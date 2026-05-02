@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    </head>
+    <body style="background-color: rgb(148, 148, 148);">
+        <canvas id="canvas" style="border: 1px solid black"></canvas>
+        <script>
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+
+            function resize() {
+                const dpr = window.devicePixelRatio || 1;
+
+                canvas.width = window.innerWidth * dpr;
+                canvas.height = window.innerHeight * dpr;
+
+                canvas.style.width = window.innerWidth + 'px';
+                canvas.style.height = window.innerHeight + 'px';
+
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.scale(dpr, dpr);
+            }
+
+            resize();
+            window.addEventListener('resize', resize);
+
+            canvas.addEventListener('pointerdown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + 100, y);
+                ctx.stroke();
+            });
+        </script>
+    </body>
+</html>
