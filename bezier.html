@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+    <head></head>
+    <body style="background-color: rgb(148, 148, 148);">
+        <canvas id="canvas" style="border: 1px solid black"></canvas>
+        <script>
+
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+
+            let lastLine = null;
+
+            function resize() {
+                const dpr = window.devicePixelRatio || 1;
+
+                canvas.width = window.innerWidth * dpr;
+                canvas.height = window.innerHeight * dpr;
+
+                canvas.style.width = window.innerWidth + 'px';
+                canvas.style.height = window.innerHeight + 'px';
+
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.scale(dpr, dpr);
+
+                draw();
+            }
+
+
+            resize();
+            window.addEventListener('resize', resize);
+
+            canvas.addEventListener('pointerdown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                lastLine = { x, y };                
+                draw();              
+            });
+
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+                if (lastLine) {
+                    ctx.beginPath();
+                    ctx.moveTo(lastLine.x, lastLine.y);
+                    ctx.quadraticCurveTo(
+                        lastLine.x + 50, lastLine.y - 50, 
+                        lastLine.x + 100, lastLine.y      
+                    );
+                    ctx.stroke();
+                }
+            }
+            
+        </script>
+    </body>
+</html>
