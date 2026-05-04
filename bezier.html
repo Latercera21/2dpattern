@@ -8,7 +8,7 @@
             const canvas = document.getElementById("canvas");
             const ctx = canvas.getContext("2d");
 
-            let lastLine = null;
+            let shapes = [];
 
             function resize() {
                 const dpr = window.devicePixelRatio || 1;
@@ -25,7 +25,6 @@
                 draw();
             }
 
-
             resize();
             window.addEventListener('resize', resize);
 
@@ -35,25 +34,27 @@
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
 
-                lastLine = { x, y };                
-                draw();              
+                shapes = [{ type: 'bezier', x, y }];
+                draw();
             });
-
 
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-                if (lastLine) {
-                    ctx.beginPath();
-                    ctx.moveTo(lastLine.x, lastLine.y);
-                    ctx.quadraticCurveTo(
-                        lastLine.x + 50, lastLine.y - 50, 
-                        lastLine.x + 100, lastLine.y      
-                    );
-                    ctx.stroke();
+
+                for (let s of shapes) {
+                    if (s.type === 'bezier') {
+                        ctx.beginPath();
+                        ctx.moveTo(s.x, s.y);
+                        ctx.bezierCurveTo(
+                            s.x + 30, s.y - 80,
+                            s.x + 70, s.y + 80,
+                            s.x + 100, s.y
+                        );
+                        ctx.stroke();
+                    }
                 }
             }
-            
+
         </script>
     </body>
 </html>
