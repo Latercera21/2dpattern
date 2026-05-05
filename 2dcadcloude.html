@@ -1,0 +1,1100 @@
+<!DOCTYPE html>  
+<html lang="es">  
+<head>  
+  <meta charset="UTF-8" />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"/>  
+  <title>Dibujo Geométrico</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 8px;
+      overflow: auto; /* Permitir scroll en el body */
+    }
+    #canvas {
+      border: 1px solid black;
+      display: block;
+      /* Removido touch-action para permitir scroll normal */
+    }
+  </style>
+</head>  
+<body>  
+  <div>  
+    <div>  
+      <button id="createBtn" onclick="toggleCreate()">Crear OFF</button>  
+      <input type="number" id="sidesInput" min="3" max="10" value="3">  
+      <span>lados</span>  
+    </div>  
+    <div>  
+      <button id="moveBtn" onclick="toggleMove()">Mover OFF</button>  
+      <button id="vertexBtn" onclick="toggleVertex()">Vértice OFF</button>  
+      <button id="addVertexBtn" onclick="toggleAddVertex()">Agregar Vértice OFF</button>
+      <button id="curveBtn" onclick="toggleCurve()">Curvar OFF</button>  
+      <button id="mirrorBtn" onclick="toggleMirror()">Desdoblar OFF</button>  
+    </div>  
+
+    <div id="vertexInputs" hidden>  
+      <span>X:</span>  
+      <input type="number" id="vertexX">  
+      <span>Y:</span>  
+      <input type="number" id="vertexY">  
+      <button onclick="applyVertexCoordinates()">Aplicar</button>  
+    </div>  
+
+    <div>
+      <button id="resizeBtn" onclick="toggleResize()">Cambiar Medida OFF</button>
+    </div>
+
+    <div id="resizeInputs" hidden>  
+      <span>Nueva medida (px):</span>  
+      <input type="number" id="resizeValue" min="1">  
+      <button onclick="applyResize()">Aplicar</button>  
+    </div>
+
+    <div>
+      <button id="rotateBtn" onclick="toggleRotate()">Rotar OFF</button>
+      <input type="number" id="rotateInput" value="90" step="1">
+      <span>grados</span>
+    </div>
+
+    <div>
+      <button id="duplicateBtn" onclick="toggleDuplicate()">Duplicar OFF</button>
+      <button id="reflectBtn" onclick="toggleReflect()">Reflejar OFF</button>
+    </div>
+
+    <div>  
+      <button id="deleteBtn" onclick="toggleDelete()">Eliminar OFF</button>  
+      <button onclick="clearAll()">Eliminar Todo</button>
+      <button onclick="undoAction()">Deshacer</button>
+      <button onclick="exportJSON()">Exportar JSON</button>
+      <button onclick="importJSON()">Importar JSON</button>
+    </div>
+  </div>  
+
+  <canvas id="canvas"></canvas>
+
+  <script>  
+    const canvas = document.getElementById('canvas');  
+    const ctx = canvas.getContext('2d');  
+  
+    let figures = [];  
+    let figuresHistory = []; // Historial para deshacer
+    let mode = 'none';  
+    let dragData = null;  
+    let selectedVertex = null;  
+    let selectedEdge = null;
+    let lastTouchTime = 0;
+    let touchStartPositions = [];
+  
+    // Ajuste de tamaño  
+    function resizeCanvas() {  
+      // Hacer el canvas más grande para permitir scroll
+      canvas.width = Math.max(1200, window.innerWidth - 16);  
+      canvas.height = Math.max(1200, window.innerHeight - 180);  
+      redrawAll();  
+    }  
+    window.addEventListener('resize', resizeCanvas);  
+    resizeCanvas();  
+  
+    // ---- Toggles de modo ----  
+    function toggleCreate(){ setMode('create','Crear'); }  
+    function toggleMove(){ setMode('move','Mover'); }  
+    function toggleCurve(){ setMode('curve','Curvar'); }  
+    function toggleDelete(){ setMode('delete','Eliminar'); }  
+    function toggleMirror(){ setMode('mirror','Desdoblar'); }
+    function toggleAddVertex(){ setMode('addVertex','Agregar Vértice'); }
+    function toggleResize(){ setMode('resize','Cambiar Medida'); }
+    function toggleRotate(){ setMode('rotate','Rotar'); }
+    function toggleDuplicate(){ setMode('duplicate','Duplicar'); }
+    function toggleReflect(){ setMode('reflect','Reflejar'); }
+  
+    function toggleVertex(){  
+      const btn = document.getElementById('vertexBtn');  
+      const inputs = document.getElementById('vertexInputs');  
+      if (mode === 'vertex') {  
+        mode = 'none';  
+        btn.textContent = 'Vértice OFF';  
+        inputs.hidden = true;  
+        selectedVertex = null;  
+      } else {  
+        mode = 'vertex';  
+        btn.textContent = 'Vértice ON';  
+        inputs.hidden = false;  
+        resetOtherButtons('vertexBtn');  
+      }  
+    }  
+  
+    function setMode(newMode,label){  
+      const btn = document.getElementById(newMode+'Btn');  
+      if (mode === newMode) {  
+        mode = 'none';  
+        btn.textContent = label+' OFF';
+        if (newMode === 'resize') {
+          document.getElementById('resizeInputs').hidden = true;
+          selectedEdge = null;
+        }
+      } else {  
+        mode = newMode;  
+        btn.textContent = label+' ON';  
+        if (newMode === 'resize') {
+          document.getElementById('resizeInputs').hidden = false;
+        }
+        resetOtherButtons(newMode+'Btn');  
+      }  
+    }  
+  
+    function resetOtherButtons(activeBtn){  
+      const ids = ['createBtn','moveBtn','vertexBtn','addVertexBtn','curveBtn','deleteBtn','mirrorBtn','resizeBtn','rotateBtn','duplicateBtn','reflectBtn'];  
+      ids.forEach(id=>{  
+        if (id!==activeBtn){  
+          const b = document.getElementById(id);  
+          if (id==='createBtn') b.textContent='Crear OFF';  
+          else if (id==='moveBtn') b.textContent='Mover OFF';  
+          else if (id==='vertexBtn'){  
+            b.textContent='Vértice OFF';  
+            document.getElementById('vertexInputs').hidden = true;  
+            selectedVertex = null;  
+          }
+          else if (id==='addVertexBtn') b.textContent='Agregar Vértice OFF';
+          else if (id==='curveBtn') b.textContent='Curvar OFF';  
+          else if (id==='deleteBtn') b.textContent='Eliminar OFF';  
+          else if (id==='mirrorBtn') b.textContent='Desdoblar OFF';
+          else if (id==='resizeBtn'){
+            b.textContent='Cambiar Medida OFF';
+            document.getElementById('resizeInputs').hidden = true;
+            selectedEdge = null;
+          }
+          else if (id==='rotateBtn') b.textContent='Rotar OFF';
+          else if (id==='duplicateBtn') b.textContent='Duplicar OFF';
+          else if (id==='reflectBtn') b.textContent='Reflejar OFF';
+        }  
+      });  
+    }  
+  
+    // ---- Utilidades ----
+    
+    // Guardar estado en el historial
+    function saveState() {
+      figuresHistory.push(JSON.parse(JSON.stringify(figures)));
+      // Limitar historial a 20 estados para no usar mucha memoria
+      if (figuresHistory.length > 20) {
+        figuresHistory.shift();
+      }
+    }
+    
+    // Deshacer última acción
+    function undoAction() {
+      if (figuresHistory.length > 0) {
+        figures = figuresHistory.pop();
+        redrawAll();
+      } else {
+        alert('No hay acciones para deshacer');
+      }
+    }
+    
+    function clearAll(){  
+      if (confirm('¿Eliminar todas las figuras?')){
+        saveState(); // Guardar antes de limpiar
+        figures = [];  
+        redrawAll();  
+      }  
+    }  
+
+    // ---- Exportar JSON ----
+    function exportJSON(){
+      const jsonData = JSON.stringify(figures, null, 2);
+      
+      // Crear modal para mostrar opciones
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.5); display: flex; align-items: center; 
+        justify-content: center; z-index: 1000;
+      `;
+      
+      const content = document.createElement('div');
+      content.style.cssText = `
+        background: white; padding: 20px; border-radius: 8px; 
+        max-width: 90%; max-height: 80%; overflow: auto;
+      `;
+      
+      content.innerHTML = `
+        <h3>Datos JSON de las figuras</h3>
+        <textarea readonly style="width: 100%; height: 200px; font-family: monospace;">${jsonData}</textarea>
+        <div style="margin-top: 10px;">
+          <button onclick="copyToClipboard('${jsonData.replace(/"/g, '\\"').replace(/\n/g, '\\n')}')">Copiar al portapapeles</button>
+          <button onclick="downloadJSON('${jsonData.replace(/"/g, '\\"').replace(/\n/g, '\\n')}')">Descargar archivo</button>
+          <button onclick="closeModal()">Cerrar</button>
+        </div>
+      `;
+      
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      
+      // Funciones para el modal
+      window.closeModal = () => document.body.removeChild(modal);
+      window.copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text.replace(/\\"/g, '"').replace(/\\n/g, '\n')).then(() => {
+          alert('JSON copiado al portapapeles');
+        });
+      };
+      window.downloadJSON = (text) => {
+        const blob = new Blob([text.replace(/\\"/g, '"').replace(/\\n/g, '\n')], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'figuras.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+    }
+
+    // ---- Importar JSON ----
+    function importJSON() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const jsonData = JSON.parse(event.target.result);
+              if (Array.isArray(jsonData)) {
+                // Validar estructura básica
+                const valid = jsonData.every(fig => 
+                  fig.vertices && Array.isArray(fig.vertices) && 
+                  fig.edges && Array.isArray(fig.edges)
+                );
+                if (valid) {
+                  saveState(); // Guardar estado actual antes de importar
+                  figures = jsonData;
+                  redrawAll();
+                  alert('Archivo importado correctamente');
+                } else {
+                  alert('El archivo JSON no tiene el formato correcto');
+                }
+              } else {
+                alert('El archivo debe contener un array de figuras');
+              }
+            } catch (error) {
+              alert('Error al leer el archivo JSON: ' + error.message);
+            }
+          };
+          reader.readAsText(file);
+        }
+      };
+      input.click();
+    }
+  
+    function createPolygon(cx, cy, sides, radius=50){  
+      const vertices=[];  
+      for (let i=0;i<sides;i++){  
+        const ang = (i*2*Math.PI)/sides - Math.PI/2;  
+        vertices.push({ x: cx + radius*Math.cos(ang), y: cy + radius*Math.sin(ang) });  
+      }  
+      const edges=[];  
+      for (let i=0;i<sides;i++){  
+        edges.push({ start:i, end:(i+1)%sides, curved:false, controlX:null, controlY:null });  
+      }  
+      return { vertices, edges };  
+    }  
+  
+    function getEventPos(e){  
+      const r = canvas.getBoundingClientRect();  
+      const clientX = e.clientX ?? (e.touches && e.touches[0].clientX);  
+      const clientY = e.clientY ?? (e.touches && e.touches[0].clientY);  
+      return { x: clientX - r.left, y: clientY - r.top };  
+    }  
+  
+    function isPointInPolygon(x,y,figure){  
+      const v = figure.vertices;  
+      let inside=false;  
+      for (let i=0,j=v.length-1;i<v.length;j=i++){  
+        if (((v[i].y>y)!==(v[j].y>y)) &&  
+            (x < (v[j].x-v[i].x)*(y-v[i].y)/(v[j].y-v[i].y)+v[i].x)) inside=!inside;  
+      }  
+      return inside;  
+    }  
+  
+    function findClickedFigure(x,y){  
+      for (let i=figures.length-1;i>=0;i--){  
+        if (isPointInPolygon(x,y,figures[i])) return i;  
+      }  
+      return -1;  
+    }  
+  
+    function findNearestVertex(x,y,thr=20){  
+      for (let fi=0; fi<figures.length; fi++){  
+        const f = figures[fi];  
+        for (let vi=0; vi<f.vertices.length; vi++){  
+          const p=f.vertices[vi];  
+          if (Math.hypot(x-p.x,y-p.y) < thr) return {figureIndex:fi,vertexIndex:vi};  
+        }  
+      }  
+      return null;  
+    }  
+  
+    function distanceToLine(px,py,x1,y1,x2,y2){  
+      const A=px-x1, B=py-y1, C=x2-x1, D=y2-y1;  
+      const dot=A*C+B*D, len=C*C+D*D;  
+      if (!len) return Math.hypot(A,B);  
+      let t=dot/len;  
+      if (t<0) return Math.hypot(A,B);  
+      if (t>1) return Math.hypot(px-x2,py-y2);  
+      const qx=x1+t*C, qy=y1+t*D;  
+      return Math.hypot(px-qx,py-qy);  
+    }  
+
+    function getClosestPointOnLine(px, py, x1, y1, x2, y2) {
+      const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
+      const dot = A * C + B * D, len = C * C + D * D;
+      if (!len) return { x: x1, y: y1, t: 0 };
+      let t = dot / len;
+      if (t < 0) return { x: x1, y: y1, t: 0 };
+      if (t > 1) return { x: x2, y: y2, t: 1 };
+      return { x: x1 + t * C, y: y1 + t * D, t: t };
+    }
+
+    function getClosestPointOnCurve(px, py, x1, y1, cx, cy, x2, y2) {
+      let bestDist = Infinity;
+      let bestPoint = { x: x1, y: y1, t: 0 };
+      
+      for (let t = 0; t <= 1; t += 0.01) {
+        const xt = (1-t)*(1-t)*x1 + 2*(1-t)*t*cx + t*t*x2;
+        const yt = (1-t)*(1-t)*y1 + 2*(1-t)*t*cy + t*t*y2;
+        const dist = Math.hypot(px - xt, py - yt);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestPoint = { x: xt, y: yt, t: t };
+        }
+      }
+      return bestPoint;
+    }
+  
+    function distanceToCurve(px,py,x1,y1,cx,cy,x2,y2){  
+      let d=Infinity;  
+      for (let t=0;t<=1;t+=0.05){  
+        const xt=(1-t)*(1-t)*x1 + 2*(1-t)*t*cx + t*t*x2;  
+        const yt=(1-t)*(1-t)*y1 + 2*(1-t)*t*cy + t*t*y2;  
+        d=Math.min(d,Math.hypot(px-xt,py-yt));  
+      }  
+      return d;  
+    }  
+  
+    function findNearestEdge(x,y,thr=15){  
+      for (let fi=0; fi<figures.length; fi++){  
+        const f=figures[fi];  
+        for (let ei=0; ei<f.edges.length; ei++){  
+          const e=f.edges[ei];  
+          const a=f.vertices[e.start], b=f.vertices[e.end];  
+          const d = (e.curved && e.controlX!=null)  
+            ? distanceToCurve(x,y,a.x,a.y,e.controlX,e.controlY,b.x,b.y)  
+            : distanceToLine(x,y,a.x,a.y,b.x,b.y);  
+          if (d<thr) return { figureIndex:fi, edgeIndex:ei };  
+        }  
+      }  
+      return null;  
+    }
+
+    // Nueva función para agregar vértice en una arista
+    function addVertexOnEdge(figureIndex, edgeIndex, x, y) {
+      const figure = figures[figureIndex];
+      const edge = figure.edges[edgeIndex];
+      const a = figure.vertices[edge.start];
+      const b = figure.vertices[edge.end];
+      
+      let newPoint, t;
+      
+      if (edge.curved && edge.controlX != null) {
+        // Para curvas cuadráticas
+        const closest = getClosestPointOnCurve(x, y, a.x, a.y, edge.controlX, edge.controlY, b.x, b.y);
+        newPoint = { x: closest.x, y: closest.y };
+        t = closest.t;
+      } else {
+        // Para líneas rectas
+        const closest = getClosestPointOnLine(x, y, a.x, a.y, b.x, b.y);
+        newPoint = { x: closest.x, y: closest.y };
+        t = closest.t;
+      }
+      
+      // Insertar el nuevo vértice
+      const newVertexIndex = edge.end;
+      figure.vertices.splice(newVertexIndex, 0, newPoint);
+      
+      // Actualizar índices de todas las aristas
+      figure.edges.forEach(e => {
+        if (e.start >= newVertexIndex) e.start++;
+        if (e.end >= newVertexIndex) e.end++;
+      });
+      
+      // Dividir la arista original
+      if (edge.curved && edge.controlX != null) {
+        // Para curvas, crear dos nuevas curvas usando subdivisión de Bézier
+        const c1x = (1-t)*a.x + t*edge.controlX;
+        const c1y = (1-t)*a.y + t*edge.controlY;
+        const c2x = (1-t)*edge.controlX + t*b.x;
+        const c2y = (1-t)*edge.controlY + t*b.y;
+        
+        // Primera parte de la curva
+        edge.end = newVertexIndex;
+        edge.controlX = c1x;
+        edge.controlY = c1y;
+        
+        // Segunda parte de la curva
+        const newEdge = {
+          start: newVertexIndex,
+          end: newVertexIndex + 1,
+          curved: true,
+          controlX: c2x,
+          controlY: c2y
+        };
+        figure.edges.splice(edgeIndex + 1, 0, newEdge);
+      } else {
+        // Para líneas rectas, simplemente dividir
+        edge.end = newVertexIndex;
+        
+        const newEdge = {
+          start: newVertexIndex,
+          end: newVertexIndex + 1,
+          curved: false,
+          controlX: null,
+          controlY: null
+        };
+        figure.edges.splice(edgeIndex + 1, 0, newEdge);
+      }
+      
+      return newVertexIndex;
+    }
+
+    // Nueva función para cambiar la medida de una arista
+    function resizeEdge(figureIndex, edgeIndex, newLength, clickX, clickY) {
+      const figure = figures[figureIndex];
+      const edge = figure.edges[edgeIndex];
+      const a = figure.vertices[edge.start];
+      const b = figure.vertices[edge.end];
+      
+      // Calcular la longitud actual
+      const currentLength = Math.hypot(b.x - a.x, b.y - a.y);
+      if (currentLength === 0) return; // Evitar división por cero
+      
+      // Determinar qué extremo está más cerca del click
+      const distToA = Math.hypot(clickX - a.x, clickY - a.y);
+      const distToB = Math.hypot(clickX - b.x, clickY - b.y);
+      const moveB = distToB < distToA;
+      
+      // Calcular el factor de escala
+      const scaleFactor = newLength / currentLength;
+      
+      if (moveB) {
+        // Mover el punto B, mantener A fijo
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        b.x = a.x + dx * scaleFactor;
+        b.y = a.y + dy * scaleFactor;
+        
+        // Si la arista es curva, escalar el punto de control también
+        if (edge.curved && edge.controlX != null) {
+          const cdx = edge.controlX - a.x;
+          const cdy = edge.controlY - a.y;
+          edge.controlX = a.x + cdx * scaleFactor;
+          edge.controlY = a.y + cdy * scaleFactor;
+        }
+      } else {
+        // Mover el punto A, mantener B fijo
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        a.x = b.x + dx * scaleFactor;
+        a.y = b.y + dy * scaleFactor;
+        
+        // Si la arista es curva, escalar el punto de control también
+        if (edge.curved && edge.controlX != null) {
+          const cdx = edge.controlX - b.x;
+          const cdy = edge.controlY - b.y;
+          edge.controlX = b.x + cdx * scaleFactor;
+          edge.controlY = b.y + cdy * scaleFactor;
+        }
+      }
+    }
+
+    // ---- NUEVAS FUNCIONES: ROTAR, DUPLICAR Y REFLEJAR ----
+
+    // Función para obtener el centroide de una figura
+    function getCentroid(figure) {
+      let cx = 0, cy = 0;
+      for (const vertex of figure.vertices) {
+        cx += vertex.x;
+        cy += vertex.y;
+      }
+      cx /= figure.vertices.length;
+      cy /= figure.vertices.length;
+      return { x: cx, y: cy };
+    }
+
+    // Función para rotar una figura
+    function rotateFigure(figureIndex, degrees) {
+      const figure = figures[figureIndex];
+      const center = getCentroid(figure);
+      const radians = degrees * Math.PI / 180;
+      const cos = Math.cos(radians);
+      const sin = Math.sin(radians);
+      
+      // Rotar vértices
+      figure.vertices.forEach(vertex => {
+        const dx = vertex.x - center.x;
+        const dy = vertex.y - center.y;
+        vertex.x = center.x + dx * cos - dy * sin;
+        vertex.y = center.y + dx * sin + dy * cos;
+      });
+      
+      // Rotar puntos de control de curvas
+      figure.edges.forEach(edge => {
+        if (edge.curved && edge.controlX != null) {
+          const dx = edge.controlX - center.x;
+          const dy = edge.controlY - center.y;
+          edge.controlX = center.x + dx * cos - dy * sin;
+          edge.controlY = center.y + dx * sin + dy * cos;
+        }
+      });
+    }
+
+    // Función para duplicar una figura
+    function duplicateFigure(figureIndex, offsetX = 100, offsetY = 100) {
+      const original = figures[figureIndex];
+      const duplicate = {
+        vertices: original.vertices.map(v => ({ x: v.x + offsetX, y: v.y + offsetY })),
+        edges: original.edges.map(e => ({
+          start: e.start,
+          end: e.end,
+          curved: e.curved,
+          controlX: e.curved && e.controlX != null ? e.controlX + offsetX : null,
+          controlY: e.curved && e.controlY != null ? e.controlY + offsetY : null
+        }))
+      };
+      figures.push(duplicate);
+      return figures.length - 1;
+    }
+
+    // Función para reflejar una figura
+    function reflectFigure(figureIndex, offsetX = 100, offsetY = 0) {
+      const original = figures[figureIndex];
+      const center = getCentroid(original);
+      
+      const reflected = {
+        vertices: original.vertices.map(v => ({ 
+          x: 2 * center.x - v.x + offsetX, 
+          y: v.y + offsetY 
+        })),
+        edges: original.edges.map(e => ({
+          start: e.start,
+          end: e.end,
+          curved: e.curved,
+          controlX: e.curved && e.controlX != null ? 2 * center.x - e.controlX + offsetX : null,
+          controlY: e.curved && e.controlY != null ? e.controlY + offsetY : null
+        }))
+      };
+      figures.push(reflected);
+      return figures.length - 1;
+    }
+  
+    function redrawAll(){  
+      ctx.clearRect(0,0,canvas.width,canvas.height);  
+      figures.forEach(drawFigure);  
+    }  
+  
+    function drawFigure(figure){  
+      ctx.strokeStyle = '#000';  
+      ctx.lineWidth = 2;  
+      figure.edges.forEach(e=>{  
+        const a=figure.vertices[e.start], b=figure.vertices[e.end];  
+        ctx.beginPath();  
+        ctx.moveTo(a.x,a.y);  
+        if (e.curved && e.controlX!=null){  
+          ctx.quadraticCurveTo(e.controlX,e.controlY,b.x,b.y);  
+        } else {  
+          ctx.lineTo(b.x,b.y);  
+        }  
+        ctx.stroke();  
+      });  
+    }  
+
+    // ---- Aplicar nueva medida a una arista ----
+    function applyResize() {
+      if (!selectedEdge) { alert('Primero selecciona una línea tocándola'); return; }
+      const newLength = parseFloat(document.getElementById('resizeValue').value);
+      if (isNaN(newLength) || newLength <= 0) { alert('Valor inválido'); return; }
+      
+      saveState(); // Guardar antes de cambiar medida
+      resizeEdge(selectedEdge.figureIndex, selectedEdge.edgeIndex, newLength, selectedEdge.clickX, selectedEdge.clickY);
+      redrawAll();
+      document.getElementById('resizeValue').value = '';
+      selectedEdge = null;
+    }
+
+    // ---- Coordenadas por input para un vértice ----  
+    function applyVertexCoordinates(){  
+      if (!selectedVertex){ alert('Primero selecciona un vértice tocándolo'); return; }  
+      const x = parseFloat(document.getElementById('vertexX').value);  
+      const y = parseFloat(document.getElementById('vertexY').value);  
+      if (isNaN(x) || isNaN(y)){ alert('Valores inválidos'); return; }
+      
+      saveState(); // Guardar antes de cambiar coordenadas
+      const f = figures[selectedVertex.figureIndex];  
+      f.vertices[selectedVertex.vertexIndex].x = x;  
+      f.vertices[selectedVertex.vertexIndex].y = y;  
+      redrawAll();  
+      document.getElementById('vertexX').value='';  
+      document.getElementById('vertexY').value='';  
+      selectedVertex=null;  
+    }
+  
+    // ---- DESDOBLAR EN LA MISMA FIGURA (unir en una sola pieza) ----  
+    function unfoldFigureInPlace(figure, hingeEdgeIndex){  
+      const n = figure.vertices.length;  
+      if (n < 3) return;  
+      const hinge = figure.edges[hingeEdgeIndex];  
+      const A = hinge.start;  
+      const B = hinge.end;  
+  
+      // índices auxiliares  
+      const prev = i => (i-1+n)%n;  
+      const next = i => (i+1)%n;  
+  
+      // Secuencia original (de A hacia atrás hasta B), sin usar la arista A->B  
+      const seqOrig = [A];  
+      let i = A;  
+      while (i !== B){ i = prev(i); seqOrig.push(i); } // incluye B  
+  
+      // Secuencia a reflejar (de B hacia adelante hasta A), excluyendo extremos  
+      const seqMirror = [];  
+      let j = next(B);  
+      while (j !== A){ seqMirror.push(j); j = next(j); }  
+  
+      const P1 = figure.vertices[A], P2 = figure.vertices[B];  
+  
+      function reflectXY(x,y){  
+        const dx=P2.x-P1.x, dy=P2.y-P1.y;  
+        const a=dy, b=-dx, c=dx*P1.y - dy*P1.x;  
+        const d=(a*x+b*y+c)/(a*a+b*b);  
+        return { x: x-2*a*d, y: y-2*b*d };  
+      }  
+  
+      const newVertices = [];  
+      // Copiamos vertices del camino largo original (A -> ... -> B)  
+      for (const idx of seqOrig){  
+        const v = figure.vertices[idx];  
+        newVertices.push({x:v.x, y:v.y});  
+      }  
+      // Añadimos los reflejados de los interiores (B -> ... -> A), sin repetir B ni A  
+      for (const idx of seqMirror){  
+        const v = figure.vertices[idx];  
+        newVertices.push(reflectXY(v.x,v.y));  
+      }  
+  
+      const newEdges = [];  
+  
+      // Edges del tramo original (A -> ... -> B), usando curvas/controles originales  
+      for (let t=0; t<seqOrig.length-1; t++){  
+        const srcEdgeIdx = seqOrig[t+1]; // edge (t+1)->(t+1)+1 == camino inverso  
+        const e = figure.edges[srcEdgeIdx];  
+        newEdges.push({  
+          start: t,  
+          end: t+1,  
+          curved: !!e.curved,  
+          controlX: e.curved ? e.controlX : null,  
+          controlY: e.curved ? e.controlY : null  
+        });  
+      }  
+  
+      // Edges del tramo reflejado:  
+      // B(index = seqOrig.length-1) -> reflect(next(B)) corresponde a edge B  
+      for (let t=0; t<seqMirror.length; t++){  
+        const srcEdgeIdx = (B + t) % n; // edges B, B+1, ..., B+(m-1)  
+        const e = figure.edges[srcEdgeIdx];  
+        const startIdx = (seqOrig.length - 1) + t; // comienza en B o vértice reflejado anterior  
+        const endIdx = startIdx + 1;              // siguiente vértice reflejado  
+        newEdges.push({  
+          start: startIdx,  
+          end: endIdx,  
+          curved: !!e.curved,  
+          controlX: e.curved ? reflectXY(e.controlX, e.controlY).x : null,  
+          controlY: e.curved ? reflectXY(e.controlX, e.controlY).y : null  
+        });  
+      }  
+  
+      // Cierre final: último reflejado -> A  
+      const lastIdx = newVertices.length - 1;  
+      const closingSrcIdx = (A - 1 + n) % n; // arista anterior a A en sentido original  
+      const eClose = figure.edges[closingSrcIdx];  
+      newEdges.push({  
+        start: lastIdx,  
+        end: 0,  
+        curved: !!eClose.curved,  
+        controlX: eClose.curved ? reflectXY(eClose.controlX, eClose.controlY).x : null,  
+        controlY: eClose.curved ? reflectXY(eClose.controlX, eClose.controlY).y : null  
+      });  
+  
+      // Reemplaza la figura por la nueva pieza "desdoblada"  
+      figure.vertices = newVertices;  
+      figure.edges = newEdges;  
+    }  
+  
+    // ---- Eventos de entrada ----  
+    let isTouchDevice = false;
+    
+    // Touch events - pasivos para permitir zoom/pan nativo
+    canvas.addEventListener('touchstart', (e) => {
+      isTouchDevice = true;
+      handleTouchStart(e);
+    }, {passive: true});  
+    canvas.addEventListener('touchmove', handleTouchMove, {passive: true});  
+    canvas.addEventListener('touchend', handleTouchEnd, {passive: true});  
+    
+    // Mouse events - solo para desktop
+    canvas.addEventListener('mousedown', (e) => {
+      if (!isTouchDevice) handleStart(e);
+    });  
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isTouchDevice) handleMove(e);
+    });  
+    canvas.addEventListener('mouseup', (e) => {
+      if (!isTouchDevice) handleEnd(e);
+    });
+
+    // Evento adicional para bloquear scroll de un dedo (no pasivo)
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1 && dragData) {
+        // Solo prevenir si estamos arrastrando algo de la app
+        e.preventDefault();
+      }
+    }, {passive: false});
+
+    function handleTouchStart(e) {
+      if (e.touches.length === 1) {
+        // Un dedo: ejecutar lógica de la app
+        const pos = getEventPos(e);
+        handleSingleTouch(pos);
+      } else if (e.touches.length === 2) {
+        // Dos dedos: permitir zoom y pan nativo
+        touchStartPositions = Array.from(e.touches).map(touch => ({
+          x: touch.clientX,
+          y: touch.clientY
+        }));
+      }
+    }
+
+    function handleSingleTouch(pos) {
+      if (mode==='create'){  
+        const s = parseInt(document.getElementById('sidesInput').value);  
+        if (s>=3 && s<=10){
+          saveState(); // Guardar antes de crear
+          figures.push(createPolygon(pos.x,pos.y,s));  
+          redrawAll();  
+        }  
+      }  
+      else if (mode==='move'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de mover
+          dragData = { type:'figure', figureIndex:fi, startX:pos.x, startY:pos.y };  
+        }  
+      }  
+      else if (mode==='vertex'){  
+        const nv = findNearestVertex(pos.x,pos.y);  
+        if (nv){
+          saveState(); // Guardar antes de editar vértice
+          selectedVertex = nv;  
+          const v = figures[nv.figureIndex].vertices[nv.vertexIndex];  
+          document.getElementById('vertexX').value = Math.round(v.x);  
+          document.getElementById('vertexY').value = Math.round(v.y);  
+          dragData = { type:'vertex', figureIndex:nv.figureIndex, vertexIndex:nv.vertexIndex };  
+        }  
+      }  
+      else if (mode==='addVertex'){  
+        const ne = findNearestEdge(pos.x,pos.y);  
+        if (ne){
+          saveState(); // Guardar antes de agregar vértice
+          addVertexOnEdge(ne.figureIndex, ne.edgeIndex, pos.x, pos.y);
+          redrawAll();  
+        }  
+      }
+      else if (mode==='curve'){  
+        const ne = findNearestEdge(pos.x,pos.y);  
+        if (ne){
+          saveState(); // Guardar antes de curvar
+          const edge = figures[ne.figureIndex].edges[ne.edgeIndex];  
+          edge.curved = true;  
+          edge.controlX = pos.x;  
+          edge.controlY = pos.y;  
+          dragData = { type:'curve', figureIndex:ne.figureIndex, edgeIndex:ne.edgeIndex };  
+          redrawAll();  
+        }  
+      }  
+      else if (mode==='resize'){  
+        const ne = findNearestEdge(pos.x,pos.y);  
+        if (ne){  
+          const figure = figures[ne.figureIndex];
+          const edge = figure.edges[ne.edgeIndex];
+          const a = figure.vertices[edge.start];
+          const b = figure.vertices[edge.end];
+          const currentLength = Math.hypot(b.x - a.x, b.y - a.y);
+          
+          selectedEdge = { 
+            figureIndex: ne.figureIndex, 
+            edgeIndex: ne.edgeIndex,
+            clickX: pos.x,
+            clickY: pos.y
+          };
+          
+          document.getElementById('resizeValue').value = Math.round(currentLength);
+        }  
+      }
+      else if (mode==='rotate'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de rotar
+          const degrees = parseFloat(document.getElementById('rotateInput').value) || 90;
+          rotateFigure(fi, degrees);
+          redrawAll();  
+        }  
+      }
+      else if (mode==='duplicate'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de duplicar
+          duplicateFigure(fi);
+          redrawAll();  
+        }  
+      }
+      else if (mode==='reflect'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de reflejar
+          reflectFigure(fi);
+          redrawAll();  
+        }  
+      }
+      else if (mode==='delete'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de eliminar
+          figures.splice(fi,1); 
+          redrawAll(); 
+        }  
+      }  
+      else if (mode==='mirror'){  
+        const ne = findNearestEdge(pos.x,pos.y);  
+        if (ne){
+          saveState(); // Guardar antes de desdoblar
+          const fig = figures[ne.figureIndex];  
+          unfoldFigureInPlace(fig, ne.edgeIndex);  
+          redrawAll();  
+        }  
+      }
+    }
+
+    function handleTouchMove(e) {
+      if (e.touches.length === 1 && dragData) {
+        // Un dedo: ejecutar lógica de movimiento de la app
+        const pos = getEventPos(e);
+        
+        if (dragData.type==='figure'){  
+          const dx = pos.x - dragData.startX;  
+          const dy = pos.y - dragData.startY;  
+          const f = figures[dragData.figureIndex];  
+          f.vertices.forEach(v=>{ v.x+=dx; v.y+=dy; });  
+          f.edges.forEach(ed=>{  
+            if (ed.curved && ed.controlX!=null){ ed.controlX+=dx; ed.controlY+=dy; }  
+          });  
+          dragData.startX = pos.x; dragData.startY = pos.y;  
+          redrawAll();  
+        }  
+        else if (dragData.type==='vertex'){  
+          const f = figures[dragData.figureIndex];  
+          f.vertices[dragData.vertexIndex].x = pos.x;  
+          f.vertices[dragData.vertexIndex].y = pos.y;  
+          redrawAll();  
+        }  
+        else if (dragData.type==='curve'){  
+          const ed = figures[dragData.figureIndex].edges[dragData.edgeIndex];  
+          ed.controlX = pos.x;  
+          ed.controlY = pos.y;  
+          redrawAll();  
+        }
+      }
+      // Con 2+ dedos no hacer nada, dejar zoom/pan nativo
+    }
+
+    function handleTouchEnd(e) {
+      dragData = null;  
+      touchStartPositions = [];
+    }
+  
+    function handleStart(e){  
+      // Solo para eventos mouse, no touch (evitar duplicados)
+      if (e.touches) return;
+      
+      e.preventDefault();  
+      const pos = getEventPos(e);  
+  
+      if (mode==='create'){  
+        const s = parseInt(document.getElementById('sidesInput').value);  
+        if (s>=3 && s<=10){
+          saveState(); // Guardar antes de crear
+          figures.push(createPolygon(pos.x,pos.y,s));  
+          redrawAll();  
+        }  
+      }  
+      else if (mode==='move'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de mover
+          dragData = { type:'figure', figureIndex:fi, startX:pos.x, startY:pos.y };  
+        }  
+      }  
+      else if (mode==='vertex'){  
+        const nv = findNearestVertex(pos.x,pos.y);  
+        if (nv){
+          saveState(); // Guardar antes de editar vértice
+          selectedVertex = nv;  
+          const v = figures[nv.figureIndex].vertices[nv.vertexIndex];  
+          document.getElementById('vertexX').value = Math.round(v.x);  
+          document.getElementById('vertexY').value = Math.round(v.y);  
+          dragData = { type:'vertex', figureIndex:nv.figureIndex, vertexIndex:nv.vertexIndex };  
+        }  
+      }  
+      else if (mode==='addVertex'){  
+        const ne = findNearestEdge(pos.x,pos.y);  
+        if (ne){
+          saveState(); // Guardar antes de agregar vértice
+          addVertexOnEdge(ne.figureIndex, ne.edgeIndex, pos.x, pos.y);
+          redrawAll();  
+        }  
+      }
+      else if (mode==='curve'){  
+        const ne = findNearestEdge(pos.x,pos.y);  
+        if (ne){
+          saveState(); // Guardar antes de curvar
+          const edge = figures[ne.figureIndex].edges[ne.edgeIndex];  
+          edge.curved = true;  
+          edge.controlX = pos.x;  
+          edge.controlY = pos.y;  
+          dragData = { type:'curve', figureIndex:ne.figureIndex, edgeIndex:ne.edgeIndex };  
+          redrawAll();  
+        }  
+      }  
+      else if (mode==='resize'){  
+        const ne = findNearestEdge(pos.x,pos.y);  
+        if (ne){  
+          const figure = figures[ne.figureIndex];
+          const edge = figure.edges[ne.edgeIndex];
+          const a = figure.vertices[edge.start];
+          const b = figure.vertices[edge.end];
+          const currentLength = Math.hypot(b.x - a.x, b.y - a.y);
+          
+          selectedEdge = { 
+            figureIndex: ne.figureIndex, 
+            edgeIndex: ne.edgeIndex,
+            clickX: pos.x,
+            clickY: pos.y
+          };
+          
+          document.getElementById('resizeValue').value = Math.round(currentLength);
+        }  
+      }
+      else if (mode==='rotate'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de rotar
+          const degrees = parseFloat(document.getElementById('rotateInput').value) || 90;
+          rotateFigure(fi, degrees);
+          redrawAll();  
+        }  
+      }
+      else if (mode==='duplicate'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de duplicar
+          duplicateFigure(fi);
+          redrawAll();  
+        }  
+      }
+      else if (mode==='reflect'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de reflejar
+          reflectFigure(fi);
+          redrawAll();  
+        }  
+      }
+      else if (mode==='delete'){  
+        const fi = findClickedFigure(pos.x,pos.y);  
+        if (fi!==-1){
+          saveState(); // Guardar antes de eliminar
+          figures.splice(fi,1); 
+          redrawAll(); 
+        }  
+      }  
+      else if (mode==='mirror'){  
+        const ne = findNearestEdge(pos.x,pos.y);  
+        if (ne){
+          saveState(); // Guardar antes de desdoblar
+          const fig = figures[ne.figureIndex];  
+          unfoldFigureInPlace(fig, ne.edgeIndex);  
+          redrawAll();  
+        }  
+      }  
+    }  
+  
+    function handleMove(e){  
+      // Solo para eventos mouse, no touch (evitar duplicados)
+      if (e.touches) return;
+      
+      e.preventDefault();  
+      if (!dragData) return;  
+      const pos = getEventPos(e);  
+  
+      if (dragData.type==='figure'){  
+        const dx = pos.x - dragData.startX;  
+        const dy = pos.y - dragData.startY;  
+        const f = figures[dragData.figureIndex];  
+        f.vertices.forEach(v=>{ v.x+=dx; v.y+=dy; });  
+        f.edges.forEach(ed=>{  
+          if (ed.curved && ed.controlX!=null){ ed.controlX+=dx; ed.controlY+=dy; }  
+        });  
+        dragData.startX = pos.x; dragData.startY = pos.y;  
+        redrawAll();  
+      }  
+      else if (dragData.type==='vertex'){  
+        const f = figures[dragData.figureIndex];  
+        f.vertices[dragData.vertexIndex].x = pos.x;  
+        f.vertices[dragData.vertexIndex].y = pos.y;  
+        redrawAll();  
+      }  
+      else if (dragData.type==='curve'){  
+        const ed = figures[dragData.figureIndex].edges[dragData.edgeIndex];  
+        ed.controlX = pos.x;  
+        ed.controlY = pos.y;  
+        redrawAll();  
+      }  
+    }  
+  
+    function handleEnd(e){  
+      // Solo para eventos mouse, no touch (evitar duplicados)
+      if (e.touches) return;
+      
+      e.preventDefault();  
+      dragData = null;  
+      touchStartPositions = [];
+    }
+
+    // Agregar atajos de teclado
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undoAction();
+      }
+    });
+  </script>  
+</body>  
+</html>
