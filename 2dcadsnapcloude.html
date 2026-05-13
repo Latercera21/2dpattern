@@ -3,16 +3,15 @@
 <head>  
   <meta charset="UTF-8" />  
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"/>  
-  <title>2D CLOTH</title>
+  <title>2d cad cloth</title>
   <style>
     body { margin: 0; padding: 8px; overflow: auto; background-color: rgb(197, 197, 197); }
     #canvas { border: 1px solid black; display: block; }
-    button.on { background: #94c495; color: white; font-weight: bold; }
+    button.on { background: #94c495; color: rgb(0, 0, 0); font-weight: bold; }
     #joinApplyBtn { display: none; margin-left: 6px; }
   </style>
 </head>  
-<body>
-  <h3>2D CLOTH</h3>  
+<body>  
   <div>
 
     <div>
@@ -573,6 +572,7 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       figures.forEach((fig, fi) => drawFigure(fig, fi));
       if (mode === 'resize' && selectedEdge) drawResizeIndicator();
+      if (mode === 'addVertex') drawVertexDots();
     }
 
     function redrawWithGuides(x, y, figureIndex, vertexIndex) {
@@ -598,6 +598,17 @@
       });
     }
 
+    function drawVertexDots() {
+      figures.forEach(fig => {
+        fig.vertices.forEach(v => {
+          ctx.beginPath();
+          ctx.arc(v.x, v.y, 3, 0, Math.PI*2);
+          ctx.fillStyle = '#e74c3c';
+          ctx.fill();
+        });
+      });
+    }
+
     function drawResizeIndicator() {
       if (!selectedEdge) return;
       const fig = figures[selectedEdge.figureIndex];
@@ -608,10 +619,10 @@
       const movingPt = distToB < distToA ? b : a;
       const fixedPt  = distToB < distToA ? a : b;
 
-      ctx.beginPath(); ctx.arc(fixedPt.x, fixedPt.y, 6, 0, Math.PI*2);
+      ctx.beginPath(); ctx.arc(fixedPt.x, fixedPt.y, 3, 0, Math.PI*2);
       ctx.fillStyle = '#27ae60'; ctx.fill();
 
-      ctx.beginPath(); ctx.arc(movingPt.x, movingPt.y, 6, 0, Math.PI*2);
+      ctx.beginPath(); ctx.arc(movingPt.x, movingPt.y, 3, 0, Math.PI*2);
       ctx.fillStyle = '#e74c3c'; ctx.fill();
 
       document.getElementById('resizeIndicator').textContent =
