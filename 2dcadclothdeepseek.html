@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>CAD Cloth</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; overflow: hidden; height: 100%; font-size: 14px;
+      background-color: #eef0f2;
+    }
+    #canvas { display: block; touch-action: none; }
+    button {
+      padding: 3px 5px; margin: 1px;
+      font-size: 15px; cursor: pointer;
+      border: 1px solid #999; background: #eee;
+      border-radius: 3px; line-height: 1;
+    }
+    button.on { background: #4caf50; color: white; border-color: #388e3c; }
+    #joinApplyBtn { display: none; }
+    .toolbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      display: flex; flex-wrap: wrap; gap: 2px;
+      padding: 3px 4px; background: #f5f5f5;
+      border-bottom: 1px solid #ccc; z-index: 100;
+      align-items: center;
+    }
+    input[type=number], input[type=text] { width: 52px; padding: 2px; font-size: 13px; }
+    .float-inputs {
+      position: fixed; z-index: 200;
+      background: #fff; border: 1px solid #aaa;
+      border-radius: 4px; padding: 4px 6px;
+      display: none; align-items: center; gap: 3px; flex-wrap: wrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    #resizeIndicator { font-style: italic; color: #c0392b; font-size: 12px; }
+    span.lbl { font-size: 12px; }
+    #zoomIndicator { font-size: 11px; color: #555; margin-left: 4px; min-width: 44px; }
+    .modal-overlay {
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.5); z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-box {
+      background: #fff; padding: 18px; border-radius: 8px;
+      width: 88%; max-width: 420px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .modal-title { font-weight: bold; font-size: 15px; }
+    .modal-box textarea {
+      width: 100%; min-height: 130px; font-family: monospace;
+      font-size: 11px; border: 1px solid #ccc; padding: 6px; resize: vertical;
+    }
+    .modal-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .modal-row button { flex: 1; padding: 8px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button id="createBtn"     onclick="toggleCreate()"     title="Crear polígono">✏️</button>
+    <input  type="number" id="sidesInput" min="3" max="10" value="3" title="Lados">
+    <button id="lineBtn"       onclick="toggleLine()"       title="Crear línea">📏</button>
+    <button id="moveBtn"       onclick="toggleMove()"       title="Mover figura">✋</button>
+    <button id="vertexBtn"     onclick="toggleVertex()"     title="Editar vértice">◎</button>
+    <button id="snapBtn"       onclick="toggleSnap()"       title="Snap">🧲</button>
+    <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vértice">➕</button>
+    <button id="curveBtn"      onclick="toggleCurve()"      title="Curvar arista">〜</button>
+    <button id="straightenBtn" onclick="toggleStraighten()" title="Curva→Recta">📐</button>
+    <button id="mirrorBtn"     onclick="toggleMirror()"     title="Desdoblar">⟺</button>
+    <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">⛓</button>
+    <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar unión">✔</button>
+    <button id="resizeBtn"     onclick="toggleResize()"     title="Cambiar longitud">📏</button>
+    <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">🔄</button>
+    <input  type="number" id="rotateInput" value="90" step="1" title="Grados">
+    <button id="duplicateBtn"  onclick="toggleDuplicate()"  title="Duplicar">⧉</button>
+    <button id="reflectBtn"    onclick="toggleReflect()"    title="Reflejar">↔</button>
+    <button id="grainBtn"      onclick="toggleGrainMode()"  title="Asignar hilo a figura">🧵</button>
+    <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Dirección del hilo">→</button>
+    <button id="deleteBtn"     onclick="toggleDelete()"     title="Eliminar figura">🗑</button>
+    <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">↕️</button>
+    <button id="cutBtn"        onclick="toggleCut()"        title="Cortar figura con línea">✂</button>
+    <button onclick="clearAll()"   title="Eliminar todo">✖</button>
+    <button onclick="undoAction()" title="Deshacer">↩</button>
+    <button onclick="exportJSON()" title="Exportar JSON">💾</button>
+    <button onclick="importJSON()" title="Importar JSON">📂</button>
+    <span id="zoomIndicator">100%</span>
+    <button onclick="resetView()" title="Restablecer vista">⊙</button>
+  </div>
+
+  <div id="vertexInputs" class="float-inputs">
+    <span class="lbl">X cm:</span><input type="text" id="vertexX" placeholder="ej: 25.5">
+    <span class="lbl">Y cm:</span><input type="text" id="vertexY" placeholder="ej: 30,2">
+    <button onclick="applyVertexCoordinates()">✔</button>
+    <button onclick="hidePanel('vertexInputs')">✖</button>
+  </div>
+  <div id="resizeInputs" class="float-inputs">
+    <span class="lbl">cm:</span>
+    <input type="text" id="resizeValue" placeholder="ej: 25.5" style="width:70px">
+    <button onclick="applyResize()">✔</button>
+    <button onclick="hidePanel('resizeInputs')">✖</button>
+    <span id="resizeIndicator"></span>
+  </div>
+  <div id="offsetInputs" class="float-inputs">
+    <span class="lbl">cm:</span>
+    <input type="text" id="offsetValue" placeholder="ej: 1.5" style="width:70px">
+    <button onclick="applyOffset()">✔</button>
+    <button onclick="hidePanel('offsetInputs')">✖</button>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+  const PX_PER_CM = 96 / 2.54;
+
+  function cmToPx(str) {
+    const v = parseFloat(String(str).trim().replace(',', '.'));
+    return isNaN(v) ? NaN : v * PX_PER_CM;
+  }
+  function pxToCm(px) { return parseFloat((px / PX_PER_CM).toFixed(2)); }
+
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+
+  let figures        = [];
+  let figuresHistory = [];
+  let mode           = 'none';
+  let dragData       = null;
+  let selectedVertex = null;
+  let selectedEdge   = null;
+  let snapEnabled    = false;
+  let joinSelection  = [];
+  let grainDir       = 'horizontal';
+  let lineStartPoint = null;
+  let cutSelection   = null;
+
+  let viewScale = 1, viewOffX = 0, viewOffY = 0;
+  let isPanning = false, panStart = {x:0,y:0};
+  let pinchStartDist = null, pinchStartScale = 1;
+  let isTouchDevice = false, lastTouchTime = 0;
+
+  const SNAP_THR = 10;
+
+  function getToolbarHeight() {
+    return document.querySelector('.toolbar').getBoundingClientRect().height;
+  }
+  function resizeCanvas() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    redrawAll();
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  function showPanel(id) {
+    const el = document.getElementById(id);
+    el.style.display = 'flex';
+    el.style.top  = (getToolbarHeight() + 6) + 'px';
+    el.style.left = '4px';
+  }
+  function hidePanel(id) {
+    document.getElementById(id).style.display = 'none';
+    if (id === 'vertexInputs') { selectedVertex = null; }
+    if (id === 'resizeInputs') {
+      selectedEdge = null;
+      document.getElementById('resizeIndicator').textContent = '';
+    }
+    if (id === 'offsetInputs') { selectedEdge = null; }
+    redrawAll();
+  }
+
+  function showModal({ title, body, textarea, buttons }) {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      const box = document.createElement('div');
+      box.className = 'modal-box';
+      const t = document.createElement('div');
+      t.className = 'modal-title'; t.textContent = title; box.appendChild(t);
+      if (body) { const p = document.createElement('div'); p.textContent = body; box.appendChild(p); }
+      let taEl = null;
+      if (textarea) {
+        taEl = document.createElement('textarea');
+        taEl.value = textarea; taEl.readOnly = true; box.appendChild(taEl);
+      }
+      const row = document.createElement('div'); row.className = 'modal-row';
+      buttons.forEach(btn => {
+        const b = document.createElement('button');
+        b.textContent = btn.label;
+        b.onclick = () => { document.body.removeChild(overlay); resolve(btn.value ?? btn.label); };
+        row.appendChild(b);
+      });
+      box.appendChild(row); overlay.appendChild(box);
+      overlay.addEventListener('click', e => { if(e.target===overlay){document.body.removeChild(overlay);resolve(null);} });
+      document.body.appendChild(overlay);
+      if (taEl) setTimeout(() => taEl.select(), 80);
+    });
+  }
+
+  function saveState() {
+    figuresHistory.push(JSON.parse(JSON.stringify(figures)));
+    if (figuresHistory.length > 20) figuresHistory.shift();
+  }
+  function undoAction() {
+    if (figuresHistory.length > 0) { figures = figuresHistory.pop(); redrawAll(); }
+    else showModal({ title:'Deshacer', body:'No hay acciones para deshacer.', buttons:[{label:'OK'}] });
+  }
+  function clearAll() {
+    showModal({
+      title: '¿Eliminar todo?',
+      body: 'Se eliminarán todas las figuras.',
+      buttons: [{label:'Eliminar todo',value:'yes'},{label:'Cancelar',value:'no'}]
+    }).then(r => { if (r==='yes') { saveState(); figures=[]; redrawAll(); } });
+  }
+
+  function updateZoomIndicator() {
+    document.getElementById('zoomIndicator').textContent = Math.round(viewScale*100)+'%';
+  }
+  function resetView() {
+    viewScale=1; viewOffX=0; viewOffY=0;
+    updateZoomIndicator(); redrawAll();
+  }
+  function screenToWorld(sx, sy) {
+    return { x:(sx-viewOffX)/viewScale, y:(sy-viewOffY)/viewScale };
+  }
+  function applyZoom(delta, cx, cy) {
+    const factor = delta > 0 ? 0.9 : 1.1;
+    const ns = Math.min(10, Math.max(0.01, viewScale * factor));
+    viewOffX = cx - (cx - viewOffX) * (ns / viewScale);
+    viewOffY = cy - (cy - viewOffY) * (ns / viewScale);
+    viewScale = ns;
+    updateZoomIndicator(); redrawAll();
+  }
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    applyZoom(e.deltaY, e.clientX, e.clientY);
+  }, {passive:false});
+
+  function toggleGrainDir() {
+    grainDir = grainDir==='horizontal' ? 'vertical' : 'horizontal';
+    document.getElementById('grainDirBtn').textContent = grainDir==='horizontal' ? '→' : '↓';
+  }
+  function toggleGrainMode() { setMode('grain'); }
+
+  function toggleCreate()     { setMode('create');     }
+  function toggleLine()       { setMode('line');       }
+  function toggleMove()       { setMode('move');       }
+  function toggleCurve()      { setMode('curve');      }
+  function toggleStraighten() { setMode('straighten'); }
+  function toggleDelete()     { setMode('delete');     }
+  function toggleMirror()     { setMode('mirror');     }
+  function toggleAddVertex()  { setMode('addVertex');  }
+  function toggleResize()     { setMode('resize');     }
+  function toggleRotate()     { setMode('rotate');     }
+  function toggleDuplicate()  { setMode('duplicate');  }
+  function toggleReflect()    { setMode('reflect');    }
+  function toggleOffset()     { setMode('offset');     }
+  function toggleCut()        { setMode('cut');        }
+
+  function toggleVertex() {
+    if (mode==='vertex') { setMode('none'); hidePanel('vertexInputs'); }
+    else { setMode('vertex'); }
+  }
+  function toggleSnap() {
+    snapEnabled = !snapEnabled;
+    document.getElementById('snapBtn').classList.toggle('on', snapEnabled);
+  }
+  function toggleJoinCurves() {
+    if (mode==='joinCurves') {
+      setMode('none');
+      document.getElementById('joinApplyBtn').style.display='none';
+      joinSelection=[]; redrawAll();
+    } else {
+      setMode('joinCurves');
+      document.getElementById('joinApplyBtn').style.display='inline-block';
+      joinSelection=[];
+    }
+  }
+
+  const ALL_MODES = ['create','line','move','vertex','addVertex','curve','straighten',
+                     'delete','mirror','resize','rotate','duplicate','reflect',
+                     'joinCurves','grain','offset','cut'];
+
+  function setMode(newMode) {
+    const prev = mode;
+    ALL_MODES.forEach(m => {
+      const btn = document.getElementById(m+'Btn');
+      if (btn) btn.classList.remove('on');
+    });
+    if (prev==='resize')  { hidePanel('resizeInputs'); }
+    if (prev==='vertex')  { hidePanel('vertexInputs'); }
+    if (prev==='offset')  { hidePanel('offsetInputs'); }
+    if (prev==='joinCurves') { document.getElementById('joinApplyBtn').style.display='none'; joinSelection=[]; }
+    if (prev==='line') { lineStartPoint = null; }
+    if (prev==='cut') { cutSelection = null; }
+
+    if (newMode===prev || newMode==='none') { mode='none'; redrawAll(); return; }
+
+    mode = newMode;
+    const btn = document.getElementById(newMode+'Btn');
+    if (btn) btn.classList.add('on');
+    if (newMode==='resize') showPanel('resizeInputs');
+    if (newMode==='vertex') showPanel('vertexInputs');
+    if (newMode==='offset') showPanel('offsetInputs');
+    redrawAll();
+  }
+
+  // Snap
+  function applySnap(x, y, exFi, exVi) {
+    let sx=x, sy=y, fx=false, fy=false;
+    for (let fi=0; fi<figures.length && (!fx||!fy); fi++)
+      for (let vi=0; vi<figures[fi].vertices.length && (!fx||!fy); vi++) {
+        if (fi===exFi && vi===exVi) continue;
+        const v=figures[fi].vertices[vi];
+        if (!fy && Math.abs(y-v.y)<SNAP_THR) { sy=v.y; fy=true; }
+        if (!fx && Math.abs(x-v.x)<SNAP_THR) { sx=v.x; fx=true; }
+      }
+    return {x:sx,y:sy};
+  }
+  function drawSnapGuides(x, y, exFi, exVi) {
+    ctx.save();
+    ctx.strokeStyle='rgba(0,120,255,0.5)';
+    ctx.lineWidth=1/viewScale;
+    ctx.setLineDash([4/viewScale,4/viewScale]);
+    for (let fi=0; fi<figures.length; fi++)
+      for (let vi=0; vi<figures[fi].vertices.length; vi++) {
+        if (fi===exFi && vi===exVi) continue;
+        const v=figures[fi].vertices[vi];
+        if (Math.abs(y-v.y)<SNAP_THR) { ctx.beginPath();ctx.moveTo(-1e6,v.y);ctx.lineTo(1e6,v.y);ctx.stroke(); }
+        if (Math.abs(x-v.x)<SNAP_THR) { ctx.beginPath();ctx.moveTo(v.x,-1e6);ctx.lineTo(v.x,1e6);ctx.stroke(); }
+      }
+    ctx.restore();
+  }
+
+  // Geometría básica
+  function q2c(p0,c,p1) {
+    return {
+      cp1:{x:p0.x+2/3*(c.x-p0.x),y:p0.y+2/3*(c.y-p0.y)},
+      cp2:{x:p1.x+2/3*(c.x-p1.x),y:p1.y+2/3*(c.y-p1.y)}
+    };
+  }
+  function makeEdge(s,e) { return{start:s,end:e,curved:false,cubic:false,controlX:null,controlY:null,control2X:null,control2Y:null}; }
+
+  function createPolygon(cx,cy,sides,radius=50) {
+    const vertices=[],edges=[];
+    for (let i=0;i<sides;i++) {
+      const ang=(i*2*Math.PI)/sides-Math.PI/2;
+      vertices.push({x:cx+radius*Math.cos(ang),y:cy+radius*Math.sin(ang)});
+    }
+    for (let i=0;i<sides;i++) edges.push(makeEdge(i,(i+1)%sides));
+    return {vertices,edges,closed:true,grain:null};
+  }
+
+  function createLine(start,end) {
+    return {
+      vertices:[{x:start.x,y:start.y},{x:end.x,y:end.y}],
+      edges:[makeEdge(0,1)],
+      closed:false,
+      grain:null
+    };
+  }
+
+  function isPointInPolygon(x,y,figure) {
+    if (!figure.closed) return false;
+    const v=figure.vertices; let inside=false;
+    for (let i=0,j=v.length-1;i<v.length;j=i++)
+      if (((v[i].y>y)!==(v[j].y>y))&&(x<(v[j].x-v[i].x)*(y-v[i].y)/(v[j].y-v[i].y)+v[i].x))
+        inside=!inside;
+    return inside;
+  }
+
+  function findClickedFigure(wx,wy) {
+    for (let i=figures.length-1;i>=0;i--) {
+      if (figures[i].closed && isPointInPolygon(wx,wy,figures[i])) return i;
+    }
+    for (let i=figures.length-1;i>=0;i--) {
+      if (!figures[i].closed) {
+        for (const e of figures[i].edges) {
+          if (edgeDist(wx,wy,figures[i],e) < 15/viewScale) return i;
+        }
+      }
+    }
+    return -1;
+  }
+
+  function findNearestVertex(wx,wy) {
+    const thr=20/viewScale;
+    for (let fi=0;fi<figures.length;fi++)
+      for (let vi=0;vi<figures[fi].vertices.length;vi++) {
+        const p=figures[fi].vertices[vi];
+        if (Math.hypot(wx-p.x,wy-p.y)<thr) return{figureIndex:fi,vertexIndex:vi};
+      }
+    return null;
+  }
+
+  function dLine(px,py,x1,y1,x2,y2){
+    const A=px-x1,B=py-y1,C=x2-x1,D=y2-y1,dot=A*C+B*D,len=C*C+D*D;
+    if(!len) return Math.hypot(A,B);
+    const t=Math.min(1,Math.max(0,dot/len));
+    return Math.hypot(px-(x1+t*C),py-(y1+t*D));
+  }
+  function dQuad(px,py,x1,y1,cx,cy,x2,y2){
+    let d=Infinity;
+    for(let t=0;t<=1;t+=0.05){const xt=(1-t)*(1-t)*x1+2*(1-t)*t*cx+t*t*x2,yt=(1-t)*(1-t)*y1+2*(1-t)*t*cy+t*t*y2;d=Math.min(d,Math.hypot(px-xt,py-yt));}
+    return d;
+  }
+  function dCubic(px,py,x0,y0,cx1,cy1,cx2,cy2,x1,y1){
+    let d=Infinity;
+    for(let t=0;t<=1;t+=0.05){const mt=1-t,xt=mt*mt*mt*x0+3*mt*mt*t*cx1+3*mt*t*t*cx2+t*t*t*x1,yt=mt*mt*mt*y0+3*mt*mt*t*cy1+3*mt*t*t*cy2+t*t*t*y1;d=Math.min(d,Math.hypot(px-xt,py-yt));}
+    return d;
+  }
+  function edgeDist(x,y,fig,e){
+    const a=fig.vertices[e.start],b=fig.vertices[e.end];
+    if(e.cubic&&e.control2X!=null) return dCubic(x,y,a.x,a.y,e.controlX,e.controlY,e.control2X,e.control2Y,b.x,b.y);
+    if(e.curved&&e.controlX!=null) return dQuad(x,y,a.x,a.y,e.controlX,e.controlY,b.x,b.y);
+    return dLine(x,y,a.x,a.y,b.x,b.y);
+  }
+  function findNearestEdge(wx,wy){
+    const thr=15/viewScale;
+    for(let fi=0;fi<figures.length;fi++){const f=figures[fi];for(let ei=0;ei<f.edges.length;ei++)if(edgeDist(wx,wy,f,f.edges[ei])<thr)return{figureIndex:fi,edgeIndex:ei};}
+    return null;
+  }
+
+  function closestOnLine(px,py,x1,y1,x2,y2){
+    const A=px-x1,B=py-y1,C=x2-x1,D=y2-y1,dot=A*C+B*D,len=C*C+D*D;
+    if(!len) return{x:x1,y:y1,t:0};
+    const t=Math.max(0,Math.min(1,dot/len));return{x:x1+t*C,y:y1+t*D,t};
+  }
+  function closestOnCurve(px,py,x1,y1,cx,cy,x2,y2){
+    let best=Infinity,bp={x:x1,y:y1,t:0};
+    for(let t=0;t<=1;t+=0.01){const xt=(1-t)*(1-t)*x1+2*(1-t)*t*cx+t*t*x2,yt=(1-t)*(1-t)*y1+2*(1-t)*t*cy+t*t*y2,d=Math.hypot(px-xt,py-yt);if(d<best){best=d;bp={x:xt,y:yt,t};}}
+    return bp;
+  }
+  function getCentroid(figure){
+    let cx=0,cy=0;figure.vertices.forEach(v=>{cx+=v.x;cy+=v.y;});
+    return{x:cx/figure.vertices.length,y:cy/figure.vertices.length};
+  }
+
+  // Operaciones
+  function addVertexOnEdge(fi,ei,x,y){
+    const figure=figures[fi],edge=figure.edges[ei];
+    const a=figure.vertices[edge.start],b=figure.vertices[edge.end];
+    let newPoint,t;
+    if(edge.curved&&edge.controlX!=null){const c=closestOnCurve(x,y,a.x,a.y,edge.controlX,edge.controlY,b.x,b.y);newPoint={x:c.x,y:c.y};t=c.t;}
+    else{const c=closestOnLine(x,y,a.x,a.y,b.x,b.y);newPoint={x:c.x,y:c.y};t=c.t;}
+    const nvi=edge.end;
+    figure.vertices.splice(nvi,0,newPoint);
+    figure.edges.forEach(e=>{if(e.start>=nvi)e.start++;if(e.end>=nvi)e.end++;});
+    if(edge.curved&&edge.controlX!=null){
+      const c1x=(1-t)*a.x+t*edge.controlX,c1y=(1-t)*a.y+t*edge.controlY;
+      const c2x=(1-t)*edge.controlX+t*b.x, c2y=(1-t)*edge.controlY+t*b.y;
+      edge.end=nvi;edge.controlX=c1x;edge.controlY=c1y;
+      figure.edges.splice(ei+1,0,{start:nvi,end:nvi+1,curved:true,cubic:false,controlX:c2x,controlY:c2y,control2X:null,control2Y:null});
+    }else{edge.end=nvi;figure.edges.splice(ei+1,0,makeEdge(nvi,nvi+1));}
+  }
+
+  function resizeEdge(fi,ei,newPx,clickX,clickY){
+    const figure=figures[fi],edge=figure.edges[ei];
+    const a=figure.vertices[edge.start],b=figure.vertices[edge.end];
+    const cur=Math.hypot(b.x-a.x,b.y-a.y);if(!cur)return;
+    const moveB=Math.hypot(clickX-b.x,clickY-b.y)<Math.hypot(clickX-a.x,clickY-a.y);
+    const sf=newPx/cur;
+    if(moveB){
+      const dx=b.x-a.x,dy=b.y-a.y;b.x=a.x+dx*sf;b.y=a.y+dy*sf;
+      if(edge.controlX !=null){edge.controlX =a.x+(edge.controlX -a.x)*sf;edge.controlY =a.y+(edge.controlY -a.y)*sf;}
+      if(edge.control2X!=null){edge.control2X=a.x+(edge.control2X-a.x)*sf;edge.control2Y=a.y+(edge.control2Y-a.y)*sf;}
+    }else{
+      const dx=a.x-b.x,dy=a.y-b.y;a.x=b.x+dx*sf;a.y=b.y+dy*sf;
+      if(edge.controlX !=null){edge.controlX =b.x+(edge.controlX -b.x)*sf;edge.controlY =b.y+(edge.controlY -b.y)*sf;}
+      if(edge.control2X!=null){edge.control2X=b.x+(edge.control2X-b.x)*sf;edge.control2Y=b.y+(edge.control2Y-b.y)*sf;}
+    }
+  }
+
+  function rotateFigure(fi,deg){
+    const f=figures[fi],c=getCentroid(f),rad=deg*Math.PI/180,cos=Math.cos(rad),sin=Math.sin(rad);
+    function rot(x,y){const dx=x-c.x,dy=y-c.y;return{x:c.x+dx*cos-dy*sin,y:c.y+dx*sin+dy*cos};}
+    f.vertices.forEach(v=>{const r=rot(v.x,v.y);v.x=r.x;v.y=r.y;});
+    f.edges.forEach(e=>{
+      if(e.controlX !=null){const r=rot(e.controlX,e.controlY);  e.controlX=r.x; e.controlY=r.y;}
+      if(e.control2X!=null){const r=rot(e.control2X,e.control2Y);e.control2X=r.x;e.control2Y=r.y;}
+    });
+  }
+
+  function duplicateFigure(fi,ox=100,oy=100){
+    const o=figures[fi];
+    figures.push({
+      vertices:o.vertices.map(v=>({x:v.x+ox,y:v.y+oy})),
+      edges:o.edges.map(e=>({start:e.start,end:e.end,curved:e.curved,cubic:e.cubic||false,
+        controlX: e.controlX !=null?e.controlX +ox:null,controlY: e.controlY !=null?e.controlY +oy:null,
+        control2X:e.control2X!=null?e.control2X+ox:null,control2Y:e.control2Y!=null?e.control2Y+oy:null})),
+      closed:o.closed,grain:o.grain
+    });
+  }
+
+  function reflectFigure(fi,ox=100,oy=0){
+    const o=figures[fi],c=getCentroid(o);
+    figures.push({
+      vertices:o.vertices.map(v=>({x:2*c.x-v.x+ox,y:v.y+oy})),
+      edges:o.edges.map(e=>({start:e.start,end:e.end,curved:e.curved,cubic:e.cubic||false,
+        controlX: e.controlX !=null?2*c.x-e.controlX +ox:null,controlY: e.controlY !=null?e.controlY +oy:null,
+        control2X:e.control2X!=null?2*c.x-e.control2X+ox:null,control2Y:e.control2Y!=null?e.control2Y+oy:null})),
+      closed:o.closed,grain:o.grain
+    });
+  }
+
+  function unfoldFigureInPlace(figure,hei){
+    const n=figure.vertices.length;if(n<3)return;
+    const hinge=figure.edges[hei],A=hinge.start,B=hinge.end;
+    const prev=i=>(i-1+n)%n,next=i=>(i+1)%n;
+    const seqOrig=[A];let i=A;while(i!==B){i=prev(i);seqOrig.push(i);}
+    const seqMirror=[];let j=next(B);while(j!==A){seqMirror.push(j);j=next(j);}
+    const P1=figure.vertices[A],P2=figure.vertices[B];
+    function rXY(x,y){const dx=P2.x-P1.x,dy=P2.y-P1.y,a=dy,b=-dx,c=dx*P1.y-dy*P1.x,d=(a*x+b*y+c)/(a*a+b*b);return{x:x-2*a*d,y:y-2*b*d};}
+    const nv=[];
+    seqOrig.forEach(idx=>{const v=figure.vertices[idx];nv.push({x:v.x,y:v.y});});
+    seqMirror.forEach(idx=>{const v=figure.vertices[idx];nv.push(rXY(v.x,v.y));});
+    const ne=[];
+    for(let t=0;t<seqOrig.length-1;t++){
+      const e=figure.edges[seqOrig[t+1]];
+      const rc=e.controlX!=null?e:null,rc2=e.control2X!=null?rXY(e.control2X,e.control2Y):null;
+      ne.push({start:t,end:t+1,curved:!!e.curved,cubic:!!e.cubic,controlX:rc?rc.controlX:null,controlY:rc?rc.controlY:null,control2X:rc2?rc2.x:null,control2Y:rc2?rc2.y:null});
+    }
+    for(let t=0;t<seqMirror.length;t++){
+      const e=figure.edges[(B+t)%n],si=(seqOrig.length-1)+t;
+      const rc=e.controlX!=null?rXY(e.controlX,e.controlY):null,rc2=e.control2X!=null?rXY(e.control2X,e.control2Y):null;
+      ne.push({start:si,end:si+1,curved:!!e.curved,cubic:!!e.cubic,controlX:rc?rc.x:null,controlY:rc?rc.y:null,control2X:rc2?rc2.x:null,control2Y:rc2?rc2.y:null});
+    }
+    const eClose=figure.edges[(A-1+n)%n];
+    const rc=eClose.controlX!=null?rXY(eClose.controlX,eClose.controlY):null,rc2=eClose.control2X!=null?rXY(eClose.control2X,eClose.control2Y):null;
+    ne.push({start:nv.length-1,end:0,curved:!!eClose.curved,cubic:!!eClose.cubic,controlX:rc?rc.x:null,controlY:rc?rc.y:null,control2X:rc2?rc2.x:null,control2Y:rc2?rc2.y:null});
+    figure.vertices=nv;figure.edges=ne;
+  }
+
+  // Unión de curvas (cíclica, por si acaso)
+  function edgeToCubicControls(figure,edge){
+    const a=figure.vertices[edge.start],b=figure.vertices[edge.end];
+    if(edge.cubic&&edge.control2X!=null) return{cp1:{x:edge.controlX,y:edge.controlY},cp2:{x:edge.control2X,y:edge.control2Y}};
+    if(edge.curved&&edge.controlX!=null) return q2c(a,{x:edge.controlX,y:edge.controlY},b);
+    return{cp1:{x:a.x+(b.x-a.x)/3,y:a.y+(b.y-a.y)/3},cp2:{x:a.x+2*(b.x-a.x)/3,y:a.y+2*(b.y-a.y)/3}};
+  }
+  function joinCubics(cubics){return{P0:cubics[0].P0,CP1:cubics[0].CP1,CP2:cubics[cubics.length-1].CP2,Pn:cubics[cubics.length-1].P3};}
+
+  function isContiguousCyclic(indices, n) {
+    if (indices.length === 0) return false;
+    if (indices.length === 1) return true;
+    let consecutive = true;
+    for (let i=1; i<indices.length; i++) if (indices[i] !== indices[i-1] + 1) { consecutive = false; break; }
+    if (consecutive) return true;
+    let wrap = true;
+    for (let i=0; i<indices.length; i++) if (indices[i] !== (indices[0] + i) % n) { wrap = false; break; }
+    return wrap;
+  }
+
+  function applyJoinCurves(){
+    if(joinSelection.length<2){showModal({title:'Unir curvas',body:'Selecciona al menos 2 curvas.',buttons:[{label:'OK'}]});return;}
+    const byFigure={};
+    joinSelection.forEach(s=>{if(!byFigure[s.figureIndex])byFigure[s.figureIndex]=[];byFigure[s.figureIndex].push(s.edgeIndex);});
+    saveState();
+    for (const fiStr in byFigure) {
+      const fi = parseInt(fiStr), figure = figures[fi], edgeIndices = byFigure[fi].sort((a,b)=>a-b), n = figure.edges.length;
+      if (!isContiguousCyclic(edgeIndices, n)) { showModal({title:'Error',body:'Las curvas deben ser consecutivas (incluso cíclicamente).',buttons:[{label:'OK'}]}); return; }
+      let orderedIndices = [...edgeIndices];
+      const minIdx = orderedIndices[0];
+      orderedIndices = [];
+      for (let i=0; i<edgeIndices.length; i++) orderedIndices.push((minIdx + i) % n);
+      const cubics = orderedIndices.map(ei => {
+        const edge = figure.edges[ei], a = figure.vertices[edge.start], b = figure.vertices[edge.end];
+        return {P0:a, CP1:edgeToCubicControls(figure,edge).cp1, CP2:edgeToCubicControls(figure,edge).cp2, P3:b};
+      });
+      const joined = joinCubics(cubics);
+      const firstE = figure.edges[orderedIndices[0]], lastE = figure.edges[orderedIndices[orderedIndices.length-1]];
+      const endVIdx = lastE.end;
+      const intermediateVerts = [];
+      for (let k=1; k<orderedIndices.length; k++) intermediateVerts.push(figure.edges[orderedIndices[k-1]].end);
+      const edgesToRemove = orderedIndices.slice(1).sort((a,b)=>b-a);
+      for (const ei of edgesToRemove) figure.edges.splice(ei, 1);
+      figure.edges.forEach(e => { for (const ei of edgesToRemove) { if (e.start > ei) e.start--; if (e.end > ei) e.end--; } });
+      let removedBefore = edgesToRemove.filter(x => x < orderedIndices[0]).length;
+      const currentIdx = orderedIndices[0] - removedBefore;
+      const finalEdge = figure.edges[currentIdx];
+      const vertsToRemove = intermediateVerts.sort((a,b)=>b-a);
+      for (const vi of vertsToRemove) {
+        figure.vertices.splice(vi, 1);
+        figure.edges.forEach(e => { if (e.start > vi) e.start--; if (e.end > vi) e.end--; });
+      }
+      finalEdge.end = endVIdx - vertsToRemove.filter(v => v < endVIdx).length;
+      finalEdge.curved = true; finalEdge.cubic = true;
+      finalEdge.controlX = joined.CP1.x; finalEdge.controlY = joined.CP1.y;
+      finalEdge.control2X = joined.CP2.x; finalEdge.control2Y = joined.CP2.y;
+    }
+    joinSelection=[]; redrawAll();
+  }
+
+  // Desfase que modifica la arista (no crea nueva figura)
+  function computeOutwardNormal(figure, ei) {
+    const edge = figure.edges[ei];
+    const a = figure.vertices[edge.start], b = figure.vertices[edge.end];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const perp = {x: -dy/len, y: dx/len};
+    const cx = (a.x+b.x)/2, cy = (a.y+b.y)/2;
+    const centroid = getCentroid(figure);
+    const toC = {x: centroid.x - cx, y: centroid.y - cy};
+    if (perp.x*toC.x + perp.y*toC.y > 0) { perp.x *= -1; perp.y *= -1; }
+    return perp;
+  }
+
+  function offsetEdgeInPlace(fi, ei, distancePx) {
+    const fig = figures[fi], edge = fig.edges[ei];
+    const a = fig.vertices[edge.start], b = fig.vertices[edge.end];
+    const normal = computeOutwardNormal(fig, ei);
+    const offX = normal.x * distancePx, offY = normal.y * distancePx;
+    a.x += offX; a.y += offY;
+    b.x += offX; b.y += offY;
+    if (edge.controlX != null) { edge.controlX += offX; edge.controlY += offY; }
+    if (edge.control2X != null) { edge.control2X += offX; edge.control2Y += offY; }
+  }
+
+  function applyOffset() {
+    if (!selectedEdge) { showModal({title:'Error',body:'Primero selecciona una arista (modo Desfase).',buttons:[{label:'OK'}]}); return; }
+    const distCm = parseFloat(document.getElementById('offsetValue').value.replace(',','.'));
+    if (isNaN(distCm) || distCm <= 0) { showModal({title:'Valor inválido',body:'Introduce una distancia positiva en cm.',buttons:[{label:'OK'}]}); return; }
+    saveState();
+    offsetEdgeInPlace(selectedEdge.figureIndex, selectedEdge.edgeIndex, distCm * PX_PER_CM);
+    hidePanel('offsetInputs');
+    redrawAll();
+  }
+
+  // Corte (ahora acepta línea de corte curva)
+  function lineLineIntersection(p1,p2,p3,p4){
+    const d = (p1.x-p2.x)*(p3.y-p4.y) - (p1.y-p2.y)*(p3.x-p4.x);
+    if (Math.abs(d) < 1e-10) return null;
+    const t = ((p1.x-p3.x)*(p3.y-p4.y) - (p1.y-p3.y)*(p3.x-p4.x)) / d;
+    const u = -((p1.x-p2.x)*(p1.y-p3.y) - (p1.y-p2.y)*(p1.x-p3.x)) / d;
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) return {x: p1.x + t*(p2.x-p1.x), y: p1.y + t*(p2.y-p1.y), t, u};
+    return null;
+  }
+
+  function lineQuadIntersections(lp1,lp2,qp1,cp,qp2){
+    const results = [];
+    const steps = 50;
+    for (let i=0; i<=steps; i++) {
+      const t1 = i/steps, t2 = (i+1)/steps;
+      const pA = {
+        x: (1-t1)*(1-t1)*qp1.x + 2*(1-t1)*t1*cp.x + t1*t1*qp2.x,
+        y: (1-t1)*(1-t1)*qp1.y + 2*(1-t1)*t1*cp.y + t1*t1*qp2.y
+      };
+      const pB = {
+        x: (1-t2)*(1-t2)*qp1.x + 2*(1-t2)*t2*cp.x + t2*t2*qp2.x,
+        y: (1-t2)*(1-t2)*qp1.y + 2*(1-t2)*t2*cp.y + t2*t2*qp2.y
+      };
+      const inter = lineLineIntersection(lp1,lp2,pA,pB);
+      if (inter) results.push({point:inter, tQuad: t1 + inter.u*(t2-t1)});
+    }
+    // deduplicar por cercanía
+    return results.filter((r,i,arr)=>arr.findIndex(r2=>Math.hypot(r.point.x-r2.point.x,r.point.y-r2.point.y)<1)===i);
+  }
+
+  function cutFigureWithLine(figIdx, lineIdx) {
+    const fig = figures[figIdx];
+    const line = figures[lineIdx];
+    if (!fig.closed) { showModal({title:'Error',body:'Solo se pueden cortar figuras cerradas.',buttons:[{label:'OK'}]}); return; }
+    if (fig.edges.some(e=>e.curved)) { showModal({title:'Error',body:'El corte solo funciona con figuras de aristas rectas por ahora.',buttons:[{label:'OK'}]}); return; }
+    // Aceptamos línea de corte recta o curva (cuadrática)
+    const cutEdges = line.edges;
+    const allIntersections = [];
+    for (let ei=0; ei<fig.edges.length; ei++) {
+      const e = fig.edges[ei], pA = fig.vertices[e.start], pB = fig.vertices[e.end];
+      for (const cutE of cutEdges) {
+        const cp1 = line.vertices[cutE.start], cp2 = line.vertices[cutE.end];
+        if (!cutE.curved) {
+          const inter = lineLineIntersection(pA, pB, cp1, cp2);
+          if (inter) allIntersections.push({edgeIdx: ei, point: inter, t: inter.t});
+        } else {
+          const ctrlX = cutE.controlX, ctrlY = cutE.controlY;
+          const inters = lineQuadIntersections(pA, pB, cp1, {x:ctrlX,y:ctrlY}, cp2);
+          inters.forEach(inter => allIntersections.push({edgeIdx: ei, point: inter.point, t: inter.tQuad}));
+        }
+      }
+    }
+    if (allIntersections.length !== 2) {
+      showModal({title:'Error',body:'La línea de corte debe cruzar exactamente dos aristas del polígono.',buttons:[{label:'OK'}]});
+      return;
+    }
+    allIntersections.sort((a,b) => a.edgeIdx - b.edgeIdx || a.t - b.t);
+    saveState();
+    for (let i=allIntersections.length-1; i>=0; i--) {
+      const inter = allIntersections[i], ei = inter.edgeIdx;
+      const figure = figures[figIdx], edge = figure.edges[ei];
+      const a = figure.vertices[edge.start], b = figure.vertices[edge.end];
+      const newPoint = {x: inter.point.x, y: inter.point.y};
+      const nvi = edge.end;
+      figure.vertices.splice(nvi, 0, newPoint);
+      figure.edges.forEach(e => { if (e.start >= nvi) e.start++; if (e.end >= nvi) e.end++; });
+      edge.end = nvi;
+      const newEdge = makeEdge(nvi, nvi+1);
+      figure.edges.splice(ei+1, 0, newEdge);
+    }
+    const verts = figures[figIdx].vertices;
+    const vi1 = verts.findIndex(v => Math.hypot(v.x-allIntersections[0].point.x, v.y-allIntersections[0].point.y) < 1);
+    const vi2 = verts.findIndex(v => Math.hypot(v.x-allIntersections[1].point.x, v.y-allIntersections[1].point.y) < 1);
+    if (vi1 === -1 || vi2 === -1) { undoAction(); showModal({title:'Error',body:'No se encontraron los puntos de corte.',buttons:[{label:'OK'}]}); return; }
+    const n = verts.length;
+    const poly1Verts = [], poly2Verts = [];
+    for (let i=vi1; i !== vi2; i = (i+1)%n) poly1Verts.push(verts[i]);
+    poly1Verts.push(verts[vi2]);
+    for (let i=vi2; i !== vi1; i = (i+1)%n) poly2Verts.push(verts[i]);
+    poly2Verts.push(verts[vi1]);
+    function buildPoly(verticesArray) {
+      const v = verticesArray.map(p=>({x:p.x, y:p.y}));
+      const m = v.length;
+      const e = [];
+      for (let i=0; i<m; i++) e.push({start:i, end:(i+1)%m, curved:false, cubic:false, controlX:null, controlY:null, control2X:null, control2Y:null});
+      return {vertices:v, edges:e, closed:true, grain:null};
+    }
+    figures.splice(figIdx, 1, buildPoly(poly1Verts), buildPoly(poly2Verts));
+    redrawAll();
+  }
+
+  // Dibujo
+  function redrawAll(){
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.setTransform(viewScale,0,0,viewScale,viewOffX,viewOffY);
+    figures.forEach((fig,fi)=>{ drawFigure(fig,fi); if(fig.grain && fig.closed) drawGrainArrow(fig); });
+    if(mode==='resize'&&selectedEdge) drawResizeIndicator();
+    if(mode==='addVertex') drawAllVertices();
+    if(mode==='line' && lineStartPoint) {
+      ctx.beginPath(); ctx.arc(lineStartPoint.x, lineStartPoint.y, 4/viewScale, 0, 2*Math.PI);
+      ctx.fillStyle = '#e67e22'; ctx.fill();
+    }
+    if(mode==='cut' && cutSelection !== null) {
+      const fig = figures[cutSelection];
+      if (fig) {
+        ctx.save();
+        ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 3/viewScale;
+        fig.edges.forEach(e => {
+          const a = fig.vertices[e.start], b = fig.vertices[e.end];
+          ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+        });
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawFigure(figure,fi){
+    ctx.save();
+    if (!figure.closed) {
+      ctx.strokeStyle = '#7f8c8d';
+      ctx.lineWidth = 2/viewScale;
+    } else {
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2/viewScale;
+    }
+    figure.edges.forEach((e,ei)=>{
+      const a=figure.vertices[e.start],b=figure.vertices[e.end];
+      const sel=mode==='joinCurves'&&joinSelection.some(s=>s.figureIndex===fi&&s.edgeIndex===ei);
+      ctx.beginPath();ctx.moveTo(a.x,a.y);
+      if(e.cubic&&e.control2X!=null) ctx.bezierCurveTo(e.controlX,e.controlY,e.control2X,e.control2Y,b.x,b.y);
+      else if(e.curved&&e.controlX!=null) ctx.quadraticCurveTo(e.controlX,e.controlY,b.x,b.y);
+      else ctx.lineTo(b.x,b.y);
+      if (sel) { ctx.strokeStyle='#e74c3c'; ctx.lineWidth=3/viewScale; }
+      ctx.stroke();
+      if (sel) { ctx.strokeStyle = '#000'; ctx.lineWidth = 2/viewScale; }
+    });
+    ctx.restore();
+  }
+
+  function drawGrainArrow(figure){
+    const c=getCentroid(figure),grain=figure.grain;if(!grain)return;
+    const len=28/viewScale,hs=7/viewScale;
+    ctx.save();ctx.strokeStyle='#1565c0';ctx.fillStyle='#1565c0';ctx.lineWidth=2/viewScale;
+    const dx=grain==='horizontal'?1:0,dy=grain==='horizontal'?0:1;
+    const x1=c.x-dx*len,y1=c.y-dy*len,x2=c.x+dx*len,y2=c.y+dy*len;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    function head(tx,ty,dirX,dirY){const px=-dirY,py=dirX;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx-dirX*hs+px*hs*0.45,ty-dirY*hs+py*hs*0.45);ctx.lineTo(tx-dirX*hs-px*hs*0.45,ty-dirY*hs-py*hs*0.45);ctx.closePath();ctx.fill();}
+    head(x2,y2, dx, dy);head(x1,y1,-dx,-dy);
+    ctx.restore();
+  }
+
+  function drawAllVertices(){
+    const r=6/viewScale;
+    figures.forEach(fig=>{fig.vertices.forEach(v=>{ctx.beginPath();ctx.arc(v.x,v.y,r,0,Math.PI*2);ctx.fillStyle='rgba(52,152,219,0.5)';ctx.fill();ctx.strokeStyle='#2980b9';ctx.lineWidth=1.5/viewScale;ctx.stroke();});});
+  }
+
+  function drawResizeIndicator(){
+    if(!selectedEdge)return;
+    const fig=figures[selectedEdge.figureIndex],edge=fig.edges[selectedEdge.edgeIndex];
+    const a=fig.vertices[edge.start],b=fig.vertices[edge.end],r=6/viewScale;
+    const moveB=Math.hypot(selectedEdge.clickX-b.x,selectedEdge.clickY-b.y)<Math.hypot(selectedEdge.clickX-a.x,selectedEdge.clickY-a.y);
+    const mv=moveB?b:a,fx=moveB?a:b;
+    ctx.beginPath();ctx.arc(fx.x,fx.y,r,0,Math.PI*2);ctx.fillStyle='#27ae60';ctx.fill();
+    ctx.beginPath();ctx.arc(mv.x,mv.y,r,0,Math.PI*2);ctx.fillStyle='#e74c3c';ctx.fill();
+    document.getElementById('resizeIndicator').textContent='← extremo '+(moveB?'B':'A')+' (rojo)';
+  }
+
+  // Eventos
+  canvas.addEventListener('touchstart',e=>{isTouchDevice=true;handleTouchStart(e);},{passive:false});
+  canvas.addEventListener('touchmove', handleTouchMove,{passive:false});
+  canvas.addEventListener('touchend',  handleTouchEnd, {passive:true});
+  canvas.addEventListener('mousedown', e=>{if(!isTouchDevice)handleMouseDown(e);});
+  canvas.addEventListener('mousemove', e=>{if(!isTouchDevice)handleMouseMove(e);});
+  canvas.addEventListener('mouseup',   e=>{if(!isTouchDevice)handleMouseUp(e);});
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+  function getPos(e){
+    const r=canvas.getBoundingClientRect();
+    const sx=(e.clientX??(e.touches&&e.touches[0].clientX))-r.left;
+    const sy=(e.clientY??(e.touches&&e.touches[0].clientY))-r.top;
+    return{sx,sy,...screenToWorld(sx,sy)};
+  }
+
+  function handleTouchStart(e){
+    if(e.touches.length===1){
+      e.preventDefault();
+      const pos=getPos(e);
+      const now=Date.now();
+      if(now-lastTouchTime<300){applyZoom(-1,pos.sx,pos.sy);lastTouchTime=0;return;}
+      lastTouchTime=now;
+      handlePointerDown(pos);
+    } else if(e.touches.length===2){
+      pinchStartDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      pinchStartScale=viewScale;dragData=null;
+    }
+  }
+  function handleTouchMove(e){
+    if(e.touches.length===2&&pinchStartDist!==null){
+      e.preventDefault();
+      const dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      const cx=(e.touches[0].clientX+e.touches[1].clientX)/2,cy=(e.touches[0].clientY+e.touches[1].clientY)/2;
+      const r=canvas.getBoundingClientRect();
+      const ns=Math.min(10,Math.max(0.01,pinchStartScale*(dist/pinchStartDist)));
+      viewOffX=(cx-r.left)-(cx-r.left-viewOffX)*(ns/viewScale);
+      viewOffY=(cy-r.top )-(cy-r.top -viewOffY)*(ns/viewScale);
+      viewScale=ns;updateZoomIndicator();redrawAll();
+    } else if(e.touches.length===1&&dragData){
+      e.preventDefault();handlePointerMove(getPos(e));
+    }
+  }
+  function handleTouchEnd(e){if(e.touches.length<2)pinchStartDist=null;if(e.touches.length===0)dragData=null;}
+
+  function handleMouseDown(e){
+    e.preventDefault();
+    const pos=getPos(e);
+    if(e.button===1||e.button===2||(e.button===0&&e.altKey)){
+      isPanning=true; panStart={x:pos.sx-pos.x,y:pos.sy-pos.y}; return;
+    }
+    handlePointerDown(pos);
+  }
+  function handleMouseMove(e){
+    e.preventDefault();
+    if(isPanning){
+      const r=canvas.getBoundingClientRect();
+      const sx=e.clientX-r.left,sy=e.clientY-r.top;
+      viewOffX=sx-panStart.x*viewScale; viewOffY=sy-panStart.y*viewScale;
+      redrawAll();return;
+    }
+    if(dragData) handlePointerMove(getPos(e));
+    else if(mode==='line' && lineStartPoint) {
+      const pos=getPos(e); redrawAll();
+      ctx.save(); ctx.setTransform(viewScale,0,0,viewScale,viewOffX,viewOffY);
+      ctx.beginPath(); ctx.moveTo(lineStartPoint.x, lineStartPoint.y); ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle='#7f8c8d'; ctx.setLineDash([]); ctx.lineWidth=2/viewScale; ctx.stroke();
+      ctx.restore();
+    }
+  }
+  function handleMouseUp(e){e.preventDefault();isPanning=false;dragData=null;}
+
+  function handlePointerDown(pos){
+    const wx=pos.x,wy=pos.y;
+    if(mode==='create'){
+      const s=parseInt(document.getElementById('sidesInput').value);
+      if(s>=3&&s<=10){saveState();figures.push(createPolygon(wx,wy,s));redrawAll();}
+    }
+    else if(mode==='line'){
+      if (!lineStartPoint) {
+        let start = {x: wx, y: wy};
+        if (snapEnabled) start = applySnap(wx, wy, -1, -1);
+        lineStartPoint = start;
+        redrawAll();
+      } else {
+        let end = {x: wx, y: wy};
+        if (snapEnabled) end = applySnap(wx, wy, -1, -1);
+        saveState();
+        figures.push(createLine(lineStartPoint, end));
+        lineStartPoint = null;
+        redrawAll();
+      }
+    }
+    else if(mode==='grain'){
+      const fi=findClickedFigure(wx,wy);
+      if(fi!==-1 && figures[fi].closed){
+        saveState();
+        figures[fi].grain = (figures[fi].grain === grainDir) ? null : grainDir;
+        redrawAll();
+      }
+    }
+    else if(mode==='move'){
+      const fi=findClickedFigure(wx,wy);
+      if(fi!==-1){saveState();dragData={type:'figure',figureIndex:fi,startX:wx,startY:wy};}
+    }
+    else if(mode==='vertex'){
+      const nv=findNearestVertex(wx,wy);
+      if(nv){
+        saveState();selectedVertex=nv;
+        const v=figures[nv.figureIndex].vertices[nv.vertexIndex];
+        document.getElementById('vertexX').value=pxToCm(v.x);
+        document.getElementById('vertexY').value=pxToCm(v.y);
+        showPanel('vertexInputs');
+        dragData={type:'vertex',figureIndex:nv.figureIndex,vertexIndex:nv.vertexIndex};
+      }
+    }
+    else if(mode==='addVertex'){
+      const ne=findNearestEdge(wx,wy);
+      if(ne){saveState();addVertexOnEdge(ne.figureIndex,ne.edgeIndex,wx,wy);redrawAll();}
+    }
+    else if(mode==='curve'){
+      const ne=findNearestEdge(wx,wy);
+      if(ne){
+        saveState();const edge=figures[ne.figureIndex].edges[ne.edgeIndex];
+        edge.curved=true;edge.cubic=false;edge.controlX=wx;edge.controlY=wy;edge.control2X=null;edge.control2Y=null;
+        dragData={type:'curve',figureIndex:ne.figureIndex,edgeIndex:ne.edgeIndex};redrawAll();
+      }
+    }
+    else if(mode==='straighten'){
+      const ne=findNearestEdge(wx,wy);
+      if(ne){const edge=figures[ne.figureIndex].edges[ne.edgeIndex];if(edge.curved){saveState();edge.curved=false;edge.cubic=false;edge.controlX=null;edge.controlY=null;edge.control2X=null;edge.control2Y=null;redrawAll();}}
+    }
+    else if(mode==='joinCurves'){
+      const ne=findNearestEdge(wx,wy);
+      if(ne){
+        const edge=figures[ne.figureIndex].edges[ne.edgeIndex];if(!edge.curved)return;
+        const idx=joinSelection.findIndex(s=>s.figureIndex===ne.figureIndex&&s.edgeIndex===ne.edgeIndex);
+        if(idx>=0)joinSelection.splice(idx,1);else joinSelection.push({figureIndex:ne.figureIndex,edgeIndex:ne.edgeIndex});
+        redrawAll();
+      }
+    }
+    else if(mode==='resize'){
+      const ne=findNearestEdge(wx,wy);
+      if(ne){
+        const fig=figures[ne.figureIndex],edge=fig.edges[ne.edgeIndex];
+        const a=fig.vertices[edge.start],b=fig.vertices[edge.end];
+        selectedEdge={figureIndex:ne.figureIndex,edgeIndex:ne.edgeIndex,clickX:wx,clickY:wy};
+        document.getElementById('resizeValue').value=pxToCm(Math.hypot(b.x-a.x,b.y-a.y));
+        showPanel('resizeInputs');redrawAll();
+      }
+    }
+    else if(mode==='offset'){
+      const ne=findNearestEdge(wx,wy);
+      if(ne){
+        selectedEdge = {figureIndex:ne.figureIndex, edgeIndex:ne.edgeIndex};
+        document.getElementById('offsetValue').value = '1.0';
+        showPanel('offsetInputs'); redrawAll();
+      }
+    }
+    else if(mode==='cut'){
+      const fi = findClickedFigure(wx,wy);
+      if (fi !== -1) {
+        if (cutSelection === null) {
+          if (!figures[fi].closed) { showModal({title:'Error',body:'Primero selecciona la figura cerrada a cortar.',buttons:[{label:'OK'}]}); return; }
+          cutSelection = fi;
+          redrawAll();
+        } else {
+          if (figures[fi].closed) { showModal({title:'Error',body:'Ahora selecciona la línea de corte (abierta).',buttons:[{label:'OK'}]}); return; }
+          cutFigureWithLine(cutSelection, fi);
+          cutSelection = null;
+          redrawAll();
+        }
+      }
+    }
+    else if(mode==='rotate'){
+      const fi=findClickedFigure(wx,wy);
+      if(fi!==-1){saveState();rotateFigure(fi,parseFloat(document.getElementById('rotateInput').value)||90);redrawAll();}
+    }
+    else if(mode==='duplicate'){const fi=findClickedFigure(wx,wy);if(fi!==-1){saveState();duplicateFigure(fi);redrawAll();}}
+    else if(mode==='reflect'){const fi=findClickedFigure(wx,wy);if(fi!==-1){saveState();reflectFigure(fi);redrawAll();}}
+    else if(mode==='delete'){const fi=findClickedFigure(wx,wy);if(fi!==-1){saveState();figures.splice(fi,1);redrawAll();}}
+    else if(mode==='mirror'){const ne=findNearestEdge(wx,wy);if(ne){saveState();unfoldFigureInPlace(figures[ne.figureIndex],ne.edgeIndex);redrawAll();}}
+  }
+
+  function handlePointerMove(pos){
+    const wx=pos.x,wy=pos.y;
+    if(!dragData) return;
+    if(dragData.type==='figure'){
+      const dx=wx-dragData.startX,dy=wy-dragData.startY;
+      const f=figures[dragData.figureIndex];
+      f.vertices.forEach(v=>{v.x+=dx;v.y+=dy;});
+      f.edges.forEach(e=>{if(e.controlX!=null){e.controlX+=dx;e.controlY+=dy;}if(e.control2X!=null){e.control2X+=dx;e.control2Y+=dy;}});
+      if (snapEnabled) {
+        for (let vi=0; vi<f.vertices.length; vi++) {
+          const v = f.vertices[vi];
+          for (let ofi=0; ofi<figures.length; ofi++) {
+            if (ofi === dragData.figureIndex) continue;
+            for (let ovi=0; ovi<figures[ofi].vertices.length; ovi++) {
+              const ov = figures[ofi].vertices[ovi];
+              if (Math.hypot(v.x-ov.x, v.y-ov.y) < SNAP_THR) {
+                const offsetX = ov.x - v.x, offsetY = ov.y - v.y;
+                f.vertices.forEach(vert => {vert.x += offsetX; vert.y += offsetY;});
+                f.edges.forEach(e => {if(e.controlX!=null){e.controlX+=offsetX;e.controlY+=offsetY;}if(e.control2X!=null){e.control2X+=offsetX;e.control2Y+=offsetY;}});
+                dragData.startX = wx; dragData.startY = wy;
+                redrawAll(); return;
+              }
+            }
+          }
+        }
+      }
+      dragData.startX=wx;dragData.startY=wy;redrawAll();
+    }
+    else if(dragData.type==='vertex'){
+      let nx=wx,ny=wy;
+      if(snapEnabled){const s=applySnap(wx,wy,dragData.figureIndex,dragData.vertexIndex);nx=s.x;ny=s.y;}
+      figures[dragData.figureIndex].vertices[dragData.vertexIndex].x=nx;
+      figures[dragData.figureIndex].vertices[dragData.vertexIndex].y=ny;
+      document.getElementById('vertexX').value=pxToCm(nx);
+      document.getElementById('vertexY').value=pxToCm(ny);
+      redrawAll(); if(snapEnabled) drawSnapGuides(nx,ny,dragData.figureIndex,dragData.vertexIndex);
+    }
+    else if(dragData.type==='curve'){
+      const ed=figures[dragData.figureIndex].edges[dragData.edgeIndex];
+      ed.controlX=wx;ed.controlY=wy;redrawAll();
+    }
+  }
+
+  function applyResize(){
+    if(!selectedEdge){showModal({title:'Error',body:'Primero selecciona una arista.',buttons:[{label:'OK'}]});return;}
+    const newPx=cmToPx(document.getElementById('resizeValue').value);
+    if(isNaN(newPx)||newPx<=0){showModal({title:'Valor inválido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
+    saveState();resizeEdge(selectedEdge.figureIndex,selectedEdge.edgeIndex,newPx,selectedEdge.clickX,selectedEdge.clickY);
+    hidePanel('resizeInputs');redrawAll();
+  }
+
+  function applyVertexCoordinates(){
+    if(!selectedVertex){showModal({title:'Error',body:'Primero selecciona un vértice.',buttons:[{label:'OK'}]});return;}
+    const x=cmToPx(document.getElementById('vertexX').value), y=cmToPx(document.getElementById('vertexY').value);
+    if(isNaN(x)||isNaN(y)){showModal({title:'Valor inválido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
+    saveState();
+    figures[selectedVertex.figureIndex].vertices[selectedVertex.vertexIndex].x=x;
+    figures[selectedVertex.figureIndex].vertices[selectedVertex.vertexIndex].y=y;
+    hidePanel('vertexInputs');redrawAll();
+  }
+
+  function exportJSON(){
+    const data={
+      unit:'cm',pxPerCm:PX_PER_CM,grainDirection:grainDir,
+      figures:figures.map(fig=>({
+        grain:fig.grain||null, closed:fig.closed,
+        vertices:fig.vertices.map(v=>({x:v.x,y:v.y,xCm:pxToCm(v.x),yCm:pxToCm(v.y)})),
+        edges:fig.edges
+      }))
+    };
+    const json=JSON.stringify(data,null,2);
+    showModal({title:'Exportar — patron.json',textarea:json,
+      buttons:[{label:'📋 Copiar',value:'copy'},{label:'💾 Descargar',value:'dl'},{label:'✖ Cerrar',value:'close'}]
+    }).then(a=>{
+      if(a==='copy'){
+        (navigator.clipboard?navigator.clipboard.writeText(json):Promise.reject())
+          .catch(()=>{const ta=document.querySelector('.modal-box textarea');if(ta){ta.select();document.execCommand('copy');}});
+      } else if(a==='dl'){
+        try{
+          const blob=new Blob([json],{type:'application/json'}),url=URL.createObjectURL(blob),el=document.createElement('a');
+          el.href=url;el.download='patron.json';document.body.appendChild(el);el.click();
+          setTimeout(()=>{document.body.removeChild(el);URL.revokeObjectURL(url);},300);
+        }catch{
+          const el=document.createElement('a');
+          el.href='data:application/json;charset=utf-8,'+encodeURIComponent(json);
+          el.download='patron.json';document.body.appendChild(el);el.click();document.body.removeChild(el);
+        }
+      }
+    });
+  }
+
+  function importJSON(){
+    const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+    inp.onchange=e=>{
+      const file=e.target.files[0];if(!file)return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        try{
+          const data=JSON.parse(ev.target.result);
+          if(data.figures&&Array.isArray(data.figures)){
+            if(data.grainDirection){grainDir=data.grainDirection;document.getElementById('grainDirBtn').textContent=grainDir==='horizontal'?'→':'↓';}
+            saveState();figures=data.figures;redrawAll();
+          } else if(Array.isArray(data)){
+            if(!data.every(f=>f.vertices&&f.edges)){showModal({title:'Error',body:'Formato incorrecto.',buttons:[{label:'OK'}]});return;}
+            saveState();figures=data;redrawAll();
+          } else showModal({title:'Error',body:'Formato incorrecto.',buttons:[{label:'OK'}]});
+        }catch(err){showModal({title:'Error',body:err.message,buttons:[{label:'OK'}]});}
+      };
+      reader.readAsText(file);
+    };
+    inp.click();
+  }
+
+  document.addEventListener('keydown',e=>{
+    if(e.ctrlKey&&e.key==='z'&&!e.shiftKey){e.preventDefault();undoAction();}
+    if(e.key==='0'&&e.ctrlKey){e.preventDefault();resetView();}
+  });
+  updateZoomIndicator();
+  </script>
+</body>
+</html>
