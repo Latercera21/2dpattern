@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Corte real de cuadrado con curva</title>
+</head>
+<body>
+    <canvas id="canvas" width="500" height="500" style="border:1px solid black"></canvas>
+    <br>
+    <button id="cortar">Cortar</button>
+    <button id="reset">Reset</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let cortado = false;
+        let pieza1 = { x: 0, y: 0, arrastrando: false };
+        let pieza2 = { x: 0, y: 0, arrastrando: false };
+        
+        // Cuadrado original
+        const cx = 150, cy = 150, ancho = 200, alto = 200;
+        
+        // Curva: de (cx, cy+80) a (cx+200, cy+120) con control en (cx+100, cy+40)
+        
+        function obtenerPuntoCurva(t) {
+            // Puntos absolutos
+            const p0 = { x: cx, y: cy + 80 };
+            const p1 = { x: cx + 100, y: cy + 40 };
+            const p2 = { x: cx + 200, y: cy + 120 };
+            const mt = 1 - t;
+            return {
+                x: mt*mt*p0.x + 2*mt*t*p1.x + t*t*p2.x,
+                y: mt*mt*p0.y + 2*mt*t*p1.y + t*t*p2.y
+            };
+        }
+        
+        function dibujar() {
+            ctx.clearRect(0, 0, 500, 500);
+            
+            if (!cortado) {
+                ctx.beginPath();
+                ctx.rect(cx, cy, ancho, alto);
+                ctx.stroke();
+                return;
+            }
+            
+            // Dibujar pieza 1 (parte superior)
+            ctx.beginPath();
+            ctx.moveTo(cx + pieza1.x, cy + pieza1.y);
+            ctx.lineTo(cx + ancho + pieza1.x, cy + pieza1.y);
+            for (let t = 1; t >= 0; t -= 0.02) {
+                let p = obtenerPuntoCurva(t);
+                ctx.lineTo(p.x + pieza1.x, p.y + pieza1.y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Dibujar pieza 2 (parte inferior)
+            ctx.beginPath();
+            ctx.moveTo(cx + pieza2.x, cy + alto + pieza2.y);
+            ctx.lineTo(cx + ancho + pieza2.x, cy + alto + pieza2.y);
+            for (let t = 1; t >= 0; t -= 0.02) {
+                let p = obtenerPuntoCurva(t);
+                ctx.lineTo(p.x + pieza2.x, p.y + pieza2.y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+        
+        // Detectar qué pieza está bajo el mouse
+        function puntoEnPieza(mx, my, pieza, esSuperior) {
+            // Versión simplificada: bounding box
+            const minX = cx + pieza.x;
+            const maxX = cx + ancho + pieza.x;
+            const minY = esSuperior ? cy + pieza.y : cy + alto/2 + pieza.y;
+            const maxY = esSuperior ? cy + alto/2 + pieza.y : cy + alto + pieza.y;
+            return (mx >= minX && mx <= maxX && my >= minY && my <= maxY);
+        }
+        
+        let dragging = false;
+        let currentPiece = null;
+        let dragStartX = 0, dragStartY = 0;
+        let pieceStartX = 0, pieceStartY = 0;
+        
+        canvas.addEventListener('mousedown', (e) => {
+            if (!cortado) return;
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) * (500 / rect.width);
+            const my = (e.clientY - rect.top) * (500 / rect.height);
+            
+            if (puntoEnPieza(mx, my, pieza1, true)) {
+                dragging = true;
+                currentPiece = pieza1;
+                dragStartX = mx;
+                dragStartY = my;
+                pieceStartX = pieza1.x;
+                pieceStartY = pieza1.y;
+            } else if (puntoEnPieza(mx, my, pieza2, false)) {
+                dragging = true;
+                currentPiece = pieza2;
+                dragStartX = mx;
+                dragStartY = my;
+                pieceStartX = pieza2.x;
+                pieceStartY = pieza2.y;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!dragging || !currentPiece) return;
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) * (500 / rect.width);
+            const my = (e.clientY - rect.top) * (500 / rect.height);
+            
+            currentPiece.x = pieceStartX + (mx - dragStartX);
+            currentPiece.y = pieceStartY + (my - dragStartY);
+            dibujar();
+        });
+        
+        window.addEventListener('mouseup', () => {
+            dragging = false;
+            currentPiece = null;
+        });
+        
+        function cortar() {
+            cortado = true;
+            pieza1 = { x: 0, y: 0, arrastrando: false };
+            pieza2 = { x: 0, y: 0, arrastrando: false };
+            dibujar();
+        }
+        
+        function reset() {
+            cortado = false;
+            dibujar();
+        }
+        
+        document.getElementById('cortar').onclick = cortar;
+        document.getElementById('reset').onclick = reset;
+        
+        dibujar();
+    </script>
+</body>
+</html>
