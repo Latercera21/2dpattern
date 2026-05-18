@@ -5,7 +5,7 @@
     </head>
     <body>
         <button></button>
-        <canvas id="canvas" style="border: 1px solid black"></canvas>
+        <canvas id="canvas" style="border: 1px solid black; touch-action: none;"></canvas>
         <script>
             document.addEventListener("touchstart", e => {
                 if (e.touches.length < 2) {
