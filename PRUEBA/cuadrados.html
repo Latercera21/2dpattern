@@ -4,15 +4,12 @@
 
     </head>
     <body>
-        <button id="✂️"></button>
-        <button id="">🖍️</button> 
+        <button id="cortar">✂️</button>
+        <button id="trazo">🖍️</button> 
         <canvas id="canvas" style="border: 1px solid black; touch-action: none;"></canvas>
-        <script>
-
-
-
-
-            document.addEventListener("touchstart", e => {
+        <script>
+          const canvas = document.getElementById("canvas");
+          const ctx = canvas.getContext("2d"); document.addEventListener("touchstart", e => {
                 if (e.touches.length < 2) {
                     e.preventDefault();
                 }
@@ -23,6 +20,7 @@
                     e.preventDefault();
                 }
             }, {passive: false});
+          const 
         </script>
     </body>
 </html>
