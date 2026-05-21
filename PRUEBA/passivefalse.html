@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    </head>
+    <body>
+        <button id="cortar">✂️</button>
+        <button id="trazo">🖍️</button> 
+        <canvas id="canvas" style="border: 1px solid black; touch-action: none;"></canvas>
+        <script>
+
+          const canvas = document.getElementById("canvas");
+          const ctx = canvas.getContext("2d"); 
+          document.addEventListener("touchstart", e => {
+                if (e.touches.length < 2) {
+                    e.preventDefault();
+                }
+            }, {passive: false});
+
+            document.addEventListener("touchmove", e => {
+                if (e.touches.length < 2) {
+                    e.preventDefault();
+                }
+            }, {passive: false});
+           function touch () {
+               const touchX = e.touches[0];
+               const touchY = e.touches[0];
+        </script>
+    </body>
+</html>

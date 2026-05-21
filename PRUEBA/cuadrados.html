@@ -7,22 +7,42 @@
         <button id="cortar">✂️</button>
         <button id="trazo">🖍️</button> 
         <canvas id="canvas" style="border: 1px solid black; touch-action: none;"></canvas>
-        <script>
+        <script>
           const canvas = document.getElementById("canvas");
-          const ctx = canvas.getContext("2d"); document.addEventListener("touchstart", e => {
-                if (e.touches.length < 2) {
-                    e.preventDefault();
-                }
-            }, {passive: false});
+          const ctx = canvas.getContext("2d");
+          let dibujando = false;
 
-            document.addEventListener("touchmove", e => {
-                if (e.touches.length < 2) {
-                    e.preventDefault();
-                }
-            }, {passive: false});
-           function touch () {
-               const touchX = e.touches[0];
-               const touchY = e.touches[0];
+          function obtenerCoordenadas(e) {
+              const rect = canvas.getBoundingClientRect();
+              return {
+                  x: e.clientX - rect.left,
+                  y: e.clientY - rect.top
+              };
+          }
+
+          canvas.addEventListener("pointerdown", function(e) {
+              e.preventDefault();
+              dibujando = true;
+              const coords = obtenerCoordenadas(e);
+              ctx.beginPath();
+              ctx.moveTo(coords.x, coords.y);
+          });
+
+          canvas.addEventListener("pointermove", function(e) {
+              if (!dibujando) return;
+              e.preventDefault();
+              const coords = obtenerCoordenadas(e);
+              ctx.lineTo(coords.x, coords.y);
+              ctx.stroke();
+          });
+
+          canvas.addEventListener("pointerup", function(e) {
+              dibujando = false;
+          });
+
+          canvas.addEventListener("pointercancel", function(e) {
+              dibujando = false;
+          });
         </script>
     </body>
 </html>
