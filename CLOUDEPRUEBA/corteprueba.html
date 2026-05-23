@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corte con curva</title>
+<style>
+  body { margin:0; padding:12px; font-family:sans-serif; background:#fff; }
+  canvas { display:block; border:1px solid #ccc; touch-action:none; }
+  #controls { padding:8px 0; display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  button { padding:7px 14px; font-size:13px; cursor:pointer; }
+  button.active { background:#111; color:#fff; }
+  button:disabled { opacity:0.35; cursor:default; }
+  #info { font-size:13px; color:#555; text-align:center; padding:4px 0; min-height:18px; }
+  #modal-overlay { display:none; position:fixed; top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.5); z-index:100; align-items:center; justify-content:center; }
+  #modal-overlay.open { display:flex; }
+  #modal-box { background:#fff; padding:16px; border-radius:8px; width:90%; max-width:480px; }
+  #modal-box textarea { width:100%; height:200px; font-size:11px; font-family:monospace;
+    box-sizing:border-box; resize:vertical; }
+  #modal-actions { display:flex; gap:8px; margin-top:8px; justify-content:flex-end; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="controls">
+  <button id="btnLinea"  class="active">Línea</button>
+  <button id="btnCurvar" disabled>Curvar</button>
+  <button id="btnMover">Mover</button>
+  <button id="btnCortar" disabled>Cortar</button>
+  <button id="btnExport" disabled>JSON</button>
+  <button id="btnReset">Reiniciar</button>
+</div>
+<div id="info">Activa "Línea" y arrastra para trazar la línea de corte.</div>
+
+<div id="modal-overlay">
+  <div id="modal-box">
+    <textarea id="jsonout" readonly></textarea>
+    <div id="modal-actions">
+      <button id="btnCopy">Copiar</button>
+      <button id="btnClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('info');
+
+const btnLinea  = document.getElementById('btnLinea');
+const btnCurvar = document.getElementById('btnCurvar');
+const btnMover  = document.getElementById('btnMover');
+const btnCortar = document.getElementById('btnCortar');
+const btnExport = document.getElementById('btnExport');
+const btnReset  = document.getElementById('btnReset');
+const modalOverlay = document.getElementById('modal-overlay');
+const jsonout   = document.getElementById('jsonout');
+const btnCopy   = document.getElementById('btnCopy');
+const btnClose  = document.getElementById('btnClose');
+
+const DPR = window.devicePixelRatio || 1;
+canvas.width  = window.innerWidth * DPR;
+canvas.height = 420 * DPR;
+canvas.style.width  = window.innerWidth + 'px';
+canvas.style.height = '420px';
+ctx.scale(DPR, DPR);
+const W = window.innerWidth, H = 420;
+
+// ── estado global ──────────────────────────────────────
+const basePoly = [
+  {x:160,y:80},{x:310,y:55},{x:400,y:130},
+  {x:390,y:280},{x:250,y:330},{x:100,y:250}
+];
+
+// 'line' | 'curve' | 'move' — modo activo
+let mode = 'line';
+
+// fase: 'draw' (sin línea aún) | 'ready' (línea definida) | 'done' (cortado)
+let phase = 'draw';
+
+let polyOffset = {x:0, y:0};
+let lineP1 = null, lineP2 = null;
+let midTouch = null;          // punto por donde pasa la curva (sin offset)
+let lineOffset = {x:0, y:0};
+
+let pieces = null;            // [{pts, offset}]
+
+// estado de arrastre — solo activo mientras el puntero está presionado
+let active = false;           // ¿está el puntero presionado?
+let dragTarget = null;        // 'poly' | 'line' | 0 | 1 (índice pieza)
+let dragStart  = null;
+let dragSnap   = null;        // offset inicial al empezar drag
+
+// ── geometría ──────────────────────────────────────────
+function getPoly(){
+  return basePoly.map(p=>({x:p.x+polyOffset.x, y:p.y+polyOffset.y}));
+}
+function getLP1(){ return lineP1 ? {x:lineP1.x+lineOffset.x, y:lineP1.y+lineOffset.y} : null; }
+function getLP2(){ return lineP2 ? {x:lineP2.x+lineOffset.x, y:lineP2.y+lineOffset.y} : null; }
+function getMT(){
+  return midTouch ? {x:midTouch.x+lineOffset.x, y:midTouch.y+lineOffset.y} : null;
+}
+
+function controlFromMid(p0,pm,p2){
+  return {x:(pm.x-0.25*p0.x-0.25*p2.x)/0.5,
+          y:(pm.y-0.25*p0.y-0.25*p2.y)/0.5};
+}
+function sampleBezier(p0,cp,p2,n=100){
+  const pts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    pts.push({x:(1-t)*(1-t)*p0.x+2*(1-t)*t*cp.x+t*t*p2.x,
+              y:(1-t)*(1-t)*p0.y+2*(1-t)*t*cp.y+t*t*p2.y});
+  }
+  return pts;
+}
+function getCurve(){
+  const lp1=getLP1(), lp2=getLP2(), mt=getMT();
+  if(!lp1||!lp2) return [];
+  if(!mt) return [lp1,lp2];
+  return sampleBezier(lp1, controlFromMid(lp1,mt,lp2), lp2, 100);
+}
+
+function segIntersect(a,b,c,d){
+  const dx1=b.x-a.x,dy1=b.y-a.y,dx2=d.x-c.x,dy2=d.y-c.y;
+  const den=dx1*dy2-dy1*dx2;
+  if(Math.abs(den)<1e-10) return null;
+  const dx3=c.x-a.x,dy3=c.y-a.y;
+  const t=(dx3*dy2-dy3*dx2)/den, s=(dx3*dy1-dy3*dx1)/den;
+  if(t<0||t>1||s<0||s>1) return null;
+  return {x:a.x+t*dx1,y:a.y+t*dy1,edgeIdx:-1,strokeIdx:-1};
+}
+function findCrossings(poly,stroke){
+  const n=poly.length, cx=[];
+  for(let si=0;si<stroke.length-1;si++)
+    for(let ei=0;ei<n;ei++){
+      const h=segIntersect(stroke[si],stroke[si+1],poly[ei],poly[(ei+1)%n]);
+      if(h){h.edgeIdx=ei;h.strokeIdx=si;cx.push(h);}
+    }
+  cx.sort((a,b)=>a.strokeIdx-b.strokeIdx);
+  return cx;
+}
+function splitWithCurve(poly,stroke){
+  const cx=findCrossings(poly,stroke);
+  if(cx.length<2) return null;
+  const c0=cx[0], c1=cx[cx.length-1], n=poly.length;
+  const fwd=[c0,...stroke.slice(c0.strokeIdx+1,c1.strokeIdx+1),c1];
+  const rev=[...fwd].reverse();
+
+  if(c0.edgeIdx===c1.edgeIdx){
+    const e=c0.edgeIdx;
+    const pA=[...fwd, c0];
+    const pB=[];
+    for(let i=0;i<n;i++){
+      pB.push(poly[i]);
+      if(i===e) for(const p of fwd) pB.push(p);
+    }
+    return [pA,pB];
+  }
+
+  const pA=[c0]; let i=(c0.edgeIdx+1)%n;
+  while(i!==(c1.edgeIdx+1)%n){pA.push(poly[i]);i=(i+1)%n;}
+  pA.push(c1,...rev);
+  const pB=[c1]; i=(c1.edgeIdx+1)%n;
+  while(i!==(c0.edgeIdx+1)%n){pB.push(poly[i]);i=(i+1)%n;}
+  pB.push(c0,...fwd);
+  return [pA,pB];
+}
+function centroid(pts){
+  let x=0,y=0; for(const p of pts){x+=p.x;y+=p.y;}
+  return {x:x/pts.length,y:y/pts.length};
+}
+
+// ── hit testing ────────────────────────────────────────
+function nearSegment(p,a,b,tol=22){
+  const dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
+  if(len2===0) return Math.hypot(p.x-a.x,p.y-a.y)<tol;
+  const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/len2));
+  return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy)<tol;
+}
+function nearPolyBB(p){
+  const poly=getPoly(),xs=poly.map(v=>v.x),ys=poly.map(v=>v.y);
+  return p.x>=Math.min(...xs)-20&&p.x<=Math.max(...xs)+20&&
+         p.y>=Math.min(...ys)-20&&p.y<=Math.max(...ys)+20;
+}
+function nearLine(p){
+  const lp1=getLP1(),lp2=getLP2();
+  return lp1&&lp2 ? nearSegment(p,lp1,lp2) : false;
+}
+function nearPieceBB(piece,p){
+  const pts=piece.pts.map(v=>({x:v.x+piece.offset.x,y:v.y+piece.offset.y}));
+  const xs=pts.map(v=>v.x),ys=pts.map(v=>v.y);
+  return p.x>=Math.min(...xs)-20&&p.x<=Math.max(...xs)+20&&
+         p.y>=Math.min(...ys)-20&&p.y<=Math.max(...ys)+20;
+}
+
+// ── render ─────────────────────────────────────────────
+function drawPath(pts,ox=0,oy=0){
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x+ox,pts[0].y+oy);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x+ox,pts[i].y+oy);
+  ctx.closePath();
+}
+function render(){
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='#111'; ctx.fillStyle='#111'; ctx.lineWidth=1.5;
+
+  if(phase==='done'&&pieces){
+    for(const piece of pieces){
+      drawPath(piece.pts,piece.offset.x,piece.offset.y);
+      ctx.stroke();
+    }
+    return;
+  }
+
+  drawPath(getPoly()); ctx.stroke();
+
+  const curve=getCurve();
+  if(curve.length>1){
+    ctx.beginPath();
+    ctx.moveTo(curve[0].x,curve[0].y);
+    for(let i=1;i<curve.length;i++) ctx.lineTo(curve[i].x,curve[i].y);
+    ctx.stroke();
+  }
+}
+
+// ── utilidades UI ──────────────────────────────────────
+function setInfo(t){ info.textContent=t; }
+function setCursor(c){ canvas.style.cursor=c; }
+function updateModeButtons(){
+  btnLinea .classList.toggle('active', mode==='line');
+  btnCurvar.classList.toggle('active', mode==='curve');
+  btnMover .classList.toggle('active', mode==='move');
+}
+
+// ── eventos de puntero ─────────────────────────────────
+function pt(e){
+  const r=canvas.getBoundingClientRect();
+  const s=e.touches?e.touches[0]:e;
+  return {x:s.clientX-r.left, y:s.clientY-r.top};
+}
+
+// variables temporales para modo línea
+let lineDrawing=false, lineStart=null, lineLiveEnd=null;
+
+function onPointerDown(e){
+  e.preventDefault();
+  const p=pt(e);
+
+  if(mode==='line' && phase==='draw'){
+    lineDrawing=true;
+    lineStart=p;
+    lineLiveEnd=p;
+    return;
+  }
+
+  if(mode==='curve' && phase==='ready'){
+    active=true;
+    // inicializar midTouch donde toca el usuario
+    midTouch={x:p.x-lineOffset.x, y:p.y-lineOffset.y};
+    render();
+    return;
+  }
+
+  if(mode==='move'){
+    active=true; dragStart=p;
+    if(phase==='done'&&pieces){
+      for(let i=0;i<pieces.length;i++){
+        if(nearPieceBB(pieces[i],p)){
+          dragTarget=i; dragSnap={...pieces[i].offset}; return;
+        }
+      }
+    } else {
+      if(nearLine(p)){dragTarget='line';dragSnap={...lineOffset};}
+      else if(nearPolyBB(p)){dragTarget='poly';dragSnap={...polyOffset};}
+      else { active=false; }
+    }
+  }
+}
+
+function onPointerMove(e){
+  e.preventDefault();
+  const p=pt(e);
+
+  // modo línea: mostrar línea provisional mientras arrastra
+  if(mode==='line' && lineDrawing){
+    lineLiveEnd=p;
+    render();
+    ctx.beginPath();
+    ctx.strokeStyle='#111'; ctx.lineWidth=1.5;
+    ctx.moveTo(lineStart.x,lineStart.y);
+    ctx.lineTo(p.x,p.y);
+    ctx.stroke();
+    return;
+  }
+
+  // modo curvar: la curva sigue al dedo/mouse SOLO si active
+  if(mode==='curve' && active && phase==='ready'){
+    midTouch={x:p.x-lineOffset.x, y:p.y-lineOffset.y};
+    render();
+    return;
+  }
+
+  // modo mover
+  if(mode==='move' && active && dragTarget!==null){
+    const dx=p.x-dragStart.x, dy=p.y-dragStart.y;
+    if(phase==='done'&&typeof dragTarget==='number')
+      pieces[dragTarget].offset={x:dragSnap.x+dx,y:dragSnap.y+dy};
+    else if(dragTarget==='line')
+      lineOffset={x:dragSnap.x+dx,y:dragSnap.y+dy};
+    else if(dragTarget==='poly')
+      polyOffset={x:dragSnap.x+dx,y:dragSnap.y+dy};
+    render();
+  }
+}
+
+function onPointerUp(e){
+  e.preventDefault();
+
+  // modo línea: fijar la línea al soltar
+  if(mode==='line' && lineDrawing && lineLiveEnd){
+    lineDrawing=false;
+    lineP1={x:lineStart.x,y:lineStart.y};
+    lineP2={x:lineLiveEnd.x,y:lineLiveEnd.y};
+    lineStart=null; lineLiveEnd=null;
+    phase='ready';
+    btnCurvar.disabled=false;
+    btnCortar.disabled=false;
+    setInfo('Línea definida. Usa "Curvar" para doblarla o "Cortar" directamente.');
+    render();
+    return;
+  }
+
+  // modo curvar y mover: soltar
+  active=false;
+  dragTarget=null;
+}
+
+canvas.addEventListener('mousedown',  onPointerDown);
+canvas.addEventListener('mousemove',  onPointerMove);
+canvas.addEventListener('mouseup',    onPointerUp);
+canvas.addEventListener('mouseleave', onPointerUp);   // ← clave para PC
+canvas.addEventListener('touchstart', onPointerDown, {passive:false});
+canvas.addEventListener('touchmove',  onPointerMove, {passive:false});
+canvas.addEventListener('touchend',   onPointerUp,   {passive:false});
+
+// ── botones de modo ────────────────────────────────────
+btnLinea.addEventListener('click',()=>{
+  mode='line'; updateModeButtons(); setCursor('crosshair');
+  setInfo('Arrastra para trazar la línea de corte.');
+});
+btnCurvar.addEventListener('click',()=>{
+  if(phase==='draw'||phase==='done') return;
+  mode='curve'; updateModeButtons(); setCursor('ns-resize');
+  setInfo('Mantén presionado y arrastra para curvar la línea.');
+});
+btnMover.addEventListener('click',()=>{
+  mode='move'; updateModeButtons(); setCursor('grab');
+  setInfo('Arrastra la línea, polígono o piezas para moverlos.');
+});
+
+// ── botones de acción ──────────────────────────────────
+btnCortar.addEventListener('click',()=>{
+  const curve=getCurve();
+  const result=splitWithCurve(getPoly(),curve);
+  if(result){
+    const cx=W/2,cy=H/2,sep=30;
+    pieces=result.map(pts=>{
+      const c=centroid(pts);
+      const dx=c.x-cx,dy=c.y-cy,len=Math.hypot(dx,dy)||1;
+      return {pts,offset:{x:(dx/len)*sep,y:(dy/len)*sep}};
+    });
+    phase='done';
+    btnCortar.disabled=true;
+    btnCurvar.disabled=true;
+    btnLinea.disabled=true;
+    btnExport.disabled=false;
+    mode='move'; updateModeButtons(); setCursor('grab');
+    setInfo('Cortado. Usa "Mover" para separar las piezas.');
+    render();
+  } else {
+    setInfo('La línea no cruzó el polígono en dos puntos. Ajusta la posición.');
+  }
+});
+
+btnExport.addEventListener('click',()=>{
+  if(!pieces) return;
+  const data=pieces.map((piece,idx)=>({
+    pieza: idx+1,
+    vertices: piece.pts.map(p=>({
+      x:Math.round((p.x+piece.offset.x)*10)/10,
+      y:Math.round((p.y+piece.offset.y)*10)/10
+    }))
+  }));
+  jsonout.value=JSON.stringify(data,null,2);
+  modalOverlay.classList.add('open');
+});
+
+btnCopy.addEventListener('click',()=>{
+  jsonout.select(); jsonout.setSelectionRange(0,99999);
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(jsonout.value).then(()=>{
+      btnCopy.textContent='¡Copiado!';
+      setTimeout(()=>btnCopy.textContent='Copiar',1500);
+    });
+  } else {
+    document.execCommand('copy');
+    btnCopy.textContent='¡Copiado!';
+    setTimeout(()=>btnCopy.textContent='Copiar',1500);
+  }
+});
+btnClose.addEventListener('click',()=>modalOverlay.classList.remove('open'));
+
+btnReset.addEventListener('click',()=>{
+  phase='draw'; mode='line';
+  lineP1=null; lineP2=null; midTouch=null; lineLiveEnd=null; lineStart=null;
+  lineOffset={x:0,y:0}; polyOffset={x:0,y:0};
+  pieces=null; active=false; dragTarget=null; lineDrawing=false;
+  btnLinea.disabled=false; btnCurvar.disabled=true;
+  btnCortar.disabled=true; btnExport.disabled=true;
+  updateModeButtons(); setCursor('crosshair');
+  jsonout.value=''; modalOverlay.classList.remove('open');
+  setInfo('Activa "Línea" y arrastra para trazar la línea de corte.');
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
