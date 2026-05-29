@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+      body {
+        touch-action: none;
+        background-color: #dddddd;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="bline">🖍️</button>
+    <canvas id="canvas" style="border: 1px solid black"></canvas>
+    <script>
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = 400 * dpr;
+      canvas.height = 500 * dpr;
+      canvas.style.width = 400 + "px";
+      canvas.style.height = 500 + "px";
+      ctx.scale(dpr, dpr);
+
+      let scale = 1;
+      let offsetX = 0, offsetY = 0;
+      let lastDist = null;
+      let lastMidX = null, lastMidY = null;
+
+      document.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+
+        if (e.touches.length === 2) {
+          const t1 = e.touches[0], t2 = e.touches[1];
+
+          // Zoom
+          const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+          if (lastDist) {
+            scale *= dist / lastDist;
+            scale = Math.min(Math.max(scale, 0.5), 5);
+          }
+          lastDist = dist;
+
+          // Pan con dos dedos
+          const midX = (t1.clientX + t2.clientX) / 2;
+          const midY = (t1.clientY + t2.clientY) / 2;
+          if (lastMidX !== null) {
+            offsetX += midX - lastMidX;
+            offsetY += midY - lastMidY;
+          }
+          lastMidX = midX;
+          lastMidY = midY;
+
+          document.body.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+          document.body.style.transformOrigin = "0 0";
+        }
+      }, { passive: false });
+
+      document.addEventListener("touchend", () => {
+        lastDist = null;
+        lastMidX = null;
+        lastMidY = null;
+      });
+    </script>
+  </body>
+</html>
