@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+      body {
+        touch-action: none;
+        background-color: #dddddd;
+        overflow: hidden;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas" style="border: 1px solid black"></canvas>
+    <script>
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+
+      function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        canvas.style.width = window.innerWidth + "px";
+        canvas.style.height = window.innerHeight + "px";
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+      }
+
+      resize();
+      window.addEventListener("resize", resize);
+
+      let pointers = new Map();
+      let lastDist = null;
+      let lastMidX = null, lastMidY = null;
+      let scale = 1, offsetX = 0, offsetY = 0;
+
+      canvas.addEventListener("pointerdown", (e) => {
+        pointers.set(e.pointerId, e);
+      });
+
+      canvas.addEventListener("pointermove", (e) => {
+        pointers.set(e.pointerId, e);
+
+        if (pointers.size === 2) {
+          const [p1, p2] = [...pointers.values()];
+          const dist = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
+          if (lastDist) {
+            scale *= dist / lastDist;
+            scale = Math.min(Math.max(scale, 0.5), 5);
+          }
+          lastDist = dist;
+          const midX = (p1.clientX + p2.clientX) / 2;
+          const midY = (p1.clientY + p2.clientY) / 2;
+          if (lastMidX !== null) {
+            offsetX += midX - lastMidX;
+            offsetY += midY - lastMidY;
+          }
+          lastMidX = midX;
+          lastMidY = midY;
+          document.body.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+          document.body.style.transformOrigin = "0 0";
+        }
+      });
+
+      canvas.addEventListener("pointerup", (e) => {
+        pointers.delete(e.pointerId);
+        if (pointers.size === 0) {
+          lastDist = null;
+          lastMidX = null;
+          lastMidY = null;
+        }
+      });
+
+      canvas.addEventListener("pointercancel", (e) => {
+        pointers.delete(e.pointerId);
+        lastDist = null;
+        lastMidX = null;
+        lastMidY = null;
+      });
+    </script>
+  </body>
+</html>
