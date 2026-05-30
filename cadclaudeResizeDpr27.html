@@ -620,13 +620,18 @@
     }
 
     function subQuadraticBetweenPoints(p0, pc, p1, newStart, newEnd) {
+        function evalQ(t) {
+            return {
+                x: (1-t)*(1-t)*p0.x + 2*(1-t)*t*pc.x + t*t*p1.x,
+                y: (1-t)*(1-t)*p0.y + 2*(1-t)*t*pc.y + t*t*p1.y
+            };
+        }
         function closestT(target) {
             let best = Infinity, bt = 0;
             for (let i = 0; i <= 400; i++) {
                 const t = i / 400;
-                const x = (1-t)*(1-t)*p0.x + 2*(1-t)*t*pc.x + t*t*p1.x;
-                const y = (1-t)*(1-t)*p0.y + 2*(1-t)*t*pc.y + t*t*p1.y;
-                const d = Math.hypot(x - target.x, y - target.y);
+                const p = evalQ(t);
+                const d = Math.hypot(p.x - target.x, p.y - target.y);
                 if (d < best) { best = d; bt = t; }
             }
             return bt;
@@ -635,16 +640,10 @@
         let tb = closestT(newEnd);
         if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; }
         if (Math.abs(tb - ta) < 1e-6) return pc;
-
-        // De Casteljau exacto: primero cortar en ta, luego en tb reparametrizado
-        // Paso 1: sub-curva desde ta hasta 1
         const q0 = { x: (1-ta)*p0.x + ta*pc.x, y: (1-ta)*p0.y + ta*pc.y };
         const q1 = { x: (1-ta)*pc.x + ta*p1.x, y: (1-ta)*pc.y + ta*p1.y };
-        const r0 = { x: (1-ta)*q0.x + ta*q1.x, y: (1-ta)*q0.y + ta*q1.y }; // punto en ta
-        // Paso 2: dentro de esa sub-curva (r0, q1, p1), cortar en tRel
         const tRel = (tb - ta) / (1 - ta);
         const s0 = { x: (1-tRel)*q0.x + tRel*q1.x, y: (1-tRel)*q0.y + tRel*q1.y };
-        // s0 es el control point del sub-segmento [ta, tb]
         return s0;
     }
 
@@ -744,6 +743,7 @@
             }
 
             // Ahora agregar los edges del corte para cerrar la figura
+            // Agregar edges del corte para cerrar la figura
             const cv = reverseCut ? [...cutVerts].reverse() : cutVerts;
             const ces = reverseCut ? [...cutEdges].reverse() : cutEdges;
     
@@ -753,12 +753,36 @@
             }
             for (let i = 0; i < ces.length; i++) {
                 const e = Object.assign({}, ces[i]);
-                if (reverseCut) {
-                    const tmp = e.start; e.start = e.end; e.end = tmp;
-                    if (e.controlX != null) { e.controlX = ces[i].controlX; e.controlY = ces[i].controlY; }
-                }
+                const rawEdge = reverseCut ? ces[ces.length - 1 - i] : ces[i];
                 e.start = cutStartIdx + i;
                 e.end = i === ces.length - 1 ? 0 : cutStartIdx + i + 1;
+                if (rawEdge.curved && rawEdge.controlX != null) {
+                    // Los vértices reales de este edge en la dirección ya orientada
+                    const edgeStartPt = cv[reverseCut ? (cv.length - 1 - i) : i];
+                    const edgeEndPt   = cv[reverseCut ? (cv.length - 2 - i) : (i + 1)];
+                    // Recalcular el control point proyectando la curva original
+                    // sobre el sub-segmento correcto (los extremos pueden ser puntos de cruce)
+                    // Usar los vértices reales del cut data sin invertir para evaluar la curva original
+                    const origStart = reverseCut ? cutVerts[cutVerts.length - 1 - i] : cutVerts[i];
+                    const origEnd   = reverseCut ? cutVerts[cutVerts.length - 2 - i] : cutVerts[i + 1];
+                    const origEdge  = reverseCut ? cutEdges[cutEdges.length - 1 - i] : cutEdges[i];
+                    const origA = cutVerts[origEdge.start] || origStart;
+                    const origB = cutVerts[origEdge.end]   || origEnd;
+                    const origC = {x: origEdge.controlX, y: origEdge.controlY};
+                    const newC = subQuadraticBetweenPoints(origA, origC, origB,
+                        reverseCut ? origEnd : origStart,
+                        reverseCut ? origStart : origEnd);
+                    e.controlX  = newC.x;
+                    e.controlY  = newC.y;
+                    e.control2X = null;
+                    e.control2Y = null;
+                    e.curved = true;
+                    e.cubic  = false;
+                } else {
+                    e.controlX = null; e.controlY = null;
+                    e.control2X = null; e.control2Y = null;
+                    e.curved = false; e.cubic = false;
+                }
                 edges.push(e);
             }
 
@@ -1225,27 +1249,11 @@
         const a = fig.vertices[edge.start], b = fig.vertices[edge.end];
         const normal = computeOutwardNormal(fig, ei);
         const offX = normal.x * distancePx, offY = normal.y * distancePx;
-    
+
         a.x += offX; a.y += offY;
         b.x += offX; b.y += offY;
         if (edge.controlX  != null) { edge.controlX  += offX; edge.controlY  += offY; }
         if (edge.control2X != null) { edge.control2X += offX; edge.control2Y += offY; }
-    
-        for (let i = 0; i < fig.edges.length; i++) {
-            if (i === ei) continue;
-            const e = fig.edges[i];
-            const sharesStart = (e.start === edge.start || e.end === edge.start);
-            const sharesEnd   = (e.start === edge.end   || e.end === edge.end);
-            if (!sharesStart && !sharesEnd) continue;
-            const sharedVIdx = sharesStart ? edge.start : edge.end;
-            const fixedVIdx  = (e.start === sharedVIdx) ? e.end : e.start;
-           const fixed = fig.vertices[fixedVIdx];
-            if (e.controlX != null) {
-                const dToShared = Math.hypot(e.controlX - (fig.vertices[sharedVIdx].x - offX), e.controlY - (fig.vertices[sharedVIdx].y - offY));
-                const dToFixed  = Math.hypot(e.controlX - fixed.x, e.controlY - fixed.y);
-                if (dToShared < dToFixed) { e.controlX += offX; e.controlY += offY; }
-            }
-        }
     }
 
     function applyOffset() {
