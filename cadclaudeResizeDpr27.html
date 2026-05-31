@@ -620,7 +620,6 @@
     }
 
     function subQuadraticBetweenPoints(p0, pc, p1, newStart, newEnd) {
-        // Encontrar t de newStart y newEnd en la curva original
         function closestT(target) {
             let best = Infinity, bt = 0;
             for (let i = 0; i <= 600; i++) {
@@ -636,33 +635,32 @@
         let tb = closestT(newEnd);
         if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; }
         if (Math.abs(tb - ta) < 1e-6) return pc;
-
-        // De Casteljau exacto para sub-curva [ta, tb]
-        // Paso 1: puntos de casteljau en ta
-        const q0 = { x: (1-ta)*p0.x + ta*pc.x,  y: (1-ta)*p0.y + ta*pc.y };
-        const q1 = { x: (1-ta)*pc.x + ta*p1.x,  y: (1-ta)*pc.y + ta*p1.y };
-        // Punto en ta (nuevo start real de la sub-curva desde ta)
-        // const r0 = { x: (1-ta)*q0.x + ta*q1.x, y: (1-ta)*q0.y + ta*q1.y };
-
-        // Paso 2: dentro de sub-curva (r0, q1, p1), parametrizar tb → tRel
+    
+        // De Casteljau para sub-curva [ta, tb]
+        const q0a = { x: (1-ta)*p0.x + ta*pc.x,  y: (1-ta)*p0.y + ta*pc.y };
+        const q1a = { x: (1-ta)*pc.x + ta*p1.x,  y: (1-ta)*pc.y + ta*p1.y };
         const tRel = (tb - ta) / (1 - ta);
-        // Control point del sub-segmento [ta, tb] es q0 reparametrizado
-        const s0 = { x: (1-tRel)*q0.x + tRel*q1.x, y: (1-tRel)*q0.y + tRel*q1.y };
-
-        // s0 es el control point de la cuadrática (newStart, s0, newEnd)
-        // PERO newStart y newEnd son puntos de cruce, no exactamente los puntos
-        // de la curva original en ta y tb. Necesitamos ajustar s0 para que la curva
-        // pase por el punto medio de la curva original entre ta y tb.
+        const subC = { x: (1-tRel)*q0a.x + tRel*q1a.x, y: (1-tRel)*q0a.y + tRel*q1a.y };
+    
+        // newStart/newEnd pueden estar desplazados respecto a la curva analítica;
+        // recalcular el control usando los puntos reales de la curva en ta y tb
+        const realStart = {
+            x: (1-ta)*(1-ta)*p0.x + 2*(1-ta)*ta*pc.x + ta*ta*p1.x,
+            y: (1-ta)*(1-ta)*p0.y + 2*(1-ta)*ta*pc.y + ta*ta*p1.y
+        };
+        const realEnd = {
+            x: (1-tb)*(1-tb)*p0.x + 2*(1-tb)*tb*pc.x + tb*tb*p1.x,
+            y: (1-tb)*(1-tb)*p0.y + 2*(1-tb)*tb*pc.y + tb*tb*p1.y
+        };
+        // Corrección por punto medio analítico
         const tMid = (ta + tb) / 2;
         const midOrig = {
             x: (1-tMid)*(1-tMid)*p0.x + 2*(1-tMid)*tMid*pc.x + tMid*tMid*p1.x,
             y: (1-tMid)*(1-tMid)*p0.y + 2*(1-tMid)*tMid*pc.y + tMid*tMid*p1.y
         };
-        // Para una cuadrática, el punto en t=0.5 es: 0.25*A + 0.5*C + 0.25*B
-        // Despejando C: C = (midOrig - 0.25*newStart - 0.25*newEnd) / 0.5
         const correctedC = {
-            x: (midOrig.x - 0.25*newStart.x - 0.25*newEnd.x) / 0.5,
-            y: (midOrig.y - 0.25*newStart.y - 0.25*newEnd.y) / 0.5
+            x: (midOrig.x - 0.25*realStart.x - 0.25*realEnd.x) / 0.5,
+            y: (midOrig.y - 0.25*realStart.y - 0.25*realEnd.y) / 0.5
         };
         return correctedC;
     }
@@ -788,16 +786,15 @@
                 e.end   = i === numCutEdges - 1 ? 0 : cutStartIdx + i + 1;
 
                 if (rawEdge.curved && rawEdge.controlX != null) {
-                    // origA y origB son los extremos reales del edge en el cut data original
                     const origA = cutVerts[rawEdge.start];
                     const origB = cutVerts[rawEdge.end];
                     const origC = {x: rawEdge.controlX, y: rawEdge.controlY};
-                    // newStart y newEnd son los extremos en la dirección en que se recorre
-                    const newStart = reverseCut ? origB : origA;
-                    const newEnd   = reverseCut ? origA : origB;
-                    const newC = subQuadraticBetweenPoints(origA, origC, origB, newStart, newEnd);
-                    e.controlX  = newC.x;
-                    e.controlY  = newC.y;
+                    // Los extremos reales de este edge del corte ya son correctos;
+                    // solo hay que respetar la dirección de recorrido invirtiendo el control
+                    // si reverseCut, pero la geometría de la curva no cambia (solo start/end).
+                    // No recortar: el edge del corte ya va de origA a origB completo.
+                    e.controlX  = origC.x;
+                    e.controlY  = origC.y;
                     e.control2X = null;
                     e.control2Y = null;
                     e.curved = true;
