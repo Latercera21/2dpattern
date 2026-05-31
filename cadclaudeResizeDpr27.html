@@ -672,151 +672,63 @@
 
         const c0 = crossings[0];
         const c1 = crossings[crossings.length - 1];
-        const n = figure.edges.length;
-
-        // Encontrar qué edge corresponde a cada cruce usando edgeIdx de polyPts
-        // polyPts tiene steps+1 puntos por edge curvo, 2 por edge recto
-        // Necesitamos mapear edgeIdx de polyPts al edge real de la figura
-        function getEdgeIdxForPolyIdx(polyIdx) {
-            let count = 0;
-            for (let ei = 0; ei < figure.edges.length; ei++) {
-                const e = figure.edges[ei];
-                const isCurve = (e.curved && e.controlX != null) || (e.cubic && e.control2X != null);
-                const segs = isCurve ? 80 : 1;
-                if (polyIdx < count + segs) return ei;
-                count += segs;
-            }
-            return figure.edges.length - 1;
-        }
-
-        const ei0 = getEdgeIdxForPolyIdx(c0.edgeIdx);
-        const ei1 = getEdgeIdxForPolyIdx(c1.edgeIdx);
-
-        // Construir fig1: desde c0 → siguiendo edges originales → hasta c1 → corte → vuelve a c0
-        // Construir fig2: desde c1 → siguiendo edges originales → hasta c0 → corte inverso → vuelve a c1
-
-        function buildHalf(startCross, endCross, startEi, endEi, cutVerts, cutEdges, reverseCut) {
-            const verts = [{x: startCross.x, y: startCross.y}];
-            const edges = [];
-
-            // Recorrer edges originales desde startEi hasta endEi
-            let ei = startEi;
-            let safety = 0;
-            while (true) {
-                const origEdge = figure.edges[ei];
-                const edgeEnd = figure.vertices[origEdge.end];
-    
-                if (ei === endEi) {
-                    // último edge: termina en endCross, no en el vértice original
-                    // agregar el punto de cruce final
-                    const e = Object.assign({}, origEdge);
-                    e.start = verts.length - 1;
-                    e.end = verts.length;
-                    // Si es curvo, calcular sub-curva desde startCross (o inicio del edge) hasta endCross
-                    if (origEdge.curved && origEdge.controlX != null) {
-                        const a = figure.vertices[origEdge.start];
-                        const b = figure.vertices[origEdge.end];
-                        const newC = subQuadraticBetweenPoints(
-                            ei === startEi ? startCross : a,
-                            {x: origEdge.controlX, y: origEdge.controlY},
-                            b,
-                            ei === startEi ? startCross : a,
-                            endCross
-                        );
-                        e.controlX = newC.x; e.controlY = newC.y;
-                    }
-                    verts.push({x: endCross.x, y: endCross.y});
-                    edges.push(e);
-                    break;
-                }
-    
-                // edge completo: agregar vértice final del edge
-                if (ei === startEi) {
-                    // primer edge: empieza en startCross, termina en vértice normal
-                    const e = Object.assign({}, origEdge);
-                    e.start = verts.length - 1;
-                    e.end = verts.length;
-                    if (origEdge.curved && origEdge.controlX != null) {
-                        const a = figure.vertices[origEdge.start];
-                        const b = figure.vertices[origEdge.end];
-                        const newC = subQuadraticBetweenPoints(
-                            a, {x: origEdge.controlX, y: origEdge.controlY}, b,
-                            startCross, b
-                        );
-                        e.controlX = newC.x; e.controlY = newC.y;
-                    }
-                    verts.push({x: edgeEnd.x, y: edgeEnd.y});
-                    edges.push(e);
-                } else {
-                    // edge intermedio completo: tal cual
-                    const e = Object.assign({}, origEdge);
-                    e.start = verts.length - 1;
-                    e.end = verts.length;
-                    verts.push({x: edgeEnd.x, y: edgeEnd.y});
-                    edges.push(e);
-                }
-
-                ei = (ei + 1) % n;
-                if (++safety > n + 2) break;
-            }
-
-            
-            // Agregar edges del corte para cerrar la figura
-            // Usar siempre cutVerts/cutEdges originales sin invertir para preservar geometría
-            const cutStartIdx = verts.length - 1;
-
-            // Vértices intermedios del corte (sin los extremos que ya están en verts[0] y se cerrarán en 0)
-            if (reverseCut) {
-                for (let i = cutVerts.length - 2; i >= 1; i--) {
-                    verts.push({x: cutVerts[i].x, y: cutVerts[i].y});
-                }
-            } else {
-                for (let i = 1; i < cutVerts.length - 1; i++) {
-                    verts.push({x: cutVerts[i].x, y: cutVerts[i].y});
-                }
-            }
-
-            const numCutEdges = cutEdges.length;
-            for (let i = 0; i < numCutEdges; i++) {
-                // En reverseCut recorremos los edges al revés
-                const rawIdx = reverseCut ? (numCutEdges - 1 - i) : i;
-                const rawEdge = cutEdges[rawIdx];
-                const e = Object.assign({}, rawEdge);
-                e.start = cutStartIdx + i;
-                e.end   = i === numCutEdges - 1 ? 0 : cutStartIdx + i + 1;
-
-                if (rawEdge.curved && rawEdge.controlX != null) {
-                    const origA = cutVerts[rawEdge.start];
-                    const origB = cutVerts[rawEdge.end];
-                    const origC = {x: rawEdge.controlX, y: rawEdge.controlY};
-                    // Los extremos reales de este edge del corte ya son correctos;
-                    // solo hay que respetar la dirección de recorrido invirtiendo el control
-                    // si reverseCut, pero la geometría de la curva no cambia (solo start/end).
-                    // No recortar: el edge del corte ya va de origA a origB completo.
-                    e.controlX  = origC.x;
-                    e.controlY  = origC.y;
-                    e.control2X = null;
-                    e.control2Y = null;
-                    e.curved = true;
-                    e.cubic  = false;
-                } else {
-                    e.controlX = null; e.controlY = null;
-                    e.control2X = null; e.control2Y = null;
-                    e.curved = false; e.cubic = false;
-                }
-                edges.push(e);
-            }
-
-            return {vertices: verts, edges, closed: true, grain: null};
-        }
+        const n = polyPts.length;
 
         const cutData = buildCutEdges(cutLineIndices);
 
-        // Si el corte cruza el mismo edge dos veces (startEi === endEi), caso especial
-        // En general: fig1 va de ei0 al siguiente hasta ei1, fig2 va de ei1 al siguiente hasta ei0
-        const fig1 = buildHalf(c0, c1, ei0, ei1, cutData.vertices, cutData.edges, false);
-        const fig2 = buildHalf(c1, c0, ei1, ei0, cutData.vertices, cutData.edges, true);
-    
+        const pts1 = [c0];
+        for (let i = (c0.edgeIdx + 1) % n; ; i = (i + 1) % n) {
+            pts1.push(polyPts[i]);
+            if (i === c1.edgeIdx) break;
+            if (pts1.length > n + 2) break;
+        }
+        pts1.push(c1);
+
+        const pts2 = [c1];
+        for (let i = (c1.edgeIdx + 1) % n; ; i = (i + 1) % n) {
+            pts2.push(polyPts[i]);
+            if (i === c0.edgeIdx) break;
+            if (pts2.length > n + 2) break;
+        }
+        pts2.push(c0);
+
+        const fig1 = ptsToFigure(simplifyPoints(removeDuplicatePoints(pts1)), false);
+        const fig2 = ptsToFigure(simplifyPoints(removeDuplicatePoints(pts2)), false);
+
+        function appendCutEdges(figBase, cutVerts, cutEdges, reversed, c0, c1) {
+            const offset = figBase.vertices.length;
+            const cv = reversed ? [...cutVerts].reverse() : cutVerts;
+            for (let i = 1; i < cv.length - 1; i++) {
+                figBase.vertices.push({x: cv[i].x, y: cv[i].y});
+            }
+            const edgesToAdd = reversed ? [...cutEdges].reverse() : cutEdges;
+            for (let ei = 0; ei < edgesToAdd.length; ei++) {
+                const e = Object.assign({}, edgesToAdd[ei]);
+                if (reversed) {
+                    const tmp = e.start; e.start = e.end; e.end = tmp;
+                }
+                if (e.curved && e.controlX != null) {
+                    const origEdgeSrc = reversed ? cutEdges[cutEdges.length - 1 - ei] : cutEdges[ei];
+                    const origP0 = cutVerts[origEdgeSrc.start];
+                    const origP1 = cutVerts[origEdgeSrc.end];
+                    const origPC = { x: origEdgeSrc.controlX, y: origEdgeSrc.controlY };
+                    const ptStart = reversed ? c1 : c0;
+                    const ptEnd   = reversed ? c0 : c1;
+                    const newC = subQuadraticBetweenPoints(origP0, origPC, origP1, ptStart, ptEnd);
+                    e.controlX = newC.x;
+                    e.controlY = newC.y;
+                }
+                e.start = (ei === 0) ? (offset - 1) : (offset - 1 + ei);
+                e.end   = (ei === edgesToAdd.length - 1) ? 0 : (offset - 1 + ei + 1);
+                figBase.edges.push(e);
+            }
+            figBase.closed = true;
+            return figBase;
+        }
+
+        appendCutEdges(fig1, cutData.vertices, cutData.edges, false, c0, c1);
+        appendCutEdges(fig2, cutData.vertices, cutData.edges, true,  c0, c1);
+
         if (fig1.vertices.length < 3 || fig2.vertices.length < 3) return null;
         return [fig1, fig2];
     }
