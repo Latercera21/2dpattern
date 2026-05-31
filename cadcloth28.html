@@ -59,30 +59,30 @@
 <body>
   <h3>CAD Cloth 2D</h3>
 <div class="toolbar">
-    <button id="createBtn"     onclick="toggleCreate()"     title="Crear pol�gono">??</button>
+    <button id="createBtn"     onclick="toggleCreate()"     title="Crear polï¿½gono">??</button>
     <input  type="number" id="sidesInput" min="3" max="10" value="3" title="Lados">
-    <button id="lineBtn"       onclick="toggleLine()"       title="Crear l�nea">???</button>
+    <button id="lineBtn"       onclick="toggleLine()"       title="Crear lï¿½nea">???</button>
     <button id="closeShapeBtn" onclick="toggleCloseShape()" title="Cerrar figura">??</button>
     <button id="closeApplyBtn" onclick="applyCloseShape()"  title="Aplicar cierre">?</button>
     <button id="moveBtn"       onclick="toggleMove()"       title="Mover figura">?</button>
-    <button id="vertexBtn"     onclick="toggleVertex()"     title="Editar v�rtice">??</button>
+    <button id="vertexBtn"     onclick="toggleVertex()"     title="Editar vï¿½rtice">??</button>
     <button id="snapBtn"       onclick="toggleSnap()"       title="Snap">??</button>
-    <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar v�rtice">?</button>
+    <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vï¿½rtice">?</button>
     <button id="curveBtn"      onclick="toggleCurve()"      title="Curvar arista">?</button>
     <button id="straightenBtn" onclick="toggleStraighten()" title="Curva?Recta">??</button>
     <button id="mirrorBtn"     onclick="toggleMirror()"     title="Desdoblar">??</button>
     <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">?</button>
-    <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar uni�n" style="display:none">?</button>
+    <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar uniï¿½n" style="display:none">?</button>
     <button id="resizeBtn"     onclick="toggleResize()"     title="Cambiar longitud">??</button>
     <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">??</button>
     <input  type="number" id="rotateInput" value="90" step="1" title="Grados">
     <button id="duplicateBtn"  onclick="toggleDuplicate()"  title="Duplicar">?</button>
     <button id="reflectBtn"    onclick="toggleReflect()"    title="Reflejar">??</button>
     <button id="grainBtn"      onclick="toggleGrainMode()"  title="Asignar hilo a figura">??</button>
-    <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Direcci�n del hilo">?</button>
+    <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Direcciï¿½n del hilo">?</button>
     <button id="deleteBtn"     onclick="toggleDelete()"     title="Eliminar figura">???</button>
     <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">??</button>
-    <button id="cutBtn"        onclick="toggleCut()"        title="Cortar figura con l�nea(s)">?</button>
+    <button id="cutBtn"        onclick="toggleCut()"        title="Cortar figura con lï¿½nea(s)">?</button>
     <button id="cutApplyBtn"   onclick="applyCut()"         title="Aplicar corte">?</button>
     <button onclick="clearAll()"   title="Eliminar todo">??</button>
     <button onclick="undoAction()" title="Deshacer">?</button>
@@ -138,10 +138,10 @@
     let lineStartPoint = null;
 
     // --- Estado de corte ---
-    let cutLineIndices = [];   // �ndices de l�neas seleccionadas para cortar
+    let cutLineIndices = [];   // ï¿½ndices de lï¿½neas seleccionadas para cortar
 
     // --- Estado de cerrar figura ---
-    let closeLineIndices = []; // �ndices de l�neas a unir en figura cerrada
+    let closeLineIndices = []; // ï¿½ndices de lï¿½neas a unir en figura cerrada
 
     // --- Estado de curva midpoint drag ---
     let curveActiveDrag = null; // {figureIndex, edgeIndex, dragging}
@@ -222,8 +222,8 @@
     }
     function clearAll() {
         showModal({
-            title: '�Eliminar todo?',
-            body: 'Se eliminar�n todas las figuras.',
+            title: 'ï¿½Eliminar todo?',
+            body: 'Se eliminarï¿½n todas las figuras.',
             buttons: [{label:'Eliminar todo',value:'yes'},{label:'Cancelar',value:'no'}]
         }).then(r => { if (r==='yes') { saveState(); figures=[]; redrawAll(); } });
     }
@@ -374,7 +374,7 @@
         ctx.restore();
     }
 
-    // ===================== GEOMETR�A B�SICA =====================
+    // ===================== GEOMETRï¿½A Bï¿½SICA =====================
     function q2c(p0,c,p1) {
         return {
             cp1:{x:p0.x+2/3*(c.x-p0.x),y:p0.y+2/3*(c.y-p0.y)},
@@ -481,7 +481,7 @@
 
     // ===================== MUESTREAR FIGURA COMO STROKE =====================
     // Convierte todos los edges de una figura en una secuencia densa de puntos
-    // Esto permite que findCrossings del c�digo peque�o funcione con cualquier tipo de arista
+    // Esto permite que findCrossings del cï¿½digo pequeï¿½o funcione con cualquier tipo de arista
     function sampleFigureEdges(figure, steps=80) {
         const pts = [];
         for (let ei = 0; ei < figure.edges.length; ei++) {
@@ -508,7 +508,7 @@
     return pts;
     }
 
-    // Convierte l�neas de corte seleccionadas en stroke muestreada
+    // Convierte lï¿½neas de corte seleccionadas en stroke muestreada
     function buildCutEdges(lineIndices) {
         if (lineIndices.length === 0) return {vertices: [], edges: []};
     
@@ -548,7 +548,7 @@
             }
         }
     
-        // Aplanar en un solo array de vertices + edges con �ndices corregidos
+        // Aplanar en un solo array de vertices + edges con ï¿½ndices corregidos
         const verts = [];
         const edges = [];
     
@@ -559,17 +559,17 @@
             const offset = verts.length === 0 ? 0 : verts.length - 1;
     
             for (let vi = 0; vi < vs.length; vi++) {
-                if (vi === 0 && verts.length > 0) continue; // no duplicar punto de uni�n
+                if (vi === 0 && verts.length > 0) continue; // no duplicar punto de uniï¿½n
                 verts.push({x: vs[vi].x, y: vs[vi].y});
             }
     
             for (let ei = 0; ei < es.length; ei++) {
                 const e = Object.assign({}, es[ei]);
                 if (seg.reversed) {
-                    // invertir direcci�n del edge
+                    // invertir direcciï¿½n del edge
                     const tmp = e.start; e.start = e.end; e.end = tmp;
-                    // invertir puntos de control cuadr�ticos (quedan igual geom�tricamente,
-                    // solo cambia start/end, el control no cambia para cuadr�ticas)
+                    // invertir puntos de control cuadrï¿½ticos (quedan igual geomï¿½tricamente,
+                    // solo cambia start/end, el control no cambia para cuadrï¿½ticas)
                 }
                 // remap al espacio global de verts
                 e.start = offset + ei;
@@ -590,7 +590,7 @@
         return sampleFigureEdges(tmpFig, 60);
     }
 
-    // ===================== ALGORITMO DE CORTE (del c�digo peque�o) =====================
+    // ===================== ALGORITMO DE CORTE (del cï¿½digo pequeï¿½o) =====================
     function segIntersect(a,b,c,d){
         const dx1=b.x-a.x,dy1=b.y-a.y,dx2=d.x-c.x,dy2=d.y-c.y;
         const den=dx1*dy2-dy1*dx2;
@@ -642,7 +642,7 @@
         const tRel = (tb - ta) / (1 - ta);
         const subC = { x: (1-tRel)*q0a.x + tRel*q1a.x, y: (1-tRel)*q0a.y + tRel*q1a.y };
     
-        // newStart/newEnd pueden estar desplazados respecto a la curva anal�tica;
+        // newStart/newEnd pueden estar desplazados respecto a la curva analï¿½tica;
         // recalcular el control usando los puntos reales de la curva en ta y tb
         const realStart = {
             x: (1-ta)*(1-ta)*p0.x + 2*(1-ta)*ta*pc.x + ta*ta*p1.x,
@@ -652,7 +652,7 @@
             x: (1-tb)*(1-tb)*p0.x + 2*(1-tb)*tb*pc.x + tb*tb*p1.x,
             y: (1-tb)*(1-tb)*p0.y + 2*(1-tb)*tb*pc.y + tb*tb*p1.y
         };
-        // Correcci�n por punto medio anal�tico
+        // Correcciï¿½n por punto medio analï¿½tico
         const tMid = (ta + tb) / 2;
         const midOrig = {
             x: (1-tMid)*(1-tMid)*p0.x + 2*(1-tMid)*tMid*pc.x + tMid*tMid*p1.x,
@@ -765,7 +765,7 @@
     }
 
 
-    // Corte parcial: 1 intersecci�n + extremo dentro
+    // Corte parcial: 1 intersecciï¿½n + extremo dentro
     function splitPartial(figure, stroke, crossings) {
         const c0 = crossings[0];
         const strokeEnd = stroke[stroke.length - 1];
@@ -818,16 +818,21 @@
     
         for (let i = 0; i < n; i++) {
             const e = Object.assign({}, goEdges[i]);
-            e.start = (i === 0) ? cIdx : (interiorStart + i - 1);
-            e.end   = (i === n - 1) ? tipIdx : (interiorStart + i);
+            if (i === 0) e.start = cIdx;
+            else e.start = interiorStart + i - 1;
+            if (i === n - 1) e.end = tipIdx;
+            else e.end = interiorStart + i;
+            if (interiorVerts.length === 0 && n === 1) { e.start = cIdx; e.end = tipIdx; }
             newEdges.push(e);
         }
     
         for (let i = n - 1; i >= 0; i--) {
             const e = Object.assign({}, goEdges[i]);
-            const tmp = e.start; e.start = e.end; e.end = tmp;
-            e.start = (i === n - 1) ? tipIdx : (interiorStart + i);
-            e.end   = (i === 0) ? cIdx : (interiorStart + i - 1);
+            if (i === n - 1) e.start = tipIdx;
+            else e.start = interiorStart + i;
+            if (i === 0) e.end = cIdx;
+            else e.end = interiorStart + i - 1;
+            if (interiorVerts.length === 0 && n === 1) { e.start = tipIdx; e.end = cIdx; }
             newEdges.push(e);
         }
     
@@ -903,17 +908,17 @@
 
     function applyCut() {
         if (cutLineIndices.length === 0) {
-            showModal({title:'Error',body:'Selecciona al menos una l�nea de corte.',buttons:[{label:'OK'}]});
+            showModal({title:'Error',body:'Selecciona al menos una lï¿½nea de corte.',buttons:[{label:'OK'}]});
             return;
         }
         // Construir stroke de corte
         const stroke = buildCutStroke(cutLineIndices);
         if (stroke.length < 2) {
-            showModal({title:'Error',body:'La l�nea de corte no tiene puntos suficientes.',buttons:[{label:'OK'}]});
+            showModal({title:'Error',body:'La lï¿½nea de corte no tiene puntos suficientes.',buttons:[{label:'OK'}]});
             return;
         }
 
-        // Buscar autom�ticamente qu� figura cerrada intersecta
+        // Buscar automï¿½ticamente quï¿½ figura cerrada intersecta
         let targetFi = -1;
         let bestCrossings = null;
 
@@ -948,7 +953,7 @@
         }
 
         if (targetFi === -1) {
-            showModal({title:'Error',body:'La l�nea de corte no intersecta ninguna figura cerrada en dos puntos, o no tiene un extremo dentro de alguna figura.',buttons:[{label:'OK'}]});
+            showModal({title:'Error',body:'La lï¿½nea de corte no intersecta ninguna figura cerrada en dos puntos, o no tiene un extremo dentro de alguna figura.',buttons:[{label:'OK'}]});
             return;
         }
 
@@ -965,7 +970,7 @@
             figures.splice(targetFi, 1, ...result);
         } else {
             // Corte parcial ? hendidura
-            // DESPU�S:
+            // DESPUï¿½S:
             const newFig = splitPartial(figures[targetFi], stroke, bestCrossings);
             if (!newFig) {
                 showModal({title:'Error',body:'No se pudo realizar el corte parcial.',buttons:[{label:'OK'}]});
@@ -983,7 +988,7 @@
     // ===================== CERRAR FIGURA =====================
     function applyCloseShape() {
         if (closeLineIndices.length < 1) {
-            showModal({title:'Error',body:'Selecciona al menos una línea.',buttons:[{label:'OK'}]});
+            showModal({title:'Error',body:'Selecciona al menos una lÃ­nea.',buttons:[{label:'OK'}]});
             return;
         }
         const lines = closeLineIndices.map(i => figures[i]);
@@ -1142,7 +1147,7 @@
         figure.vertices=nv;figure.edges=ne;
     }
 
-    // ===================== UNI�N DE CURVAS =====================
+    // ===================== UNIï¿½N DE CURVAS =====================
     function edgeToCubicControls(figure,edge){
         const a=figure.vertices[edge.start],b=figure.vertices[edge.end];
         if(edge.cubic&&edge.control2X!=null) return{cp1:{x:edge.controlX,y:edge.controlY},cp2:{x:edge.control2X,y:edge.control2Y}};
@@ -1169,7 +1174,7 @@
         saveState();
         for (const fiStr in byFigure) {
             const fi = parseInt(fiStr), figure = figures[fi], edgeIndices = byFigure[fi].sort((a,b)=>a-b), n = figure.edges.length;
-            if (!isContiguousCyclic(edgeIndices, n)) { showModal({title:'Error',body:'Las curvas deben ser consecutivas (incluso c�clicamente).',buttons:[{label:'OK'}]}); return; }
+            if (!isContiguousCyclic(edgeIndices, n)) { showModal({title:'Error',body:'Las curvas deben ser consecutivas (incluso cï¿½clicamente).',buttons:[{label:'OK'}]}); return; }
             let orderedIndices = [...edgeIndices];
             const minIdx = orderedIndices[0];
             orderedIndices = [];
@@ -1233,7 +1238,7 @@
         const fig = figures[selectedEdge.figureIndex];
         if (!fig.closed) { showModal({title:'Error',body:'El desfase solo funciona en figuras cerradas.',buttons:[{label:'OK'}]}); return; }
         const distCm = parseFloat(document.getElementById('offsetValue').value.replace(',','.'));
-        if (isNaN(distCm) || distCm <= 0) { showModal({title:'Valor inv�lido',body:'Introduce una distancia positiva en cm.',buttons:[{label:'OK'}]}); return; }
+        if (isNaN(distCm) || distCm <= 0) { showModal({title:'Valor invï¿½lido',body:'Introduce una distancia positiva en cm.',buttons:[{label:'OK'}]}); return; }
         saveState();
         offsetEdgeInPlace(selectedEdge.figureIndex, selectedEdge.edgeIndex, distCm * PX_PER_CM);
         hidePanel('offsetInputs');
@@ -1241,7 +1246,7 @@
     }
 
     // ===================== CURVA MIDPOINT DRAG =====================
-    // Calcula el punto de control cuadr�tico a partir del punto medio donde arrastra el usuario
+    // Calcula el punto de control cuadrï¿½tico a partir del punto medio donde arrastra el usuario
     function controlFromMidpoint(p0, pm, p2) {
         return {
             x: (pm.x - 0.25*p0.x - 0.25*p2.x) / 0.5,
@@ -1265,7 +1270,7 @@
             ctx.beginPath(); ctx.arc(lineStartPoint.x, lineStartPoint.y, 4/viewScale, 0, 2*Math.PI);
             ctx.fillStyle = '#e67e22'; ctx.fill();
         }
-        // Resaltar l�neas de corte seleccionadas
+        // Resaltar lï¿½neas de corte seleccionadas
         if(mode==='cut') {
             cutLineIndices.forEach(li => {
                 const line = figures[li];
@@ -1285,7 +1290,7 @@
                 }
             });
         }
-        // Resaltar l�neas para cerrar figura
+        // Resaltar lï¿½neas para cerrar figura
         if(mode==='closeShape') {
             closeLineIndices.forEach(li => {
                 const line = figures[li];
@@ -1491,7 +1496,7 @@
             if(ne){
                 saveState();
                 const edge=figures[ne.figureIndex].edges[ne.edgeIndex];
-                // Inicializar controlX/Y en el punto donde se hizo clic (ser� el midpoint inicial)
+                // Inicializar controlX/Y en el punto donde se hizo clic (serï¿½ el midpoint inicial)
                 if(!edge.curved){
                     edge.curved=true; edge.cubic=false;
                     edge.controlX=wx; edge.controlY=wy;
@@ -1533,10 +1538,10 @@
             }
         }
         else if(mode==='cut'){
-            // Seleccionar/deseleccionar solo l�neas (no cerradas) como l�neas de corte
+            // Seleccionar/deseleccionar solo lï¿½neas (no cerradas) como lï¿½neas de corte
             for(let fi=figures.length-1;fi>=0;fi--){
                 const fig=figures[fi];
-                if(fig.closed) continue; // solo l�neas abiertas
+                if(fig.closed) continue; // solo lï¿½neas abiertas
                 let near=false;
                 for(const e of fig.edges){
                     if(edgeDist(wx,wy,fig,e)<15/viewScale){near=true;break;}
@@ -1551,7 +1556,7 @@
             }
         }
         else if(mode==='closeShape'){
-            // Seleccionar/deseleccionar l�neas abiertas para cerrar figura
+            // Seleccionar/deseleccionar lï¿½neas abiertas para cerrar figura
             for(let fi=figures.length-1;fi>=0;fi--){
                 const fig=figures[fi];
                 if(fig.closed) continue;
@@ -1589,12 +1594,12 @@
     function handlePointerMove(pos){
         const wx=pos.x,wy=pos.y;
 
-        // Curva midpoint drag � arrastrar mientras presionado
+        // Curva midpoint drag ï¿½ arrastrar mientras presionado
         if(mode==='curve' && curveActiveDrag){
             const fig=figures[curveActiveDrag.figureIndex];
             const edge=fig.edges[curveActiveDrag.edgeIndex];
             const a=fig.vertices[edge.start], b=fig.vertices[edge.end];
-            // Calcular control point desde midpoint donde est� el puntero
+            // Calcular control point desde midpoint donde estï¿½ el puntero
             const cp = controlFromMidpoint(a, {x:wx,y:wy}, b);
             edge.curved=true; edge.cubic=false;
             edge.controlX=cp.x; edge.controlY=cp.y;
@@ -1604,7 +1609,7 @@
         }
 
         if(!dragData) {
-            // Vista previa de l�nea en modo line
+            // Vista previa de lï¿½nea en modo line
             if(mode==='line' && lineStartPoint) {
                 redrawAll();
                 ctx.save();
@@ -1655,15 +1660,15 @@
     function applyResize(){
         if(!selectedEdge){showModal({title:'Error',body:'Primero selecciona una arista.',buttons:[{label:'OK'}]});return;}
         const newPx=cmToPx(document.getElementById('resizeValue').value);
-        if(isNaN(newPx)||newPx<=0){showModal({title:'Valor inv�lido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
+        if(isNaN(newPx)||newPx<=0){showModal({title:'Valor invï¿½lido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
         saveState();resizeEdge(selectedEdge.figureIndex,selectedEdge.edgeIndex,newPx,selectedEdge.clickX,selectedEdge.clickY);
         hidePanel('resizeInputs');redrawAll();
     }
 
     function applyVertexCoordinates(){
-        if(!selectedVertex){showModal({title:'Error',body:'Primero selecciona un v�rtice.',buttons:[{label:'OK'}]});return;}
+        if(!selectedVertex){showModal({title:'Error',body:'Primero selecciona un vï¿½rtice.',buttons:[{label:'OK'}]});return;}
         const x=cmToPx(document.getElementById('vertexX').value), y=cmToPx(document.getElementById('vertexY').value);
-        if(isNaN(x)||isNaN(y)){showModal({title:'Valor inv�lido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
+        if(isNaN(x)||isNaN(y)){showModal({title:'Valor invï¿½lido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
         saveState();
         figures[selectedVertex.figureIndex].vertices[selectedVertex.vertexIndex].x=x;
         figures[selectedVertex.figureIndex].vertices[selectedVertex.vertexIndex].y=y;
@@ -1681,7 +1686,7 @@
             }))
         };
         const json=JSON.stringify(data,null,2);
-        showModal({title:'Exportar � patron.json',textarea:json,
+        showModal({title:'Exportar ï¿½ patron.json',textarea:json,
             buttons:[{label:'?? Copiar',value:'copy'},{label:'?? Descargar',value:'dl'},{label:'? Cerrar',value:'close'}]
         }).then(a=>{
             if(a==='copy'){
