@@ -620,18 +620,14 @@
     }
 
     function subQuadraticBetweenPoints(p0, pc, p1, newStart, newEnd) {
-        function evalQ(t) {
-            return {
-                x: (1-t)*(1-t)*p0.x + 2*(1-t)*t*pc.x + t*t*p1.x,
-                y: (1-t)*(1-t)*p0.y + 2*(1-t)*t*pc.y + t*t*p1.y
-            };
-        }
+        // Encontrar t de newStart y newEnd en la curva original
         function closestT(target) {
             let best = Infinity, bt = 0;
-            for (let i = 0; i <= 400; i++) {
-                const t = i / 400;
-                const p = evalQ(t);
-                const d = Math.hypot(p.x - target.x, p.y - target.y);
+            for (let i = 0; i <= 600; i++) {
+                const t = i / 600;
+                const x = (1-t)*(1-t)*p0.x + 2*(1-t)*t*pc.x + t*t*p1.x;
+                const y = (1-t)*(1-t)*p0.y + 2*(1-t)*t*pc.y + t*t*p1.y;
+                const d = Math.hypot(x - target.x, y - target.y);
                 if (d < best) { best = d; bt = t; }
             }
             return bt;
@@ -640,11 +636,35 @@
         let tb = closestT(newEnd);
         if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; }
         if (Math.abs(tb - ta) < 1e-6) return pc;
-        const q0 = { x: (1-ta)*p0.x + ta*pc.x, y: (1-ta)*p0.y + ta*pc.y };
-        const q1 = { x: (1-ta)*pc.x + ta*p1.x, y: (1-ta)*pc.y + ta*p1.y };
+
+        // De Casteljau exacto para sub-curva [ta, tb]
+        // Paso 1: puntos de casteljau en ta
+        const q0 = { x: (1-ta)*p0.x + ta*pc.x,  y: (1-ta)*p0.y + ta*pc.y };
+        const q1 = { x: (1-ta)*pc.x + ta*p1.x,  y: (1-ta)*pc.y + ta*p1.y };
+        // Punto en ta (nuevo start real de la sub-curva desde ta)
+        // const r0 = { x: (1-ta)*q0.x + ta*q1.x, y: (1-ta)*q0.y + ta*q1.y };
+
+        // Paso 2: dentro de sub-curva (r0, q1, p1), parametrizar tb → tRel
         const tRel = (tb - ta) / (1 - ta);
+        // Control point del sub-segmento [ta, tb] es q0 reparametrizado
         const s0 = { x: (1-tRel)*q0.x + tRel*q1.x, y: (1-tRel)*q0.y + tRel*q1.y };
-        return s0;
+
+        // s0 es el control point de la cuadrática (newStart, s0, newEnd)
+        // PERO newStart y newEnd son puntos de cruce, no exactamente los puntos
+        // de la curva original en ta y tb. Necesitamos ajustar s0 para que la curva
+        // pase por el punto medio de la curva original entre ta y tb.
+        const tMid = (ta + tb) / 2;
+        const midOrig = {
+            x: (1-tMid)*(1-tMid)*p0.x + 2*(1-tMid)*tMid*pc.x + tMid*tMid*p1.x,
+            y: (1-tMid)*(1-tMid)*p0.y + 2*(1-tMid)*tMid*pc.y + tMid*tMid*p1.y
+        };
+        // Para una cuadrática, el punto en t=0.5 es: 0.25*A + 0.5*C + 0.25*B
+        // Despejando C: C = (midOrig - 0.25*newStart - 0.25*newEnd) / 0.5
+        const correctedC = {
+            x: (midOrig.x - 0.25*newStart.x - 0.25*newEnd.x) / 0.5,
+            y: (midOrig.y - 0.25*newStart.y - 0.25*newEnd.y) / 0.5
+        };
+        return correctedC;
     }
 
     function splitWithStroke(figure, stroke) {
@@ -742,36 +762,40 @@
                 if (++safety > n + 2) break;
             }
 
-            // Ahora agregar los edges del corte para cerrar la figura
+            
             // Agregar edges del corte para cerrar la figura
-            const cv = reverseCut ? [...cutVerts].reverse() : cutVerts;
-            const ces = reverseCut ? [...cutEdges].reverse() : cutEdges;
-    
+            // Usar siempre cutVerts/cutEdges originales sin invertir para preservar geometría
             const cutStartIdx = verts.length - 1;
-            for (let i = 1; i < cv.length - 1; i++) {
-                verts.push({x: cv[i].x, y: cv[i].y});
+
+            // Vértices intermedios del corte (sin los extremos que ya están en verts[0] y se cerrarán en 0)
+            if (reverseCut) {
+                for (let i = cutVerts.length - 2; i >= 1; i--) {
+                    verts.push({x: cutVerts[i].x, y: cutVerts[i].y});
+                }
+            } else {
+                for (let i = 1; i < cutVerts.length - 1; i++) {
+                    verts.push({x: cutVerts[i].x, y: cutVerts[i].y});
+                }
             }
-            for (let i = 0; i < ces.length; i++) {
-                const e = Object.assign({}, ces[i]);
-                const rawEdge = reverseCut ? ces[ces.length - 1 - i] : ces[i];
+
+            const numCutEdges = cutEdges.length;
+            for (let i = 0; i < numCutEdges; i++) {
+                // En reverseCut recorremos los edges al revés
+                const rawIdx = reverseCut ? (numCutEdges - 1 - i) : i;
+                const rawEdge = cutEdges[rawIdx];
+                const e = Object.assign({}, rawEdge);
                 e.start = cutStartIdx + i;
-                e.end = i === ces.length - 1 ? 0 : cutStartIdx + i + 1;
+                e.end   = i === numCutEdges - 1 ? 0 : cutStartIdx + i + 1;
+
                 if (rawEdge.curved && rawEdge.controlX != null) {
-                    // Los vértices reales de este edge en la dirección ya orientada
-                    const edgeStartPt = cv[reverseCut ? (cv.length - 1 - i) : i];
-                    const edgeEndPt   = cv[reverseCut ? (cv.length - 2 - i) : (i + 1)];
-                    // Recalcular el control point proyectando la curva original
-                    // sobre el sub-segmento correcto (los extremos pueden ser puntos de cruce)
-                    // Usar los vértices reales del cut data sin invertir para evaluar la curva original
-                    const origStart = reverseCut ? cutVerts[cutVerts.length - 1 - i] : cutVerts[i];
-                    const origEnd   = reverseCut ? cutVerts[cutVerts.length - 2 - i] : cutVerts[i + 1];
-                    const origEdge  = reverseCut ? cutEdges[cutEdges.length - 1 - i] : cutEdges[i];
-                    const origA = cutVerts[origEdge.start] || origStart;
-                    const origB = cutVerts[origEdge.end]   || origEnd;
-                    const origC = {x: origEdge.controlX, y: origEdge.controlY};
-                    const newC = subQuadraticBetweenPoints(origA, origC, origB,
-                        reverseCut ? origEnd : origStart,
-                        reverseCut ? origStart : origEnd);
+                    // origA y origB son los extremos reales del edge en el cut data original
+                    const origA = cutVerts[rawEdge.start];
+                    const origB = cutVerts[rawEdge.end];
+                    const origC = {x: rawEdge.controlX, y: rawEdge.controlY};
+                    // newStart y newEnd son los extremos en la dirección en que se recorre
+                    const newStart = reverseCut ? origB : origA;
+                    const newEnd   = reverseCut ? origA : origB;
+                    const newC = subQuadraticBetweenPoints(origA, origC, origB, newStart, newEnd);
                     e.controlX  = newC.x;
                     e.controlY  = newC.y;
                     e.control2X = null;
