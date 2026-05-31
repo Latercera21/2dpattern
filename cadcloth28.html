@@ -57,40 +57,40 @@
     </style>
 </head>
 <body>
-  <h3>CAD Cloth 2D</h3>
-<div class="toolbar">
-    <button id="createBtn"     onclick="toggleCreate()"     title="Crear polÃ¯Â¿Â½gono">??</button>
-    <input  type="number" id="sidesInput" min="3" max="10" value="3" title="Lados">
-    <button id="lineBtn"       onclick="toggleLine()"       title="Crear lÃ¯Â¿Â½nea">???</button>
-    <button id="closeShapeBtn" onclick="toggleCloseShape()" title="Cerrar figura">??</button>
-    <button id="closeApplyBtn" onclick="applyCloseShape()"  title="Aplicar cierre">?</button>
-    <button id="moveBtn"       onclick="toggleMove()"       title="Mover figura">?</button>
-    <button id="vertexBtn"     onclick="toggleVertex()"     title="Editar vÃ¯Â¿Â½rtice">??</button>
-    <button id="snapBtn"       onclick="toggleSnap()"       title="Snap">??</button>
-    <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vÃ¯Â¿Â½rtice">?</button>
-    <button id="curveBtn"      onclick="toggleCurve()"      title="Curvar arista">?</button>
-    <button id="straightenBtn" onclick="toggleStraighten()" title="Curva?Recta">??</button>
-    <button id="mirrorBtn"     onclick="toggleMirror()"     title="Desdoblar">??</button>
-    <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">?</button>
-    <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar uniÃ¯Â¿Â½n" style="display:none">?</button>
-    <button id="resizeBtn"     onclick="toggleResize()"     title="Cambiar longitud">??</button>
-    <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">??</button>
-    <input  type="number" id="rotateInput" value="90" step="1" title="Grados">
-    <button id="duplicateBtn"  onclick="toggleDuplicate()"  title="Duplicar">?</button>
-    <button id="reflectBtn"    onclick="toggleReflect()"    title="Reflejar">??</button>
-    <button id="grainBtn"      onclick="toggleGrainMode()"  title="Asignar hilo a figura">??</button>
-    <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="DirecciÃ¯Â¿Â½n del hilo">?</button>
-    <button id="deleteBtn"     onclick="toggleDelete()"     title="Eliminar figura">???</button>
-    <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">??</button>
-    <button id="cutBtn"        onclick="toggleCut()"        title="Cortar figura con lÃ¯Â¿Â½nea(s)">?</button>
-    <button id="cutApplyBtn"   onclick="applyCut()"         title="Aplicar corte">?</button>
-    <button onclick="clearAll()"   title="Eliminar todo">??</button>
-    <button onclick="undoAction()" title="Deshacer">?</button>
-    <button onclick="exportJSON()" title="Exportar JSON">??</button>
-    <button onclick="importJSON()" title="Importar JSON">??</button>
-    <span id="zoomIndicator">100%</span>
-    <button onclick="resetView()" title="Restablecer vista">?</button>
-</div>
+    <h3>CAD Cloth 2D</h3>
+    <div class="toolbar">
+        <button id="createBtn"     onclick="toggleCreate()"     title="Crear polígono">◻️</button>
+        <input  type="number" id="sidesInput" min="3" max="10" value="3" title="Lados">
+        <button id="lineBtn"       onclick="toggleLine()"       title="Crear línea">🖊️</button>
+        <button id="closeShapeBtn" onclick="toggleCloseShape()" title="Cerrar figura">🔒</button>
+        <button id="closeApplyBtn" onclick="applyCloseShape()"  title="Aplicar cierre">✔</button>
+        <button id="moveBtn"       onclick="toggleMove()"       title="Mover figura">✋</button>
+        <button id="vertexBtn"     onclick="toggleVertex()"     title="Editar vértice">📌</button>
+        <button id="snapBtn"       onclick="toggleSnap()"       title="Snap">🧲</button>
+        <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vértice">➕</button>
+        <button id="curveBtn"      onclick="toggleCurve()"      title="Curvar arista">〜</button>
+        <button id="straightenBtn" onclick="toggleStraighten()" title="Curva→Recta">📐</button>
+        <button id="mirrorBtn"     onclick="toggleMirror()"     title="Desdoblar">📖</button>
+        <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">⛓</button>
+        <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar unión" style="display:none">✔</button>
+        <button id="resizeBtn"     onclick="toggleResize()"     title="Cambiar longitud">📏</button>
+        <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">🔄</button>
+        <input  type="number" id="rotateInput" value="90" step="1" title="Grados">
+        <button id="duplicateBtn"  onclick="toggleDuplicate()"  title="Duplicar">⧉</button>
+        <button id="reflectBtn"    onclick="toggleReflect()"    title="Reflejar">🪞</button>
+        <button id="grainBtn"      onclick="toggleGrainMode()"  title="Asignar hilo a figura">🧵</button>
+        <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Dirección del hilo">→</button>
+        <button id="deleteBtn"     onclick="toggleDelete()"     title="Eliminar figura">🗑️</button>
+        <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">⏸︎</button>
+        <button id="cutBtn"        onclick="toggleCut()"        title="Cortar figura con línea(s)">✂</button>
+        <button id="cutApplyBtn"   onclick="applyCut()"         title="Aplicar corte">✔</button>
+        <button onclick="clearAll()"   title="Eliminar todo">💥</button>
+        <button onclick="undoAction()" title="Deshacer">↩</button>
+        <button onclick="exportJSON()" title="Exportar JSON">💾</button>
+        <button onclick="importJSON()" title="Importar JSON">📂</button>
+        <span id="zoomIndicator">100%</span>
+        <button onclick="resetView()" title="Restablecer vista">⊙</button>
+    </div>
 
 <div id="vertexInputs" class="float-inputs">
     <span class="lbl">X cm:</span><input type="text" id="vertexX" placeholder="ej: 25.5">
