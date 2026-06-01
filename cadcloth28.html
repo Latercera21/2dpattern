@@ -622,8 +622,8 @@
     function subQuadraticBetweenPoints(p0, pc, p1, newStart, newEnd) {
         function closestT(target) {
             let best = Infinity, bt = 0;
-            for (let i = 0; i <= 600; i++) {
-                const t = i / 600;
+            for (let i = 0; i <= 1000; i++) {
+                const t = i / 1000;
                 const x = (1-t)*(1-t)*p0.x + 2*(1-t)*t*pc.x + t*t*p1.x;
                 const y = (1-t)*(1-t)*p0.y + 2*(1-t)*t*pc.y + t*t*p1.y;
                 const d = Math.hypot(x - target.x, y - target.y);
@@ -631,38 +631,34 @@
             }
             return bt;
         }
-        let ta = closestT(newStart);
-        let tb = closestT(newEnd);
-        if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; }
-        if (Math.abs(tb - ta) < 1e-6) return pc;
+        const ta = closestT(newStart);
+        const tb = closestT(newEnd);
+        const t0 = Math.min(ta, tb);
+        const t1 = Math.max(ta, tb);
+        if (Math.abs(t1 - t0) < 1e-6) return pc;
     
-        // De Casteljau para sub-curva [ta, tb]
-        const q0a = { x: (1-ta)*p0.x + ta*pc.x,  y: (1-ta)*p0.y + ta*pc.y };
-        const q1a = { x: (1-ta)*pc.x + ta*p1.x,  y: (1-ta)*pc.y + ta*p1.y };
-        const tRel = (tb - ta) / (1 - ta);
-        const subC = { x: (1-tRel)*q0a.x + tRel*q1a.x, y: (1-tRel)*q0a.y + tRel*q1a.y };
+        const q0 = { x: (1-t0)*p0.x + t0*pc.x, y: (1-t0)*p0.y + t0*pc.y };
+        const q1 = { x: (1-t0)*pc.x + t0*p1.x, y: (1-t0)*pc.y + t0*p1.y };
+        const tRel = (t1 - t0) / (1 - t0);
+        const subC = { x: (1-tRel)*q0.x + tRel*q1.x, y: (1-tRel)*q0.y + tRel*q1.y };
     
-        // newStart/newEnd pueden estar desplazados respecto a la curva analÃ¯Â¿Â½tica;
-        // recalcular el control usando los puntos reales de la curva en ta y tb
-        const realStart = {
-            x: (1-ta)*(1-ta)*p0.x + 2*(1-ta)*ta*pc.x + ta*ta*p1.x,
-            y: (1-ta)*(1-ta)*p0.y + 2*(1-ta)*ta*pc.y + ta*ta*p1.y
+        const realA = {
+            x: (1-t0)*(1-t0)*p0.x + 2*(1-t0)*t0*pc.x + t0*t0*p1.x,
+            y: (1-t0)*(1-t0)*p0.y + 2*(1-t0)*t0*pc.y + t0*t0*p1.y
         };
-        const realEnd = {
-            x: (1-tb)*(1-tb)*p0.x + 2*(1-tb)*tb*pc.x + tb*tb*p1.x,
-            y: (1-tb)*(1-tb)*p0.y + 2*(1-tb)*tb*pc.y + tb*tb*p1.y
+        const realB = {
+            x: (1-t1)*(1-t1)*p0.x + 2*(1-t1)*t1*pc.x + t1*t1*p1.x,
+            y: (1-t1)*(1-t1)*p0.y + 2*(1-t1)*t1*pc.y + t1*t1*p1.y
         };
-        // CorrecciÃ¯Â¿Â½n por punto medio analÃ¯Â¿Â½tico
-        const tMid = (ta + tb) / 2;
-        const midOrig = {
+        const tMid = (t0 + t1) / 2;
+        const mid = {
             x: (1-tMid)*(1-tMid)*p0.x + 2*(1-tMid)*tMid*pc.x + tMid*tMid*p1.x,
             y: (1-tMid)*(1-tMid)*p0.y + 2*(1-tMid)*tMid*pc.y + tMid*tMid*p1.y
         };
-        const correctedC = {
-            x: (midOrig.x - 0.25*realStart.x - 0.25*realEnd.x) / 0.5,
-            y: (midOrig.y - 0.25*realStart.y - 0.25*realEnd.y) / 0.5
+        return {
+            x: (mid.x - 0.25*realA.x - 0.25*realB.x) / 0.5,
+            y: (mid.y - 0.25*realA.y - 0.25*realB.y) / 0.5
         };
-        return correctedC;
     }
 
     function splitWithStroke(figure, stroke) {
@@ -765,7 +761,6 @@
     }
 
 
-    // Corte parcial: 1 intersecciÃ¯Â¿Â½n + extremo dentro
     function splitPartial(figure, stroke, crossings) {
         const c0 = crossings[0];
         const strokeEnd = stroke[stroke.length - 1];
@@ -775,9 +770,18 @@
         const cutData = buildCutEdges(cutLineIndices);
         if (cutData.vertices.length < 2) return null;
     
-        const stepsPerEdge = 80;
-        let origEdgeIdx = Math.floor(c0.edgeIdx / stepsPerEdge);
-        if (origEdgeIdx >= figure.edges.length) origEdgeIdx = figure.edges.length - 1;
+        // Encontrar el edge original donde cae c0
+        // Recorrer edges acumulando puntos muestreados para mapear c0.edgeIdx
+        let origEdgeIdx = 0;
+        let accumulated = 0;
+        for (let ei = 0; ei < figure.edges.length; ei++) {
+            const e = figure.edges[ei];
+            const isCurved = (e.cubic && e.control2X != null) || (e.curved && e.controlX != null);
+            const pts = isCurved ? 80 : 1;
+            if (c0.edgeIdx < accumulated + pts) { origEdgeIdx = ei; break; }
+            accumulated += pts;
+            origEdgeIdx = ei;
+        }
     
         const newVerts = figure.vertices.map(v => ({x: v.x, y: v.y}));
         const newEdges = figure.edges.map(e => Object.assign({}, e));
@@ -804,13 +808,12 @@
         });
     
         const cIdx = insertAt;
-    
-        const cv = cutData.vertices;
         const tipIdx = newVerts.length;
         newVerts.push({x: strokeEnd.x, y: strokeEnd.y});
     
-        const interiorStart = newVerts.length;
+        const cv = cutData.vertices;
         const interiorVerts = cv.slice(1, cv.length - 1);
+        const interiorStart = newVerts.length;
         interiorVerts.forEach(v => newVerts.push({x: v.x, y: v.y}));
     
         const goEdges = cutData.edges;
@@ -818,20 +821,16 @@
     
         for (let i = 0; i < n; i++) {
             const e = Object.assign({}, goEdges[i]);
-            if (i === 0) e.start = cIdx;
-            else e.start = interiorStart + i - 1;
-            if (i === n - 1) e.end = tipIdx;
-            else e.end = interiorStart + i;
+            e.start = (i === 0) ? cIdx : (interiorStart + i - 1);
+            e.end   = (i === n - 1) ? tipIdx : (interiorStart + i);
             if (interiorVerts.length === 0 && n === 1) { e.start = cIdx; e.end = tipIdx; }
             newEdges.push(e);
         }
     
         for (let i = n - 1; i >= 0; i--) {
             const e = Object.assign({}, goEdges[i]);
-            if (i === n - 1) e.start = tipIdx;
-            else e.start = interiorStart + i;
-            if (i === 0) e.end = cIdx;
-            else e.end = interiorStart + i - 1;
+            e.start = (i === n - 1) ? tipIdx : (interiorStart + i);
+            e.end   = (i === 0) ? cIdx : (interiorStart + i - 1);
             if (interiorVerts.length === 0 && n === 1) { e.start = tipIdx; e.end = cIdx; }
             newEdges.push(e);
         }
@@ -925,7 +924,7 @@
         for (let fi=0; fi<figures.length; fi++) {
             if (!figures[fi].closed) continue;
             if (cutLineIndices.includes(fi)) continue;
-            const polyPts = sampleFigureEdges(figures[fi], 12);
+            const polyPts = sampleFigureEdges(figures[fi], 80);
             const cx = findCrossings(polyPts, stroke);
             if (cx.length >= 2) {
                 targetFi = fi;
@@ -939,7 +938,7 @@
             for (let fi=0; fi<figures.length; fi++) {
                 if (!figures[fi].closed) continue;
                 if (cutLineIndices.includes(fi)) continue;
-                const polyPts = sampleFigureEdges(figures[fi], 12);
+                const polyPts = sampleFigureEdges(figures[fi], 80);
                 const cx = findCrossings(polyPts, stroke);
                 if (cx.length === 1) {
                     const strokeEnd = stroke[stroke.length-1];
@@ -958,7 +957,6 @@
         }
 
         saveState();
-        const polyPts = sampleFigureEdges(figures[targetFi], 12);
 
         if (bestCrossings.length >= 2) {
             // Corte completo ? 2 piezas
