@@ -665,32 +665,48 @@
         const polyPts = sampleFigureEdges(figure, 80);
         const crossings = findCrossings(polyPts, stroke);
         if (crossings.length < 2) return null;
-
+    
         const c0 = crossings[0];
         const c1 = crossings[crossings.length - 1];
-        const n = polyPts.length;
-
         const cutData = buildCutEdges(cutLineIndices);
-
-        const pts1 = [c0];
-        for (let i = (c0.edgeIdx + 1) % n; ; i = (i + 1) % n) {
-            pts1.push(polyPts[i]);
-            if (i === c1.edgeIdx) break;
-            if (pts1.length > n + 2) break;
+    
+        function edgeIdxToOrig(edgeIdx) {
+            let accumulated = 0;
+            for (let ei = 0; ei < figure.edges.length; ei++) {
+                const e = figure.edges[ei];
+                const isCurved = (e.cubic && e.control2X != null) || (e.curved && e.controlX != null);
+                const pts = isCurved ? 80 : 1;
+                if (edgeIdx < accumulated + pts) return ei;
+                accumulated += pts;
+            }
+            return figure.edges.length - 1;
         }
-        pts1.push(c1);
-
-        const pts2 = [c1];
-        for (let i = (c1.edgeIdx + 1) % n; ; i = (i + 1) % n) {
-            pts2.push(polyPts[i]);
-            if (i === c0.edgeIdx) break;
-            if (pts2.length > n + 2) break;
+    
+        const origE0 = edgeIdxToOrig(c0.edgeIdx);
+        const origE1 = edgeIdxToOrig(c1.edgeIdx);
+        const n = figure.edges.length;
+    
+        // pts1: c0 -> recorrer vértices originales -> c1
+        const verts1 = [c0];
+        for (let i = (origE0 + 1) % n; ; i = (i + 1) % n) {
+            verts1.push(figure.vertices[figure.edges[i].start]);
+            if (i === origE1) break;
+            if (verts1.length > n + 2) break;
         }
-        pts2.push(c0);
-
-        const fig1 = ptsToFigure(simplifyPoints(removeDuplicatePoints(pts1)), false);
-        const fig2 = ptsToFigure(simplifyPoints(removeDuplicatePoints(pts2)), false);
-
+        verts1.push(c1);
+    
+        // pts2: c1 -> recorrer vértices originales -> c0
+        const verts2 = [c1];
+        for (let i = (origE1 + 1) % n; ; i = (i + 1) % n) {
+            verts2.push(figure.vertices[figure.edges[i].start]);
+            if (i === origE0) break;
+            if (verts2.length > n + 2) break;
+        }
+        verts2.push(c0);
+    
+        const fig1 = ptsToFigure(removeDuplicatePoints(verts1), false);
+        const fig2 = ptsToFigure(removeDuplicatePoints(verts2), false);
+    
         function appendCutEdges(figBase, cutVerts, cutEdges, reversed, c0, c1) {
             const offset = figBase.vertices.length;
             const cv = reversed ? [...cutVerts].reverse() : cutVerts;
@@ -700,9 +716,7 @@
             const edgesToAdd = reversed ? [...cutEdges].reverse() : cutEdges;
             for (let ei = 0; ei < edgesToAdd.length; ei++) {
                 const e = Object.assign({}, edgesToAdd[ei]);
-                if (reversed) {
-                    const tmp = e.start; e.start = e.end; e.end = tmp;
-                }
+                if (reversed) { const tmp = e.start; e.start = e.end; e.end = tmp; }
                 if (e.curved && e.controlX != null) {
                     const origEdgeSrc = reversed ? cutEdges[cutEdges.length - 1 - ei] : cutEdges[ei];
                     const origP0 = cutVerts[origEdgeSrc.start];
@@ -721,10 +735,10 @@
             figBase.closed = true;
             return figBase;
         }
-
+    
         appendCutEdges(fig1, cutData.vertices, cutData.edges, false, c0, c1);
         appendCutEdges(fig2, cutData.vertices, cutData.edges, true,  c0, c1);
-
+    
         if (fig1.vertices.length < 3 || fig2.vertices.length < 3) return null;
         return [fig1, fig2];
     }
