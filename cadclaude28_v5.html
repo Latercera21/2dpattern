@@ -691,27 +691,19 @@
         for (let i = (startOrigE + 1) % n; ; i = (i + 1) % n) {
             const origE = figure.edges[i];
             verts.push({x: figure.vertices[origE.start].x, y: figure.vertices[origE.start].y});
-            const ec = Object.assign({}, origE);
-            ec.start = verts.length - 2;
-            ec.end   = verts.length - 1;
-            edges.push(ec);
+            edges.push(Object.assign({}, origE));
             if (i === endOrigE) break;
             if (verts.length > n + 2) break;
         }
         verts.push(endCross);
 
-        const figBase = {
-            vertices: removeDuplicatePoints(verts).map(p => ({x:p.x, y:p.y})),
-            edges: [],
-            closed: false,
-            grain: null
-        };
+        const cleanVerts = removeDuplicatePoints(verts);
+        const figBase = {vertices: cleanVerts.map(p => ({x:p.x, y:p.y})), edges: [], closed: false, grain: null};
 
-        figBase.edges.push(makeEdge(0, 1));
-        for (let ei = 0; ei < edges.length; ei++) {
-            const e = Object.assign({}, edges[ei]);
-            e.start = ei + 1;
-            e.end   = ei + 2;
+        for (let ei = 0; ei < cleanVerts.length - 1; ei++) {
+            const e = ei < edges.length ? Object.assign({}, edges[ei]) : makeEdge(ei, ei+1);
+            e.start = ei;
+            e.end   = ei + 1;
             figBase.edges.push(e);
         }
         return figBase;
@@ -821,18 +813,47 @@
         });
 
         const oldEnd = newEdges[origEdgeIdx].end;
-        newEdges[origEdgeIdx].end = insertAt;
-        newEdges[origEdgeIdx].curved = false;
-        newEdges[origEdgeIdx].cubic = false;
-        newEdges[origEdgeIdx].controlX = null;
-        newEdges[origEdgeIdx].controlY = null;
-        newEdges[origEdgeIdx].control2X = null;
-        newEdges[origEdgeIdx].control2Y = null;
-        newEdges.splice(origEdgeIdx + 1, 0, {
-            start: insertAt, end: oldEnd,
-            curved: false, cubic: false,
-            controlX: null, controlY: null, control2X: null, control2Y: null
-        });
+        const origEdge = figure.edges[origEdgeIdx];
+        if (origEdge.curved && origEdge.controlX != null) {
+            const pa = figure.vertices[origEdge.start];
+            const pb = figure.vertices[origEdge.end];
+            const pc = {x: origEdge.controlX, y: origEdge.controlY};
+            let t = 0;
+            let best = Infinity;
+            for (let k = 0; k <= 200; k++) {
+                const tt = k/200;
+                const x = (1-tt)*(1-tt)*pa.x + 2*(1-tt)*tt*pc.x + tt*tt*pb.x;
+                const y = (1-tt)*(1-tt)*pa.y + 2*(1-tt)*tt*pc.y + tt*tt*pb.y;
+                const d = Math.hypot(x - c0.x, y - c0.y);
+                if (d < best) { best = d; t = tt; }
+            }
+            const split = splitQuadraticBezier(pa, pc, pb, t);
+            newEdges[origEdgeIdx].end = insertAt;
+            newEdges[origEdgeIdx].curved = true;
+            newEdges[origEdgeIdx].controlX = split.left.control.x;
+            newEdges[origEdgeIdx].controlY = split.left.control.y;
+            newEdges[origEdgeIdx].control2X = null;
+            newEdges[origEdgeIdx].control2Y = null;
+            newEdges.splice(origEdgeIdx + 1, 0, {
+                start: insertAt, end: oldEnd,
+                curved: true, cubic: false,
+                controlX: split.right.control.x, controlY: split.right.control.y,
+                control2X: null, control2Y: null
+            });
+        } else {
+            newEdges[origEdgeIdx].end = insertAt;
+            newEdges[origEdgeIdx].curved = false;
+            newEdges[origEdgeIdx].cubic = false;
+            newEdges[origEdgeIdx].controlX = null;
+            newEdges[origEdgeIdx].controlY = null;
+            newEdges[origEdgeIdx].control2X = null;
+            newEdges[origEdgeIdx].control2Y = null;
+            newEdges.splice(origEdgeIdx + 1, 0, {
+                start: insertAt, end: oldEnd,
+                curved: false, cubic: false,
+                controlX: null, controlY: null, control2X: null, control2Y: null
+            });
+        }
 
         const cIdx = insertAt;
         const tipIdx = newVerts.length;
