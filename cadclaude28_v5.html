@@ -681,68 +681,97 @@
             return figure.edges.length - 1;
         }
 
-    const origE0 = edgeIdxToOrig(c0.edgeIdx);
-    const origE1 = edgeIdxToOrig(c1.edgeIdx);
-    const n = figure.edges.length;
-
-    function buildHalf(startCross, endCross, startOrigE, endOrigE) {
-        const verts = [startCross];
-        const edges = [];
-        for (let i = (startOrigE + 1) % n; ; i = (i + 1) % n) {
-            const origE = figure.edges[i];
-            verts.push({x: figure.vertices[origE.start].x, y: figure.vertices[origE.start].y});
-            edges.push(Object.assign({}, origE));
-            if (i === endOrigE) break;
-            if (verts.length > n + 2) break;
-        }
-        verts.push(endCross);
-
-        const cleanVerts = removeDuplicatePoints(verts);
-        const figBase = {vertices: cleanVerts.map(p => ({x:p.x, y:p.y})), edges: [], closed: false, grain: null};
-
-        for (let ei = 0; ei < cleanVerts.length - 1; ei++) {
-            const e = ei < edges.length ? Object.assign({}, edges[ei]) : makeEdge(ei, ei+1);
-            e.start = ei;
-            e.end   = ei + 1;
-            figBase.edges.push(e);
-        }
-        return figBase;
-    }
-
-    const fig1 = buildHalf(c0, c1, origE0, origE1);
-    const fig2 = buildHalf(c1, c0, origE1, origE0);
-
-    function appendCutEdges(figBase, cutVerts, cutEdges, reversed, c0, c1) {
-        const offset = figBase.vertices.length;
-        const cv = reversed ? [...cutVerts].reverse() : cutVerts;
-        for (let i = 1; i < cv.length - 1; i++) {
-            figBase.vertices.push({x: cv[i].x, y: cv[i].y});
-        }
-        const edgesToAdd = reversed ? [...cutEdges].reverse() : cutEdges;
-        for (let ei = 0; ei < edgesToAdd.length; ei++) {
-            const e = Object.assign({}, edgesToAdd[ei]);
-            if (reversed) { const tmp = e.start; e.start = e.end; e.end = tmp; }
-            if (e.curved && e.controlX != null) {
-                const origEdgeSrc = reversed ? cutEdges[cutEdges.length - 1 - ei] : cutEdges[ei];
-                const origP0 = cutVerts[origEdgeSrc.start];
-                const origP1 = cutVerts[origEdgeSrc.end];
-                const origPC = { x: origEdgeSrc.controlX, y: origEdgeSrc.controlY };
-                const ptStart = reversed ? c1 : c0;
-                const ptEnd   = reversed ? c0 : c1;
-                const newC = subQuadraticBetweenPoints(origP0, origPC, origP1, ptStart, ptEnd);
-                e.controlX = newC.x;
-                e.controlY = newC.y;
+        const origE0 = edgeIdxToOrig(c0.edgeIdx);
+        const origE1 = edgeIdxToOrig(c1.edgeIdx);
+        const n = figure.edges.length;
+    
+        function buildHalf(startCross, endCross, startOrigE, endOrigE) {
+            const verts = [startCross];
+            const edges = [];
+    
+            const firstOrigE = figure.edges[startOrigE];
+            const firstOrigENext = figure.edges[(startOrigE + 1) % n];
+            if (firstOrigE.curved && firstOrigE.controlX != null) {
+                const pa = figure.vertices[firstOrigE.start];
+                const pb = figure.vertices[firstOrigE.end];
+                const pc = {x: firstOrigE.controlX, y: firstOrigE.controlY};
+                let t = 0, best = Infinity;
+                for (let k = 0; k <= 200; k++) {
+                    const tt = k/200;
+                    const x = (1-tt)*(1-tt)*pa.x + 2*(1-tt)*tt*pc.x + tt*tt*pb.x;
+                    const y = (1-tt)*(1-tt)*pa.y + 2*(1-tt)*tt*pc.y + tt*tt*pb.y;
+                    const d = Math.hypot(x - startCross.x, y - startCross.y);
+                    if (d < best) { best = d; t = tt; }
+                }
+                const split = splitQuadraticBezier(pa, pc, pb, t);
+                edges.push({start:0, end:1, curved:true, cubic:false, controlX:split.right.control.x, controlY:split.right.control.y, control2X:null, control2Y:null});
+            } else {
+                edges.push(makeEdge(0, 1));
             }
-            e.start = (ei === 0) ? (offset - 1) : (offset - 1 + ei);
-            e.end   = (ei === edgesToAdd.length - 1) ? 0 : (offset - 1 + ei + 1);
-            figBase.edges.push(e);
+    
+            for (let i = (startOrigE + 1) % n; ; i = (i + 1) % n) {
+                const origE = figure.edges[i];
+                verts.push({x: figure.vertices[origE.start].x, y: figure.vertices[origE.start].y});
+                if (i === endOrigE) {
+                    const lastOrigE = figure.edges[endOrigE];
+                    if (lastOrigE.curved && lastOrigE.controlX != null) {
+                        const pa = figure.vertices[lastOrigE.start];
+                        const pb = figure.vertices[lastOrigE.end];
+                        const pc = {x: lastOrigE.controlX, y: lastOrigE.controlY};
+                        let t = 0, best = Infinity;
+                        for (let k = 0; k <= 200; k++) {
+                            const tt = k/200;
+                            const x = (1-tt)*(1-tt)*pa.x + 2*(1-tt)*tt*pc.x + tt*tt*pb.x;
+                            const y = (1-tt)*(1-tt)*pa.y + 2*(1-tt)*tt*pc.y + tt*tt*pb.y;
+                            const d = Math.hypot(x - endCross.x, y - endCross.y);
+                            if (d < best) { best = d; t = tt; }
+                        }
+                        const split = splitQuadraticBezier(pa, pc, pb, t);
+                        edges.push({start:0, end:1, curved:true, cubic:false, controlX:split.left.control.x, controlY:split.left.control.y, control2X:null, control2Y:null});
+                    } else {
+                        edges.push(Object.assign({}, lastOrigE));
+                    }
+                    break;
+                }
+                if (verts.length > n + 2) break;
+                edges.push(Object.assign({}, origE));
+            }
+            verts.push(endCross);
+
+            const cleanVerts = removeDuplicatePoints(verts);
+            const figBase = {vertices: cleanVerts.map(p => ({x:p.x, y:p.y})), edges: [], closed: false, grain: null};
+
+            for (let ei = 0; ei < cleanVerts.length - 1; ei++) {
+                const e = ei < edges.length ? Object.assign({}, edges[ei]) : makeEdge(ei, ei+1);
+                e.start = ei;
+                e.end   = ei + 1;
+                figBase.edges.push(e);
+            }
+            return figBase;
         }
+
+        const fig1 = buildHalf(c0, c1, origE0, origE1);
+        const fig2 = buildHalf(c1, c0, origE1, origE0);
+
+        function appendCutEdges(figBase, cutVerts, cutEdges, reversed) {
+            const offset = figBase.vertices.length;
+            const cv = reversed ? [...cutVerts].reverse() : cutVerts;
+            for (let i = 1; i < cv.length - 1; i++) {
+                figBase.vertices.push({x: cv[i].x, y: cv[i].y});
+            }
+            const edgesToAdd = reversed ? [...cutEdges].reverse() : cutEdges;
+            for (let ei = 0; ei < edgesToAdd.length; ei++) {
+                const e = Object.assign({}, edgesToAdd[ei]);
+                e.start = (ei === 0) ? (offset - 1) : (offset - 1 + ei);
+                e.end   = (ei === edgesToAdd.length - 1) ? 0 : (offset - 1 + ei + 1);
+                figBase.edges.push(e);
+            }
             figBase.closed = true;
             return figBase;
         }
 
-        appendCutEdges(fig1, cutData.vertices, cutData.edges, false, c0, c1);
-        appendCutEdges(fig2, cutData.vertices, cutData.edges, true,  c0, c1);
+        appendCutEdges(fig1, cutData.vertices, cutData.edges, false);
+        appendCutEdges(fig2, cutData.vertices, cutData.edges, true);
 
         if (fig1.vertices.length < 3 || fig2.vertices.length < 3) return null;
         return [fig1, fig2];
