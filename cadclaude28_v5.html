@@ -709,10 +709,12 @@
                 edges.push(makeEdge(0, 1));
             }
     
+            let loopCount = 0;
             for (let i = (startOrigE + 1) % n; ; i = (i + 1) % n) {
+                loopCount++;
                 const origE = figure.edges[i];
                 verts.push({x: figure.vertices[origE.start].x, y: figure.vertices[origE.start].y});
-                if (i === endOrigE) {
+                if (i === endOrigE && loopCount > 0) {
                     const lastOrigE = figure.edges[endOrigE];
                     if (lastOrigE.curved && lastOrigE.controlX != null) {
                         const pa = figure.vertices[lastOrigE.start];
