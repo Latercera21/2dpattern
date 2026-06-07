@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Nesting</title>
+<style>
+  body { margin:0; font-family:monospace; font-size:12px; }
+  #controls { display:flex; gap:8px; padding:6px; align-items:center; flex-wrap:wrap; border-bottom:1px solid #ccc; }
+  button { padding:3px 10px; cursor:pointer; }
+  #canvasWrap { overflow:auto; }
+  canvas { display:block; }
+</style>
+</head>
+<body>
+<div id="controls">
+  <button id="btnCargar">Cargar JSON</button>
+  <button id="btnNesting" disabled>Ejecutar Nesting</button>
+  <label><input type="checkbox" id="chkRotar" checked> Rotación 180°</label>
+  <span id="info">—</span>
+  <input type="file" id="fileInput" accept=".json" style="display:none">
+</div>
+<div id="canvasWrap"><canvas id="c"></canvas></div>
+<pre id="log" style="font-size:10px;padding:4px;max-height:200px;overflow:auto;border-top:1px solid #ccc;"></pre>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONSTANTES
+// ═══════════════════════════════════════════════════════
+const TELA_W  = 160;   // cm
+const PX_CM   = 4;     // solo visualización
+const MARGEN  = 0.5;   // cm entre piezas
+const N_SAMP  = 96;    // puntos por polígono de colisión
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let piezas   = [];
+let layout   = [];
+
+// ═══════════════════════════════════════════════════════
+// GEOMETRÍA BÁSICA
+// ═══════════════════════════════════════════════════════
+const lerp   = (a,b,t) => a+(b-a)*t;
+const ptLerp = (a,b,t) => ({x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t)});
+const ptQuad = (p0,cp,p1,t) => ptLerp(ptLerp(p0,cp,t), ptLerp(cp,p1,t), t);
+const dist2  = (a,b) => (a.x-b.x)**2+(a.y-b.y)**2;
+const dist   = (a,b) => Math.sqrt(dist2(a,b));
+const cross  = (o,a,b) => (a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x);
+
+// ═══════════════════════════════════════════════════════
+// SAMPLEO DE FIGURA → POLÍGONO (en cm)
+// Distribuye N puntos equidistantes a lo largo del contorno
+// ═══════════════════════════════════════════════════════
+function segLen(seg){
+  if(seg.type==='line') return dist(seg.pts[0], seg.pts[1]);
+  let l=0, prev=seg.pts[0];
+  for(let i=1;i<=24;i++){
+    const p=ptQuad(seg.pts[0],seg.pts[1],seg.pts[2],i/24);
+    l+=dist(prev,p); prev=p;
+  }
+  return l;
+}
+
+function ptOnSeg(seg, t){
+  if(seg.type==='line') return ptLerp(seg.pts[0],seg.pts[1],t);
+  return ptQuad(seg.pts[0],seg.pts[1],seg.pts[2],t);
+}
+
+function samplearFigura(segs, n){
+  const lens  = segs.map(segLen);
+  const total = lens.reduce((a,b)=>a+b,0);
+  const pts   = [];
+  const step  = total / n;
+  let acum=0, si=0, tBase=0;
+
+  for(let k=0;k<n;k++){
+    const target = k * step;
+    while(si < segs.length-1 && acum+lens[si] < target){
+      acum += lens[si]; si++;
+    }
+    const t = lens[si]>1e-9 ? Math.min(1,(target-acum)/lens[si]) : 0;
+    pts.push(ptOnSeg(segs[si], t));
+  }
+  return pts;
+}
+
+// ═══════════════════════════════════════════════════════
+// BBOX
+// ═══════════════════════════════════════════════════════
+function bboxPoly(poly){
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of poly){
+    if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x;
+    if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y;
+  }
+  return {minX,minY,maxX,maxY,w:maxX-minX,h:maxY-minY};
+}
+
+function normPoly(poly){
+  const bb=bboxPoly(poly);
+  return poly.map(p=>({x:p.x-bb.minX, y:p.y-bb.minY}));
+}
+
+function normSegs(segs){
+  const allPts=segs.flatMap(s=>s.pts);
+  const minX=Math.min(...allPts.map(p=>p.x));
+  const minY=Math.min(...allPts.map(p=>p.y));
+  return segs.map(s=>({type:s.type, pts:s.pts.map(p=>({x:p.x-minX,y:p.y-minY}))}));
+}
+
+// ═══════════════════════════════════════════════════════
+// CONVEX HULL (Graham scan)
+// ═══════════════════════════════════════════════════════
+function convexHull(pts){
+  const n=pts.length;
+  if(n<3) return [...pts];
+  const sorted=[...pts].sort((a,b)=>a.x!==b.x?a.x-b.x:a.y-b.y);
+  const lower=[], upper=[];
+  for(const p of sorted){
+    while(lower.length>=2 && cross(lower[lower.length-2],lower[lower.length-1],p)<=0) lower.pop();
+    lower.push(p);
+  }
+  for(let i=sorted.length-1;i>=0;i--){
+    const p=sorted[i];
+    while(upper.length>=2 && cross(upper[upper.length-2],upper[upper.length-1],p)<=0) upper.pop();
+    upper.push(p);
+  }
+  upper.pop(); lower.pop();
+  return lower.concat(upper);
+}
+
+// ═══════════════════════════════════════════════════════
+// NFP — No-Fit Polygon por Minkowski Difference
+//
+// NFP(A,B) = conjunto de vectores de traslación t tal que
+// B trasladado por t toca A sin penetrar.
+// = Minkowski sum de A con B reflejado respecto al origen.
+// Resultado: polígono (convex hull de A + (-B))
+// 
+// Para polígonos cóncavos esto es una aproximación
+// (el NFP exacto requeriría decomposición convexa),
+// pero para moldes de ropa es suficientemente preciso.
+// ═══════════════════════════════════════════════════════
+function calcNFP(polyA, polyB){
+  // Reflejar B
+  const Br = polyB.map(p=>({x:-p.x, y:-p.y}));
+  // Minkowski sum: todos los a+b
+  const pts=[];
+  for(const a of polyA) for(const b of Br) pts.push({x:a.x+b.x, y:a.y+b.y});
+  return convexHull(pts);
+}
+
+// ═══════════════════════════════════════════════════════
+// COLISIÓN POR SEPARATING AXIS THEOREM (SAT)
+// Para polígonos convexos. Para cóncavos usamos punto-en-poly
+// como chequeo adicional.
+// ═══════════════════════════════════════════════════════
+function proyectar(poly, ax, ay){
+  let mn=Infinity, mx=-Infinity;
+  for(const p of poly){
+    const d=p.x*ax+p.y*ay;
+    if(d<mn)mn=d; if(d>mx)mx=d;
+  }
+  return {mn,mx};
+}
+
+function solapaSAT(A, B){
+  for(const poly of [A,B]){
+    const n=poly.length;
+    for(let i=0;i<n;i++){
+      const a=poly[i], b=poly[(i+1)%n];
+      const ax=-(b.y-a.y), ay=b.x-a.x; // normal al edge
+      const pA=proyectar(A,ax,ay);
+      const pB=proyectar(B,ax,ay);
+      if(pA.mx<pB.mn||pB.mx<pA.mn) return false;
+    }
+  }
+  return true;
+}
+
+function puntoEnPoly(pt, poly){
+  let inside=false;
+  const n=poly.length;
+  for(let i=0,j=n-1;i<n;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>pt.y)!==(yj>pt.y))&&(pt.x<(xj-xi)*(pt.y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+function polySolapa(A, B){
+  // Chequeo bbox rápido
+  const bbA=bboxPoly(A), bbB=bboxPoly(B);
+  if(bbA.maxX<bbB.minX||bbB.maxX<bbA.minX||bbA.maxY<bbB.minY||bbB.maxY<bbA.minY) return false;
+  // SAT
+  if(!solapaSAT(A,B)) return false;
+  // Punto en poly para cóncavos
+  for(const p of B) if(puntoEnPoly(p,A)) return true;
+  for(const p of A) if(puntoEnPoly(p,B)) return true;
+  return false;
+}
+
+// Expandir polígono hacia afuera por 'margen' cm (offset aproximado)
+function expandirPoly(poly, margen){
+  const cx=poly.reduce((s,p)=>s+p.x,0)/poly.length;
+  const cy=poly.reduce((s,p)=>s+p.y,0)/poly.length;
+  return poly.map(p=>{
+    const dx=p.x-cx, dy=p.y-cy;
+    const d=Math.sqrt(dx*dx+dy*dy)||1;
+    return {x:p.x+dx/d*margen, y:p.y+dy/d*margen};
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// PARSEO JSON → piezas normalizadas en cm
+// ═══════════════════════════════════════════════════════
+function parsearJSON(data){
+  const pxPerCm=data.pxPerCm||37.79527559055118;
+  return data.figures.map((fig,idx)=>{
+    const verts=fig.vertices.map(v=>({
+      x: v.xCm!==undefined ? v.xCm : v.x/pxPerCm,
+      y: v.yCm!==undefined ? v.yCm : v.y/pxPerCm
+    }));
+    const n=verts.length;
+    const edgeMap={};
+    fig.edges.forEach(e=>{ edgeMap[e.start+'_'+e.end]=e; });
+
+    const segs=[];
+    for(let i=0;i<n;i++){
+      const j=(i+1)%n;
+      const e=edgeMap[i+'_'+j];
+      if(!e){
+        segs.push({type:'line',pts:[{...verts[i]},{...verts[j]}]});
+      } else if(!e.curved){
+        segs.push({type:'line',pts:[{...verts[e.start]},{...verts[e.end]}]});
+      } else {
+        segs.push({type:'quad',pts:[
+          {...verts[e.start]},
+          {x:e.controlX/pxPerCm, y:e.controlY/pxPerCm},
+          {...verts[e.end]}
+        ]});
+      }
+    }
+
+    const segsN = normSegs(segs);
+    const poly  = samplearFigura(segsN, N_SAMP);
+    const polyN = normPoly(poly);
+    const bb    = bboxPoly(polyN);
+
+    return { id:idx, grain:fig.grain||data.grainDirection||'vertical', segs:segsN, poly:polyN, bb };
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// ROTACIÓN 180°
+// ═══════════════════════════════════════════════════════
+function rotar180(pieza){
+  const {bb} = pieza;
+  const segsR = pieza.segs.map(s=>({
+    type:s.type,
+    pts: s.pts.map(p=>({x:bb.w-p.x, y:bb.h-p.y}))
+  }));
+  const polyR = pieza.poly.map(p=>({x:bb.w-p.x, y:bb.h-p.y}));
+  const polyN = normPoly(polyR);
+  const bbR   = bboxPoly(polyN);
+  return {...pieza, segs:segsR, poly:polyN, bb:bbR, rotada:true};
+}
+
+// ═══════════════════════════════════════════════════════
+// NESTING — NFP Minkowski + búsqueda sobre contorno NFP
+//
+// Para cada pieza nueva B:
+//   Para cada pieza ya colocada A:
+//     Calcular NFP(A,B) → contorno de posiciones prohibidas
+//     Los puntos del contorno NFP son candidatos de posición
+//     (es donde B toca A exactamente, sin solapar)
+//   También probar posición en origen y bordes de tela.
+//   De todos los candidatos válidos, elegir el que minimiza
+//   el Y máximo del layout (= menor largo de tela usada).
+// ═══════════════════════════════════════════════════════
+function ejecutarNesting(piezas, rotacion){
+  // Orden: área desc (piezas grandes primero — heurística estándar)
+  const orden=[...piezas].sort((a,b)=>(b.bb.w*b.bb.h)-(a.bb.w*a.bb.h));
+
+  const colocadas=[]; // {poly_abs, bb_abs, polyExp_abs}
+  const res=[];
+
+  for(const pieza of orden){
+    const variantes=[pieza];
+    if(rotacion) variantes.push(rotar180(pieza));
+
+    let mejor=null;
+
+    for(const v of variantes){
+      const pos=buscarPosNFP(v, colocadas);
+      if(!pos) continue;
+      const yMax=pos.ty+v.bb.h;
+      // Criterio: menor yMax, desempate por menor tx
+      // Tolerancia 0.5cm para comparar floats
+      if(!mejor
+        || yMax < mejor.yMax - 0.5
+        || (yMax < mejor.yMax + 0.5 && pos.tx < mejor.tx)){
+        mejor={tx:pos.tx, ty:pos.ty, yMax, variante:v};
+      }
+    }
+
+    if(!mejor) mejor={tx:MARGEN, ty:0, yMax:variantes[0].bb.h, variante:variantes[0]};
+
+    const {tx,ty,variante}=mejor;
+    const poly_abs = variante.poly.map(p=>({x:p.x+tx, y:p.y+ty}));
+    const polyExp  = expandirPoly(poly_abs, MARGEN);
+    const bb_abs   = bboxPoly(poly_abs);
+    colocadas.push({poly_abs, polyExp, bb_abs});
+    const logRot = rotacion && variantes.length>1
+      ? `normal yMax=${(buscarPosNFP(variantes[0],[...colocadas.slice(0,-1)])||{ty:-1,yMax:-1}).ty+variantes[0].bb.h|0} | 180° yMax=${(buscarPosNFP(variantes[1],[...colocadas.slice(0,-1)])||{ty:-1}).ty+variantes[1].bb.h|0} | eligió ${variante.rotada?'180°':'normal'}`
+      : 'rotación desactivada';
+    res.push({pieza, segs:variante.segs, poly:variante.poly, bb:variante.bb,
+              tx, ty, rotada:!!variante.rotada, log:`#${pieza.id} → tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} | ${logRot}`});
+  }
+  return res;
+}
+
+function buscarPosNFP(v, colocadas){
+  // Candidatos de posición: origen + bordes NFP de cada pieza colocada
+  const candidatos=[{tx:MARGEN, ty:MARGEN}];
+
+  for(const c of colocadas){
+    // NFP entre pieza colocada (A) y nueva pieza (B)
+    const nfp=calcNFP(c.poly_abs, v.poly);
+    // Los vértices del NFP son posiciones donde B toca A exactamente
+    for(const pt of nfp){
+      // pt es la posición del origen de B; el origen de B está en (0,0) de v.poly
+      // así que la traslación es directamente pt
+      candidatos.push({tx:pt.x, ty:pt.y});
+      // También probar desplazamientos pequeños alrededor del punto NFP
+      for(const [dx,dy] of [[MARGEN,0],[-MARGEN,0],[0,MARGEN],[0,-MARGEN]]){
+        candidatos.push({tx:pt.x+dx, ty:pt.y+dy});
+      }
+    }
+    // Adyacente directo por bbox (respaldo)
+    const b=c.bb_abs;
+    candidatos.push(
+      {tx:b.maxX+MARGEN, ty:b.minY},
+      {tx:b.minX,        ty:b.maxY+MARGEN},
+      {tx:b.maxX+MARGEN, ty:MARGEN}
+    );
+  }
+
+  // Filtrar y evaluar candidatos
+  let mejor=null;
+  for(const cand of candidatos){
+    const {tx,ty}=cand;
+    if(tx<0||ty<0) continue;
+    if(tx+v.bb.w>TELA_W) continue;
+
+    const polyAbs=v.poly.map(p=>({x:p.x+tx, y:p.y+ty}));
+    const bbAbs=bboxPoly(polyAbs);
+    if(bbAbs.minX<0||bbAbs.maxX>TELA_W||bbAbs.minY<0) continue;
+
+    let libre=true;
+    for(const c of colocadas){
+      // Chequeo rápido bbox
+      if(bbAbs.maxX<c.bb_abs.minX-MARGEN||c.bb_abs.maxX<bbAbs.minX-MARGEN||
+         bbAbs.maxY<c.bb_abs.minY-MARGEN||c.bb_abs.maxY<bbAbs.minY-MARGEN) continue;
+      // Chequeo real con polígono expandido
+      if(polySolapa(polyAbs, c.polyExp)){ libre=false; break; }
+    }
+
+    if(libre){
+      const yMax=ty+v.bb.h;
+      if(!mejor||yMax<mejor.yMax||(yMax===mejor.yMax&&tx<mejor.tx)){
+        mejor={tx,ty,yMax};
+      }
+    }
+  }
+
+  return mejor;
+}
+
+// ═══════════════════════════════════════════════════════
+// DIBUJO
+// ═══════════════════════════════════════════════════════
+const px=v=>v*PX_CM;
+
+function dibujarSegs(segs,tx,ty){
+  if(!segs.length) return;
+  ctx.beginPath();
+  ctx.moveTo(px(segs[0].pts[0].x+tx), px(segs[0].pts[0].y+ty));
+  for(const s of segs){
+    if(s.type==='line'){
+      ctx.lineTo(px(s.pts[1].x+tx), px(s.pts[1].y+ty));
+    } else {
+      ctx.quadraticCurveTo(
+        px(s.pts[1].x+tx),px(s.pts[1].y+ty),
+        px(s.pts[2].x+tx),px(s.pts[2].y+ty)
+      );
+    }
+  }
+  ctx.closePath();
+}
+
+function dibujarFlecha(cx,cy,grain,largo){
+  const L=largo/2;
+  const [dx,dy]=grain==='vertical'?[0,1]:[1,0];
+  const x0=px(cx-dx*L),y0=px(cy-dy*L),x1=px(cx+dx*L),y1=px(cy+dy*L);
+  const sz=5;
+  ctx.save(); ctx.strokeStyle='#333'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  for(const [ex,ey] of [[x1,y1],[x0,y0]]){
+    const a=ex===x1?Math.atan2(y1-y0,x1-x0):Math.atan2(y0-y1,x0-x1);
+    ctx.beginPath();
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-sz*Math.cos(a-0.4),ey-sz*Math.sin(a-0.4));
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-sz*Math.cos(a+0.4),ey-sz*Math.sin(a+0.4));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function renderizar(modo){
+  const items=modo==='preview'
+    ? piezas.map(p=>({...p,tx:0,ty:0,rotada:false,pieza:p}))
+    : layout.map(r=>({...r,pieza:r.pieza}));
+
+  if(modo==='preview'){
+    let cx=MARGEN,cy=MARGEN,rowH=0;
+    for(const it of items){
+      if(cx+it.bb.w>TELA_W){ cy+=rowH+MARGEN*2; cx=MARGEN; rowH=0; }
+      it.tx=cx; it.ty=cy;
+      cx+=it.bb.w+MARGEN*2;
+      if(it.bb.h>rowH) rowH=it.bb.h;
+    }
+  }
+
+  const maxY=items.reduce((m,r)=>Math.max(m,r.ty+r.bb.h),0)+MARGEN*2;
+  canvas.width=px(TELA_W); canvas.height=px(maxY);
+  ctx.fillStyle='#f8f8f8'; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Bordes tela
+  ctx.save(); ctx.strokeStyle='#bbb'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(0,canvas.height);
+  ctx.moveTo(canvas.width,0); ctx.lineTo(canvas.width,canvas.height);
+  ctx.stroke(); ctx.restore();
+
+  for(const r of items){
+    const cx=r.tx+r.bb.w/2, cy=r.ty+r.bb.h/2;
+    ctx.save();
+    ctx.fillStyle=r.rotada?'#dde':'#e4e4e4';
+    ctx.strokeStyle='#000'; ctx.lineWidth=1;
+    dibujarSegs(r.segs, r.tx, r.ty);
+    ctx.fill(); ctx.stroke(); ctx.restore();
+    dibujarFlecha(cx,cy,r.pieza.grain,Math.min(r.bb.w,r.bb.h)*0.4);
+    ctx.save();
+    ctx.fillStyle='#000';
+    ctx.font=`${Math.max(7,px(1.6))}px monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(`#${r.pieza.id}${r.rotada?' ↺':''}`, px(cx), px(cy));
+    ctx.restore();
+  }
+
+  if(modo==='nesting' && layout.length){
+    document.getElementById('log').textContent =
+      layout.map(r=>r.log||'').join('\n');
+  } else if(modo==='preview'){
+    document.getElementById('log').textContent='';
+  }
+  document.getElementById('info').textContent = modo==='preview'
+    ? `${piezas.length} piezas — vista previa (${N_SAMP} pts/pieza)`
+    : `Nesting: ${TELA_W}cm × ${maxY.toFixed(1)}cm`;
+}
+
+// ═══════════════════════════════════════════════════════
+// BOTONES
+// ═══════════════════════════════════════════════════════
+document.getElementById('btnCargar').addEventListener('click',()=>{
+  document.getElementById('fileInput').click();
+});
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      piezas=parsearJSON(JSON.parse(ev.target.result));
+      layout=[];
+      document.getElementById('btnNesting').disabled=false;
+      renderizar('preview');
+    } catch(err){ alert('Error JSON: '+err.message); }
+  };
+  r.readAsText(f);
+});
+document.getElementById('btnNesting').addEventListener('click',()=>{
+  if(!piezas.length) return;
+  const btn=document.getElementById('btnNesting');
+  btn.disabled=true;
+  document.getElementById('info').textContent='Calculando NFP...';
+  setTimeout(()=>{
+    layout=ejecutarNesting(piezas, document.getElementById('chkRotar').checked);
+    renderizar('nesting');
+    btn.disabled=false;
+  },20);
+});
+</script>
+</body>
+</html>
