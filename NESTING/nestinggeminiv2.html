@@ -179,34 +179,55 @@ function solapaSAT(A, B){
 
 function puntoEnPoly(pt, poly){
   let inside=false;
-  const n=poly.length;
-  for(let i=0,j=n-1;i<n;j=i++){
-    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
-    if(((yi>pt.y)!==(yj>pt.y))&&(pt.x<(xj-xi)*(pt.y-yi)/(yj-yi)+xi)) inside=!inside;
+  for(let i=0, j=poly.length-1; i<poly.length; j=i++){
+    const xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y;
+    if(((yi>pt.y)!==(yj>pt.y)) && (pt.x<(xj-xi)*(pt.y-yi)/(yj-yi)+xi)) inside=!inside;
   }
   return inside;
 }
 
-function polySolapa(A, B){
-  // Chequeo bbox rápido
+function intersectanSegmentos(p1, p2, p3, p4) {
+  const ccw = (A, B, C) => (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x);
+  return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4);
+}
+
+function polySolapaExacta(A, B){
   const bbA=bboxPoly(A), bbB=bboxPoly(B);
   if(bbA.maxX<bbB.minX||bbB.maxX<bbA.minX||bbA.maxY<bbB.minY||bbB.maxY<bbA.minY) return false;
-  // SAT
-  if(!solapaSAT(A,B)) return false;
-  // Punto en poly para cóncavos
-  for(const p of B) if(puntoEnPoly(p,A)) return true;
-  for(const p of A) if(puntoEnPoly(p,B)) return true;
+  
+  const nA = A.length, nB = B.length;
+  // 1. Intersección de bordes
+  for(let i=0; i<nA; i++){
+    const a1 = A[i], a2 = A[(i+1)%nA];
+    const minXa = Math.min(a1.x, a2.x), maxXa = Math.max(a1.x, a2.x);
+    const minYa = Math.min(a1.y, a2.y), maxYa = Math.max(a1.y, a2.y);
+    
+    for(let j=0; j<nB; j++){
+      const b1 = B[j], b2 = B[(j+1)%nB];
+      if(Math.max(minXa, Math.min(b1.x, b2.x)) > Math.min(maxXa, Math.max(b1.x, b2.x)) ||
+         Math.max(minYa, Math.min(b1.y, b2.y)) > Math.min(maxYa, Math.max(b1.y, b2.y))) continue;
+      
+      if(intersectanSegmentos(a1, a2, b1, b2)) return true;
+    }
+  }
+  // 2. Uno dentro del otro
+  if(puntoEnPoly(A[0], B)) return true;
+  if(puntoEnPoly(B[0], A)) return true;
   return false;
 }
 
 // Expandir polígono hacia afuera por 'margen' cm (offset aproximado)
 function expandirPoly(poly, margen){
-  const cx=poly.reduce((s,p)=>s+p.x,0)/poly.length;
-  const cy=poly.reduce((s,p)=>s+p.y,0)/poly.length;
-  return poly.map(p=>{
-    const dx=p.x-cx, dy=p.y-cy;
-    const d=Math.sqrt(dx*dx+dy*dy)||1;
-    return {x:p.x+dx/d*margen, y:p.y+dy/d*margen};
+  const n = poly.length;
+  let area = 0;
+  for(let i=0; i<n; i++) area += poly[i].x * poly[(i+1)%n].y - poly[(i+1)%n].x * poly[i].y;
+  const sign = area < 0 ? -1 : 1; 
+  
+  return poly.map((p, i) => {
+    const prev = poly[(i - 1 + n) % n], next = poly[(i + 1) % n];
+    const dx = next.x - prev.x, dy = next.y - prev.y;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    return {x: p.x + sign * (-dy/len) * margen, y: p.y + sign * (dx/len) * margen};
   });
 }
 
@@ -280,59 +301,83 @@ function rotar180(pieza){
 // ═══════════════════════════════════════════════════════
 // NESTING — Ejecución y Comparación Corregida
 // ═══════════════════════════════════════════════════════
+
+function buscarPosGrid(v, colocadas, maxYGeneral){
+  let mejor = null;
+  const paso = 1.0; // 1 cm de resolución de escaneo. Bájalo a 0.5 si quieres más precisión (pero será más lento)
+  const maxTy = Math.max(maxYGeneral + MARGEN, 10); // Límite de escaneo vertical
+
+  for(let ty = MARGEN; ty <= maxTy; ty += paso){
+    for(let tx = MARGEN; tx <= TELA_W - v.bb.w - MARGEN; tx += paso){
+      const bbAbs = {minX: tx, maxX: tx+v.bb.w, minY: ty, maxY: ty+v.bb.h};
+      
+      // Filtro rápido de candidatos
+      let colisionesBbox = [];
+      for(const c of colocadas){
+        if(!(bbAbs.maxX < c.bb_abs.minX - MARGEN || c.bb_abs.maxX < bbAbs.minX - MARGEN ||
+             bbAbs.maxY < c.bb_abs.minY - MARGEN || c.bb_abs.maxY < bbAbs.minY - MARGEN)){
+           colisionesBbox.push(c);
+        }
+      }
+
+      let libre = true;
+      if(colisionesBbox.length > 0){
+        const polyAbs = v.poly.map(p=>({x: p.x+tx, y: p.y+ty}));
+        for(const c of colisionesBbox){
+          if(polySolapaExacta(polyAbs, c.polyExp)){ libre = false; break; }
+        }
+      }
+
+      // La primera libre que encuentre será la mejor en Y (Bottom-Left absoluto)
+      if(libre){
+        mejor = {tx, ty, yMax: ty + v.bb.h};
+        break; // Interrumpe X (prioriza la izquierda)
+      }
+    }
+    if(mejor) break; // Interrumpe Y (prioriza altura mínima)
+  }
+  return mejor;
+}
+
 function ejecutarNesting(piezas, rotacion){
+  // Ordenar por área descendente
   const orden=[...piezas].sort((a,b)=>(b.bb.w*b.bb.h)-(a.bb.w*a.bb.h));
   const colocadas=[]; 
   const res=[];
-  const EPS = 0.1; // Tolerancia de 1mm para evitar errores de coma flotante
+  let maxYGeneral = 0; // Guardamos la altura máxima actual para limitar la búsqueda
 
   for(const pieza of orden){
     const variantes=[pieza];
     if(rotacion) variantes.push(rotar180(pieza));
 
     let mejor=null;
-    let logVariantes=[];
 
     for(const v of variantes){
-      const pos=buscarPosNFP(v, colocadas);
-      if(!pos) {
-        logVariantes.push(`${v.rotada ? '180°' : 'normal'}: sin espacio`);
-        continue;
-      }
-      
-      const yMax=pos.ty+v.bb.h;
-      logVariantes.push(`${v.rotada ? '180°' : 'normal'}(yMax:${yMax.toFixed(1)}, tx:${pos.tx.toFixed(1)})`);
-
-      // Criterio con Epsilon: Menor yMax, desempate por menor tx
-      if(!mejor){
-        mejor={tx:pos.tx, ty:pos.ty, yMax, variante:v};
-      } else if(yMax < mejor.yMax - EPS){
-        mejor={tx:pos.tx, ty:pos.ty, yMax, variante:v};
-      } else if(Math.abs(yMax - mejor.yMax) <= EPS && pos.tx < mejor.tx - EPS){
-        mejor={tx:pos.tx, ty:pos.ty, yMax, variante:v};
+      const pos = buscarPosGrid(v, colocadas, maxYGeneral);
+      if(pos){
+         // Si una variante empató en Y, elige la que empuje menos hacia la derecha
+         if(!mejor || pos.ty < mejor.ty || (pos.ty === mejor.ty && (pos.tx+v.bb.w) < (mejor.tx+mejor.variante.bb.w))){
+             mejor = {...pos, variante: v};
+         }
       }
     }
 
-    if(!mejor) {
-      mejor={tx:MARGEN, ty:0, yMax:variantes[0].bb.h, variante:variantes[0]};
-      logVariantes.push(`fallback normal`);
+    if(!mejor){ // Fallback de emergencia
+       mejor = {tx:MARGEN, ty:maxYGeneral+MARGEN, variante:variantes[0]};
     }
 
-    const {tx,ty,variante}=mejor;
+    const {tx, ty, variante} = mejor;
     const poly_abs = variante.poly.map(p=>({x:p.x+tx, y:p.y+ty}));
     const polyExp  = expandirPoly(poly_abs, MARGEN);
     const bb_abs   = bboxPoly(poly_abs);
-    colocadas.push({poly_abs, polyExp, bb_abs});
     
-    // Log real basado en la evaluación, sin recalcular
-    const logRot = rotacion && variantes.length>1
-      ? `Probó: ${logVariantes.join(' | ')} -> Eligió: ${variante.rotada?'180°':'normal'}`
-      : 'rotación desactivada';
-      
+    colocadas.push({poly_abs, polyExp, bb_abs});
+    maxYGeneral = Math.max(maxYGeneral, ty + variante.bb.h);
+
     res.push({
         pieza, segs:variante.segs, poly:variante.poly, bb:variante.bb,
         tx, ty, rotada:!!variante.rotada, 
-        log:`#${pieza.id} → tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} | ${logRot}`
+        log:`#${pieza.id} → tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} | eligió ${variante.rotada?'180°':'normal'}`
     });
   }
   return res;
