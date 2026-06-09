@@ -352,6 +352,50 @@ function cabeEnGrid(rast, tx, ty){
   return true;
 }
 
+// Verificación exacta de solapamiento entre polígonos
+// items: array de piezas ya colocadas (cada una con .poly, .tx, .ty)
+// polyNuevo: polígono de la pieza candidata (array de puntos {x,y} relativos al BBox)
+// tx, ty: posición candidata
+function haySolapeExacto(items, polyNuevo, tx, ty) {
+  // Convertir polyNuevo a coordenadas absolutas
+  const polyAbs = polyNuevo.map(p => ({ x: p.x + tx, y: p.y + ty }));
+
+  // Comprobar cada pieza ya colocada
+  for (const item of items) {
+    const polyItem = item.poly.map(p => ({ x: p.x + item.tx, y: p.y + item.ty }));
+
+    // Comprobar si algún punto de polyAbs cae dentro de polyItem
+    for (const punto of polyAbs) {
+      if (puntoEnPoly(punto.x, punto.y, polyItem)) {
+        return true; // hay solape
+      }
+    }
+
+    // Comprobar si algún punto de polyItem cae dentro de polyAbs
+    for (const punto of polyItem) {
+      if (puntoEnPoly(punto.x, punto.y, polyAbs)) {
+        return true;
+      }
+    }
+
+    // Comprobar si algún borde se cruza (chequeo simplificado: punto medio de segmentos)
+    // Para evitar falsos negativos en piezas que se cruzan sin contenerse
+    for (let i = 0; i < polyAbs.length; i++) {
+      const j = (i + 1) % polyAbs.length;
+      const mx = (polyAbs[i].x + polyAbs[j].x) / 2;
+      const my = (polyAbs[i].y + polyAbs[j].y) / 2;
+      if (puntoEnPoly(mx, my, polyItem)) return true;
+    }
+    for (let i = 0; i < polyItem.length; i++) {
+      const j = (i + 1) % polyItem.length;
+      const mx = (polyItem[i].x + polyItem[j].x) / 2;
+      const my = (polyItem[i].y + polyItem[j].y) / 2;
+      if (puntoEnPoly(mx, my, polyAbs)) return true;
+    }
+  }
+  return false;
+}
+
 // ── Parseo JSON ──
 function parsearJSON(data){
   const pxPerCm = data.pxPerCm || 37.79527559055118;
@@ -483,6 +527,10 @@ function nestingPorOrden(orden) {
       const rastExpand = rasterizarPieza(v.poly, v.bb, MARGEN, true);
       const pos = buscarPosSkyline(skyline, rastExpand);
       if (!pos) continue;
+
+      // Verificación fina de solape real
+      if (haySolapeExacto(res, v.poly, pos.tx, pos.ty)) continue;
+
       const score = pos.ty * TELA_W + pos.tx;
       if (!mejor || score < mejor.score) {
         mejor = { tx: pos.tx, ty: pos.ty, score, variante: v, rastExpand };
