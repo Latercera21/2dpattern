@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nesting</title>
+<style>
+  body { margin:0; font-family:monospace; font-size:12px; }
+  #controls { display:flex; gap:6px; padding:6px; align-items:center; flex-wrap:wrap; border-bottom:1px solid #ccc; }
+  button { padding:4px 10px; cursor:pointer; }
+  button:disabled { opacity:0.4; }
+  #jsonPanel { padding:6px; border-bottom:1px solid #ccc; display:none; }
+  #jsonPanel textarea { width:100%; box-sizing:border-box; height:80px; font-size:10px; }
+  #canvasWrap { overflow:auto; }
+  canvas { display:block; }
+  #log { font-size:10px; padding:4px; max-height:120px; overflow:auto; border-top:1px solid #ccc; margin:0; }
+  #analisisPanel { padding:6px; border-bottom:1px solid #ccc; background:#fafafa; display:none; }
+  #analisisPanel pre { margin:0; font-size:10px; white-space:pre-wrap; max-height:200px; overflow:auto; }
+</style>
+</head>
+<body>
+<div id="controls">
+  <button id="btnTogglePanel">Pegar JSON ▾</button>
+  <input type="file" id="fileInput" accept=".json" style="font-size:11px">
+  <button id="btnNesting" disabled>Ejecutar Nesting</button>
+  <label>Ancho: <input type="number" id="inputAncho" value="160" min="50" max="300" step="1" style="width:50px"> cm</label>
+  <label>Iteraciones: <input type="number" id="inputIter" value="50" min="1" max="500" step="1" style="width:50px"></label>
+  <span id="info">—</span>
+  <button id="btnAnalizar" disabled>Exportar análisis ▸</button>
+</div>
+<div id="analisisPanel">
+  <pre id="analisisContenido"></pre>
+  <button id="btnCopiar">Copiar JSON</button>
+  <span id="copiadoOk" style="display:none;color:green;font-size:11px;">¡Copiado!</span>
+</div>
+<div id="jsonPanel">
+  <textarea id="jsonTxt" placeholder="Pega el JSON aquí..."></textarea>
+  <button id="btnCargarTxt">Cargar</button>
+</div>
+<div id="canvasWrap"><canvas id="c"></canvas></div>
+<pre id="log"></pre>
+
+<script>
+const PX_CM   = 4;
+const MARGEN  = 0.5;
+const N_SAMP  = 96;
+const GRID_RES = 0.5;
+const GRID_RES_COL = 0.25; // malla fina para colisión
+
+let TELA_W = 160;
+let GRID_W = Math.ceil(TELA_W / GRID_RES);
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let piezas   = [];
+let layout   = [];
+
+// ── Geometría ──
+const lerp   = (a,b,t) => a+(b-a)*t;
+const ptLerp = (a,b,t) => ({x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t)});
+const ptQuad = (p0,cp,p1,t) => ptLerp(ptLerp(p0,cp,t), ptLerp(cp,p1,t), t);
+const dist   = (a,b) => Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
+
+function segLen(seg){
+  if(seg.type==='line') return dist(seg.pts[0],seg.pts[1]);
+  let l=0,prev=seg.pts[0];
+  for(let i=1;i<=24;i++){const p=ptQuad(seg.pts[0],seg.pts[1],seg.pts[2],i/24);l+=dist(prev,p);prev=p;}
+  return l;
+}
+function ptOnSeg(seg,t){
+  if(seg.type==='line') return ptLerp(seg.pts[0],seg.pts[1],t);
+  return ptQuad(seg.pts[0],seg.pts[1],seg.pts[2],t);
+}
+function samplearFigura(segs,n){
+  const lens=segs.map(segLen);
+  const total=lens.reduce((a,b)=>a+b,0);
+  const pts=[],step=total/n;
+  let acum=0,si=0;
+  for(let k=0;k<n;k++){
+    const target=k*step;
+    while(si<segs.length-1&&acum+lens[si]<target){acum+=lens[si];si++;}
+    const t=lens[si]>1e-9?Math.min(1,(target-acum)/lens[si]):0;
+    pts.push(ptOnSeg(segs[si],t));
+  }
+  return pts;
+}
+
+// ── BBox / área ──
+function bboxPoly(poly){
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of poly){if(p.x<minX)minX=p.x;if(p.x>maxX)maxX=p.x;if(p.y<minY)minY=p.y;if(p.y>maxY)maxY=p.y;}
+  return {minX,minY,maxX,maxY,w:maxX-minX,h:maxY-minY};
+}
+function areaPoly(poly){
+  let a=0;const n=poly.length;
+  for(let i=0;i<n;i++){const j=(i+1)%n;a+=poly[i].x*poly[j].y-poly[j].x*poly[i].y;}
+  return Math.abs(a)/2;
+}
+function normPoly(poly){
+  const bb=bboxPoly(poly);
+  return poly.map(p=>({x:p.x-bb.minX,y:p.y-bb.minY}));
+}
+function normSegs(segs){
+  const allPts=segs.flatMap(s=>s.pts);
+  const minX=Math.min(...allPts.map(p=>p.x));
+  const minY=Math.min(...allPts.map(p=>p.y));
+  return segs.map(s=>({type:s.type,pts:s.pts.map(p=>({x:p.x-minX,y:p.y-minY}))}));
+}
+
+// ── Punto en polígono ──
+function puntoEnPoly(px,py,poly){
+  let inside=false;const n=poly.length;
+  for(let i=0,j=n-1;i<n;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+
+// ── Rasterización (con o sin expansión de margen) ──
+function rasterizarPieza(poly, bb, margen, expandir){
+  const offX = expandir ? -margen : 0;
+  const offY = expandir ? -margen : 0;
+  // Malla gruesa (0.5 cm) para skyline
+  const cols = expandir ? Math.ceil((bb.w + margen*2)/GRID_RES) + 2 : Math.ceil(bb.w/GRID_RES) + 2;
+  const rows = expandir ? Math.ceil((bb.h + margen*2)/GRID_RES) + 2 : Math.ceil(bb.h/GRID_RES) + 2;
+  // Malla fina (0.25 cm) para colisión
+  const cols_fino = expandir ? Math.ceil((bb.w + margen*2)/GRID_RES_COL) + 2 : Math.ceil(bb.w/GRID_RES_COL) + 2;
+  const rows_fino = expandir ? Math.ceil((bb.h + margen*2)/GRID_RES_COL) + 2 : Math.ceil(bb.h/GRID_RES_COL) + 2;
+
+  const mask = new Uint8Array(cols*rows);
+  const mask_fino = new Uint8Array(cols_fino*rows_fino);
+
+  if(expandir){
+    const cx = poly.reduce((s,p)=>s+p.x,0)/poly.length;
+    const cy = poly.reduce((s,p)=>s+p.y,0)/poly.length;
+    const polyExp = poly.map(p=>{
+      const dx = p.x - cx, dy = p.y - cy, d = Math.sqrt(dx*dx+dy*dy) || 1;
+      return {x: p.x + dx/d*margen, y: p.y + dy/d*margen};
+    });
+    // Raster grueso
+    for(let r=0; r<rows; r++){
+      for(let c=0; c<cols; c++){
+        const px = offX + (c+0.5)*GRID_RES;
+        const py = offY + (r+0.5)*GRID_RES;
+        if(puntoEnPoly(px, py, polyExp)) mask[r*cols+c]=1;
+      }
+    }
+    // Raster fino
+    for(let r=0; r<rows_fino; r++){
+      for(let c=0; c<cols_fino; c++){
+        const px = offX + (c+0.5)*GRID_RES_COL;
+        const py = offY + (r+0.5)*GRID_RES_COL;
+        if(puntoEnPoly(px, py, polyExp)) mask_fino[r*cols_fino+c]=1;
+      }
+    }
+  } else {
+    // Sin expandir
+    for(let r=0; r<rows; r++){
+      for(let c=0; c<cols; c++){
+        const px = offX + (c+0.5)*GRID_RES;
+        const py = offY + (r+0.5)*GRID_RES;
+        if(puntoEnPoly(px, py, poly)) mask[r*cols+c]=1;
+      }
+    }
+    for(let r=0; r<rows_fino; r++){
+      for(let c=0; c<cols_fino; c++){
+        const px = offX + (c+0.5)*GRID_RES_COL;
+        const py = offY + (r+0.5)*GRID_RES_COL;
+        if(puntoEnPoly(px, py, poly)) mask_fino[r*cols_fino+c]=1;
+      }
+    }
+  }
+
+  return { mask, cols, rows, mask_fino, cols_fino, rows_fino, offX, offY, bb_w: bb.w, bb_h: bb.h };
+}
+
+// ── Skyline ──
+function crearSkyline(){
+  return [{x:0, w:TELA_W, h:0}];
+}
+
+function alturaEnRango(skyline, x, w){
+  let maxH = 0;
+  for(const seg of skyline){
+    const overlapX = Math.max(0, Math.min(seg.x+seg.w, x+w) - Math.max(seg.x, x));
+    if(overlapX > 0.01 && seg.h > maxH) maxH = seg.h;
+  }
+  return maxH;
+}
+
+// Nueva función: obtener la altura mínima del skyline en un rango
+function alturaMinEnRango(skyline, x, w){
+  let minH = Infinity;
+  let hay = false;
+  for(const seg of skyline){
+    const overlapX = Math.max(0, Math.min(seg.x+seg.w, x+w) - Math.max(seg.x, x));
+    if(overlapX > 0.01){
+      hay = true;
+      if(seg.h < minH) minH = seg.h;
+    }
+  }
+  return hay ? minH : 0;
+}
+
+function buscarPosSkyline(skyline, rastExpand){
+  const pW = rastExpand.bb_w + MARGEN*2; // ancho total con márgenes
+  const step = GRID_RES;
+  let mejorPos = null;
+  let mejorScore = Infinity;
+
+  // Candidatos X: bordes de segmentos + puntos intermedios cada step
+  const candidatosX = new Set();
+  for(const seg of skyline){
+    for(let x = seg.x; x <= seg.x + seg.w; x += step){
+      candidatosX.add(Math.round(x * 100) / 100);
+    }
+  }
+  // Añadir límites teniendo en cuenta márgenes laterales
+  for(let x = MARGEN; x <= TELA_W - pW; x += step){
+    candidatosX.add(Math.round(x * 100) / 100);
+  }
+
+  for(const tx of candidatosX){
+    if(tx < MARGEN || tx + pW > TELA_W + 0.01) continue;
+
+    const maxH = alturaEnRango(skyline, tx, pW);
+    const minH = alturaMinEnRango(skyline, tx, pW);
+    
+    // Probar diferentes alturas desde la más baja posible (minH+MARGEN) hasta la máxima (maxH+MARGEN)
+    for(let ty = minH + MARGEN; ty <= maxH + MARGEN + 0.001; ty += GRID_RES){
+      if(!cabeEnGrid(rastExpand, tx, ty)) continue;
+      const score = ty * TELA_W + tx;
+      if(score < mejorScore){
+        mejorScore = score;
+        mejorPos = {tx, ty};
+      }
+      break; // Solo nos interesa la primera que quepa (la más baja)
+    }
+  }
+
+  // Fallback: barrido completo sobre grilla
+    // Fallback: barrido completo sobre grilla fina
+  if(!mejorPos){
+    for(let r = 0; r * GRID_RES_COL < gridH * GRID_RES_COL + rastExpand.rows_fino * GRID_RES_COL + 2; r++){
+      const ty = r * GRID_RES_COL - rastExpand.offY;
+      if(ty < MARGEN) continue;
+      expandirGrid(ty + rastExpand.rows_fino * GRID_RES_COL + 2);
+      for(let c = 0; c < GRID_W_COL; c++){
+        const tx = c * GRID_RES_COL - rastExpand.offX;
+        if(tx < MARGEN || tx + (rastExpand.bb_w + MARGEN*2) > TELA_W + 0.01) continue;
+        if(cabeEnGrid(rastExpand, tx, ty)){
+          return {tx, ty};
+        }
+      }
+    }
+  }
+
+  // Al final de buscarPosSkyline, reemplaza:
+// return mejorPos;
+// por:
+if (mejorPos) mejorPos.score = mejorScore;
+return mejorPos;
+}
+
+function actualizarSkyline(skyline, tx, ty, bw, bh){
+  const x1 = tx;
+  const x2 = tx + bw;
+  // Solo se suma la altura real ocupada (sin margen inferior extra)
+  const newH = ty + bh;
+
+  const result = [];
+  for(const seg of skyline){
+    const sx1 = seg.x;
+    const sx2 = seg.x + seg.w;
+    if(sx2 <= x1 || sx1 >= x2){
+      result.push({...seg});
+    } else {
+      if(sx1 < x1) result.push({x:sx1, w:x1 - sx1, h:seg.h});
+      result.push({x:Math.max(sx1, x1), w:Math.min(sx2, x2) - Math.max(sx1, x1), h:Math.max(seg.h, newH)});
+      if(sx2 > x2) result.push({x:x2, w:sx2 - x2, h:seg.h});
+    }
+  }
+
+  // Fusionar segmentos contiguos de igual altura
+  const merged = [];
+  for(const seg of result){
+    if(seg.w < 0.01) continue;
+    if(merged.length && Math.abs(merged[merged.length-1].h - seg.h) < 0.01){
+      merged[merged.length-1].w += seg.w;
+    } else {
+      merged.push({...seg});
+    }
+  }
+  return merged;
+}
+
+// ── Grilla global ──
+let gridH = 0, grid = null;
+
+let GRID_W_COL; // ancho en celdas finas, se recalculará cuando cambie TELA_W
+
+function iniciarGrid(){
+  GRID_W_COL = Math.ceil(TELA_W / GRID_RES_COL);
+  gridH = 4;
+  grid = new Uint8Array(GRID_W_COL * gridH);
+}
+
+function expandirGrid(nuevaH){
+  const newGridH = Math.ceil(nuevaH / GRID_RES_COL) + 4;
+  if(newGridH <= gridH) return;
+  const newGrid = new Uint8Array(GRID_W_COL * newGridH);
+  newGrid.set(grid);
+  grid = newGrid;
+  gridH = newGridH;
+}
+
+function marcarEnGrid(rast, tx, ty){
+  const c0 = Math.floor((tx + rast.offX) / GRID_RES_COL);
+  const r0 = Math.floor((ty + rast.offY) / GRID_RES_COL);
+  expandirGrid((r0 + rast.rows_fino + 2) * GRID_RES_COL);
+  for(let r = 0; r < rast.rows_fino; r++){
+    const gr = r0 + r;
+    if(gr < 0 || gr >= gridH) continue;
+    for(let c = 0; c < rast.cols_fino; c++){
+      const gc = c0 + c;
+      if(gc < 0 || gc >= GRID_W_COL) continue;
+      if(rast.mask_fino[r * rast.cols_fino + c]) grid[gr * GRID_W_COL + gc] = 1;
+    }
+  }
+}
+
+function cabeEnGrid(rast, tx, ty){
+  if(tx < 0 || ty < 0) return false;
+  const c0 = Math.floor((tx + rast.offX) / GRID_RES_COL);
+  const r0 = Math.floor((ty + rast.offY) / GRID_RES_COL);
+  if(c0 < 0 || r0 < 0) return false;
+  expandirGrid((r0 + rast.rows_fino + 2) * GRID_RES_COL);
+  for(let c = 0; c < rast.cols_fino; c++){
+    if(rast.mask_fino[c] && (c0 + c) >= GRID_W_COL) return false;
+  }
+  for(let r = 0; r < rast.rows_fino; r++){
+    const gr = r0 + r;
+    if(gr >= gridH) continue;
+    for(let c = 0; c < rast.cols_fino; c++){
+      if(!rast.mask_fino[r * rast.cols_fino + c]) continue;
+      const gc = c0 + c;
+      if(gc >= GRID_W_COL) return false;
+      if(grid[gr * GRID_W_COL + gc]) return false;
+    }
+  }
+  return true;
+}
+
+// ── Parseo JSON ──
+function parsearJSON(data){
+  const pxPerCm = data.pxPerCm || 37.79527559055118;
+  const figs = data.figures.filter(f => f.closed !== false && f.vertices && f.vertices.length >= 3);
+  return figs.map((fig, idx) => {
+    const verts = fig.vertices.map(v => ({
+      x: v.xCm !== undefined ? v.xCm : v.x / pxPerCm,
+      y: v.yCm !== undefined ? v.yCm : v.y / pxPerCm
+    }));
+    const n = verts.length, edgeMap = {};
+    fig.edges.forEach(e => { edgeMap[e.start + '_' + e.end] = e; });
+    const segs = [];
+    for(let i = 0; i < n; i++){
+      const j = (i + 1) % n, e = edgeMap[i + '_' + j];
+      if(!e) segs.push({type:'line', pts:[{...verts[i]}, {...verts[j]}]});
+      else if(!e.curved) segs.push({type:'line', pts:[{...verts[e.start]}, {...verts[e.end]}]});
+      else segs.push({type:'quad', pts:[{...verts[e.start]}, {x:e.controlX/pxPerCm, y:e.controlY/pxPerCm}, {...verts[e.end]}]});
+    }
+    const segsN = normSegs(segs);
+    const poly = samplearFigura(segsN, N_SAMP);
+    const polyN = normPoly(poly);
+    const bb = bboxPoly(polyN);
+    const area = areaPoly(polyN);
+    return { id: idx, grain: fig.grain || data.grainDirection || 'vertical', segs: segsN, poly: polyN, bb, area };
+  });
+}
+
+// ── Rotación 180° ──
+function rotar180(pieza){
+  const { bb } = pieza;
+  const segsR = pieza.segs.map(s => ({ type: s.type, pts: s.pts.map(p => ({ x: bb.w - p.x, y: bb.h - p.y })) }));
+  const polyR = pieza.poly.map(p => ({ x: bb.w - p.x, y: bb.h - p.y }));
+  const polyN = normPoly(polyR), bbR = bboxPoly(polyN);
+  return { ...pieza, segs: segsR, poly: polyN, bb: bbR, rotada: true };
+}
+
+// ── Una pasada con skyline ──
+function nestingUnaPassada(piezasDisponibles) {
+  iniciarGrid();
+  let skyline = crearSkyline();
+  const res = [];
+  const colocadas = new Set();
+
+  while (colocadas.size < piezasDisponibles.length) {
+    let mejorPieza = null;
+    let mejorColocacion = null;
+    let mejorScoreGlobal = Infinity;
+
+    // Probar cada pieza no colocada
+    for (let i = 0; i < piezasDisponibles.length; i++) {
+      if (colocadas.has(i)) continue;
+      const pieza = piezasDisponibles[i];
+      const variantes = [pieza, rotar180(pieza)];
+
+      for (const v of variantes) {
+        const rastExpand = rasterizarPieza(v.poly, v.bb, MARGEN, true);
+        const pos = buscarPosSkyline(skyline, rastExpand);
+        if (!pos) continue;
+        const score = pos.ty * TELA_W + pos.tx;
+        if (score < mejorScoreGlobal) {
+          mejorScoreGlobal = score;
+          mejorPieza = { idx: i, variante: v, rastExpand };
+          mejorColocacion = { tx: pos.tx, ty: pos.ty };
+        }
+      }
+    }
+
+    if (!mejorPieza) break; // no cabe ninguna, fin
+
+    const { idx, variante, rastExpand } = mejorPieza;
+    const { tx, ty } = mejorColocacion;
+
+    // Marcar en grid la pieza sin expandir
+    const rastPieza = rasterizarPieza(variante.poly, variante.bb, MARGEN, false);
+    expandirGrid(ty + variante.bb.h + MARGEN * 2);
+    marcarEnGrid(rastPieza, tx, ty);
+    skyline = actualizarSkyline(skyline, tx, ty, variante.bb.w, variante.bb.h);
+
+    colocadas.add(idx);
+    res.push({
+      pieza: piezasDisponibles[idx],
+      segs: variante.segs,
+      poly: variante.poly,
+      bb: variante.bb,
+      tx, ty,
+      rotada: !!variante.rotada,
+      log: `#${piezasDisponibles[idx].id} ${variante.bb.w.toFixed(1)}×${variante.bb.h.toFixed(1)}cm tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} ${variante.rotada ? '180°' : 'normal'}`
+    });
+  }
+
+  // Si quedaron piezas sin colocar (no debería, pero por si acaso), las colocamos abajo
+  for (let i = 0; i < piezasDisponibles.length; i++) {
+    if (colocadas.has(i)) continue;
+    const pieza = piezasDisponibles[i];
+    const v = pieza; // variante normal
+    const rastExpand = rasterizarPieza(v.poly, v.bb, MARGEN, true);
+    const ty = gridH * GRID_RES;
+    const tx = MARGEN;
+    const rastPieza = rasterizarPieza(v.poly, v.bb, MARGEN, false);
+    expandirGrid(ty + v.bb.h + MARGEN * 2);
+    marcarEnGrid(rastPieza, tx, ty);
+    skyline = actualizarSkyline(skyline, tx, ty, v.bb.w, v.bb.h);
+    res.push({
+      pieza,
+      segs: v.segs,
+      poly: v.poly,
+      bb: v.bb,
+      tx, ty,
+      rotada: false,
+      log: `#${pieza.id} ${v.bb.w.toFixed(1)}×${v.bb.h.toFixed(1)}cm tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} normal (fallback)`
+    });
+  }
+
+  return res;
+}
+//===========
+
+// Versión que coloca en el orden dado (para iteraciones aleatorias)
+function nestingPorOrden(orden) {
+  iniciarGrid();
+  let skyline = crearSkyline();
+  const res = [];
+
+  for (const pieza of orden) {
+    const variantes = [pieza, rotar180(pieza)];
+    let mejor = null;
+
+    for (const v of variantes) {
+      const rastExpand = rasterizarPieza(v.poly, v.bb, MARGEN, true);
+      const pos = buscarPosSkyline(skyline, rastExpand);
+      if (!pos) continue;
+      const score = pos.ty * TELA_W + pos.tx;
+      if (!mejor || score < mejor.score) {
+        mejor = { tx: pos.tx, ty: pos.ty, score, variante: v, rastExpand };
+      }
+    }
+
+    if (!mejor) {
+      const v = variantes[0];
+      const rastExpand = rasterizarPieza(v.poly, v.bb, MARGEN, true);
+      const ty = gridH * GRID_RES;
+      mejor = { tx: MARGEN, ty, score: Infinity, variante: v, rastExpand };
+    }
+
+    const { tx, ty, variante, rastExpand } = mejor;
+    const rastPieza = rasterizarPieza(variante.poly, variante.bb, MARGEN, false);
+    expandirGrid(ty + variante.bb.h + MARGEN * 2);
+    marcarEnGrid(rastPieza, tx, ty);
+    skyline = actualizarSkyline(skyline, tx, ty, variante.bb.w, variante.bb.h);
+
+    res.push({
+      pieza,
+      segs: variante.segs,
+      poly: variante.poly,
+      bb: variante.bb,
+      tx, ty,
+      rotada: !!variante.rotada,
+      log: `#${pieza.id} ${variante.bb.w.toFixed(1)}×${variante.bb.h.toFixed(1)}cm tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} ${variante.rotada ? '180°' : 'normal'}`
+    });
+  }
+  return res;
+}
+//=============
+//===========
+
+// Pulir un layout: intentar recolocar cada pieza en un hueco más bajo,
+// sin cambiar el orden. Devuelve un layout mejorado.
+function pulirLayout(layoutActual) {
+  // Reconstruir skyline y grilla con todas las piezas MENOS la que se va a recolocar
+  const mejorado = [];
+  const piezasAReubicar = [...layoutActual];
+
+  while (piezasAReubicar.length > 0) {
+    // Elegir la pieza que más abajo está (la de mayor ty+bb.h) para recolocarla primero
+    let idxPeor = 0;
+    let peorFin = 0;
+    for (let i = 0; i < piezasAReubicar.length; i++) {
+      const fin = piezasAReubicar[i].ty + piezasAReubicar[i].bb.h;
+      if (fin > peorFin) { peorFin = fin; idxPeor = i; }
+    }
+    const pieza = piezasAReubicar.splice(idxPeor, 1)[0];
+
+    // Reconstruir skyline con las piezas ya "mejoradas" (las que quedan en mejorado)
+    iniciarGrid();
+    let skyline = crearSkyline();
+    for (const r of mejorado) {
+      const rastPieza = rasterizarPieza(r.poly, r.bb, MARGEN, false);
+      expandirGrid(r.ty + r.bb.h + MARGEN * 2);
+      marcarEnGrid(rastPieza, r.tx, r.ty);
+      skyline = actualizarSkyline(skyline, r.tx, r.ty, r.bb.w, r.bb.h);
+    }
+
+    // Buscar la mejor posición para esta pieza (normal y rotada 180°)
+    const variantes = [pieza, rotar180(pieza)];
+    let mejorPos = null;
+    let mejorScore = Infinity;
+    for (const v of variantes) {
+      const rastExpand = rasterizarPieza(v.poly, v.bb, MARGEN, true);
+      const pos = buscarPosSkyline(skyline, rastExpand);
+      if (!pos) continue;
+      const score = pos.ty * TELA_W + pos.tx;
+      if (score < mejorScore) {
+        mejorScore = score;
+        mejorPos = { tx: pos.tx, ty: pos.ty, variante: v };
+      }
+    }
+
+    const { tx, ty, variante } = mejorPos || { tx: pieza.tx, ty: pieza.ty, variante: pieza };
+    const rastPieza = rasterizarPieza(variante.poly, variante.bb, MARGEN, false);
+    expandirGrid(ty + variante.bb.h + MARGEN * 2);
+    marcarEnGrid(rastPieza, tx, ty);
+    skyline = actualizarSkyline(skyline, tx, ty, variante.bb.w, variante.bb.h);
+
+    mejorado.push({
+      pieza: pieza.pieza || pieza,
+      segs: variante.segs,
+      poly: variante.poly,
+      bb: variante.bb,
+      tx, ty,
+      rotada: !!variante.rotada,
+      log: `#${(pieza.pieza || pieza).id} ${variante.bb.w.toFixed(1)}×${variante.bb.h.toFixed(1)}cm tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} ${variante.rotada ? '180°' : 'normal'}`
+    });
+  }
+  return mejorado;
+}//==========
+
+
+function largoLayout(res) { return res.reduce((m, r) => Math.max(m, r.ty + r.bb.h), 0); }
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+// ── Dibujo ──
+const px = v => v * PX_CM;
+
+function dibujarSegs(segs, tx, ty){
+  if(!segs.length) return;
+  ctx.beginPath();
+  ctx.moveTo(px(segs[0].pts[0].y + ty), px(segs[0].pts[0].x + tx));
+  for(const s of segs){
+    if(s.type === 'line') ctx.lineTo(px(s.pts[1].y + ty), px(s.pts[1].x + tx));
+    else ctx.quadraticCurveTo(px(s.pts[1].y + ty), px(s.pts[1].x + tx), px(s.pts[2].y + ty), px(s.pts[2].x + tx));
+  }
+  ctx.closePath();
+}
+
+function dibujarFlecha(cx, cy, grain, largo){
+  const L = largo / 2;
+  const [ddx, ddy] = grain === 'vertical' ? [1, 0] : [0, 1];
+  const sx = px(cy), sy = px(cx);
+  const x0 = sx - ddx * px(L), y0 = sy - ddy * px(L), x1 = sx + ddx * px(L), y1 = sy + ddy * px(L);
+  const sz = 5, ang = Math.atan2(y1 - y0, x1 - x0);
+  ctx.save(); ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  for(const [ex, ey] of [[x1, y1], [x0, y0]]){
+    const a = ex === x1 ? ang : ang + Math.PI;
+    ctx.beginPath(); ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - sz * Math.cos(a - 0.4), ey - sz * Math.sin(a - 0.4));
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - sz * Math.cos(a + 0.4), ey - sz * Math.sin(a + 0.4));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function renderizarItems(items, maxLargo){
+  canvas.width = px(maxLargo); canvas.height = px(TELA_W);
+  ctx.fillStyle = '#f8f8f8'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.save(); ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(canvas.width, 0);
+  ctx.moveTo(0, canvas.height); ctx.lineTo(canvas.width, canvas.height);
+  ctx.stroke(); ctx.restore();
+  for(const r of items){
+    const cx2 = r.tx + r.bb.w / 2, cy2 = r.ty + r.bb.h / 2;
+    ctx.save();
+    ctx.fillStyle = r.rotada ? '#dde' : '#e4e4e4';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+    dibujarSegs(r.segs, r.tx, r.ty);
+    ctx.fill(); ctx.stroke(); ctx.restore();
+    dibujarFlecha(cx2, cy2, (r.pieza || r).grain, Math.min(r.bb.w, r.bb.h) * 0.4);
+    ctx.save(); ctx.fillStyle = '#000';
+    ctx.font = `${Math.max(7, px(1.5))}px monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`#${(r.pieza || r).id}${r.rotada ? ' ↺' : ''}`, px(cy2), px(cx2));
+    ctx.restore();
+  }
+}
+
+function renderizar(modo, resOverride){
+  const src = resOverride || (modo === 'nesting' ? layout : null);
+  const items = src
+    ? src.map(r => ({ ...r, pieza: r.pieza }))
+    : piezas.map(p => ({ ...p, tx: 0, ty: 0, rotada: false, pieza: p }));
+  if(!src){
+    let cx = MARGEN, cy = MARGEN, rowH = 0;
+    for(const it of items){
+      if(cy + it.bb.h > TELA_W){ cx += rowH + MARGEN * 2; cy = MARGEN; rowH = 0; }
+      it.tx = cx; it.ty = cy; cy += it.bb.h + MARGEN * 2;
+      if(it.bb.w > rowH) rowH = it.bb.w;
+    }
+  }
+  const maxLargo = items.reduce((m, r) => Math.max(m, r.ty + r.bb.h), 0) + MARGEN * 2;
+  renderizarItems(items, maxLargo);
+  if(!resOverride){
+    document.getElementById('log').textContent =
+      (modo === 'nesting' && layout.length) ? layout.map(r => r.log).join('\n') : '';
+  }
+}
+
+// ── Carga ──
+function cargarDatos(texto){
+  try{
+    piezas = parsearJSON(JSON.parse(texto));
+    layout = [];
+    document.getElementById('btnNesting').disabled = false;
+    renderizar('preview');
+    document.getElementById('info').textContent = `${piezas.length} piezas cargadas`;
+  } catch(err) { alert('Error JSON: ' + err.message); }
+}
+
+document.getElementById('btnTogglePanel').addEventListener('click', () => {
+  const p = document.getElementById('jsonPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('btnCargarTxt').addEventListener('click', () => {
+  const txt = document.getElementById('jsonTxt').value.trim();
+  if(!txt) { alert('Pega el JSON primero.'); return; }
+  cargarDatos(txt);
+  document.getElementById('jsonPanel').style.display = 'none';
+});
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ev => cargarDatos(ev.target.result);
+  r.readAsText(f);
+});
+
+// ── Exportar análisis ──
+function exportarAnalisis(){
+  if(!layout.length) return;
+  const largo = largoLayout(layout);
+  const totalArea = piezas.reduce((s, p) => s + p.area, 0);
+  const aprov = (totalArea / (TELA_W * largo) * 100).toFixed(1);
+
+  const datos = {
+    tela: { ancho_cm: TELA_W, largo_usado_cm: +largo.toFixed(2), aprovechamiento_pct: +aprov },
+    piezas_colocadas: layout.map(r => ({
+      id: r.pieza.id,
+      grain: r.pieza.grain,
+      ancho_cm: +r.bb.w.toFixed(2),
+      alto_cm: +r.bb.h.toFixed(2),
+      area_cm2: +r.pieza.area.toFixed(2),
+      tx_cm: +r.tx.toFixed(2),
+      ty_cm: +r.ty.toFixed(2),
+      rotada_180: r.rotada,
+      poligono_muestra: r.poly.map(p => ({ x: +p.x.toFixed(3), y: +p.y.toFixed(3) }))
+    }))
+  };
+
+  const panel = document.getElementById('analisisPanel');
+  const contenido = document.getElementById('analisisContenido');
+  const btnCopiar = document.getElementById('btnCopiar');
+  const copiadoOk = document.getElementById('copiadoOk');
+  panel.style.display = 'block';
+  contenido.textContent = JSON.stringify(datos, null, 2);
+  btnCopiar.onclick = () => {
+    navigator.clipboard.writeText(contenido.textContent).then(() => {
+      copiadoOk.style.display = 'inline';
+      setTimeout(() => { copiadoOk.style.display = 'none'; }, 2000);
+    }).catch(() => alert('No se pudo copiar. Selecciona el texto manualmente.'));
+  };
+}
+
+document.getElementById('btnAnalizar').addEventListener('click', exportarAnalisis);
+
+// ── Botón nesting ──
+document.getElementById('btnNesting').addEventListener('click', () => {
+  if(!piezas.length) return;
+  const btn = document.getElementById('btnNesting');
+  const info = document.getElementById('info');
+  btn.disabled = true;
+
+  TELA_W = parseFloat(document.getElementById('inputAncho').value)||160;
+  GRID_W = Math.ceil(TELA_W / GRID_RES);
+  GRID_W_COL = Math.ceil(TELA_W / GRID_RES_COL);
+  const N_ITER = parseInt(document.getElementById('inputIter').value) || 50;
+  const N_FIJOS = Math.ceil(piezas.length * 0.3);
+  const porArea = [...piezas].sort((a, b) => (b.bb.w * b.bb.h) - (a.bb.w * a.bb.h));
+
+  let mejorRes = null, mejorLargo = Infinity, iter = 0;
+
+  // Pasadas deterministas iniciales con distintos órdenes
+  for(const orden of [
+    porArea,
+    [...piezas].sort((a, b) => b.bb.h - a.bb.h),
+    [...piezas].sort((a, b) => b.bb.w - a.bb.w),
+    [...piezas].sort((a, b) => (b.bb.w + b.bb.h) - (a.bb.w + a.bb.h)),
+    [...piezas].sort((a, b) => b.area - a.area),
+  ]){
+    const res = nestingUnaPassada(piezas);
+    const largo = largoLayout(res);
+    if(largo < mejorLargo) { mejorLargo = largo; mejorRes = res; }
+  }
+
+  renderizar('nesting', mejorRes);
+  info.textContent = `Iteración 0/${N_ITER} — mejor: ${mejorLargo.toFixed(1)}cm`;
+
+  const CHUNK = 5;
+  function tick() {
+    for (let k = 0; k < CHUNK && iter < N_ITER; k++, iter++) {
+    // Orden aleatorio completo
+    // Orden priorizando piezas grandes con perturbación aleatoria
+    const ordenGrandes = [...piezas].sort((a, b) => (b.bb.w * b.bb.h) - (a.bb.w * a.bb.h));
+    // Intercambiamos aleatoriamente algunos pares adyacentes para explorar variaciones
+    for (let i = 0; i < ordenGrandes.length - 1; i++) {
+      if (Math.random() < 0.3) {
+        [ordenGrandes[i], ordenGrandes[i + 1]] = [ordenGrandes[i + 1], ordenGrandes[i]];
+      }
+    }
+    let res = nestingPorOrden(ordenGrandes);
+    const largoAntes = largoLayout(res);
+    res = pulirLayout(res);
+    const largo = largoLayout(res);
+    if (largo < mejorLargo) { mejorLargo = largo; mejorRes = res; }
+  }
+  info.textContent = `Iteración ${iter}/${N_ITER} — mejor: ${mejorLargo.toFixed(1)}cm`;
+  renderizar('nesting', mejorRes);
+  if (iter < N_ITER) {
+    setTimeout(tick, 0);
+  } else {
+    layout = mejorRes;
+    renderizar('nesting');
+    const largo = largoLayout(layout);
+    const totalArea = piezas.reduce((s, p) => s + p.area, 0);
+    const aprov = (totalArea / (TELA_W * largo) * 100).toFixed(1);
+    info.textContent = `${TELA_W}cm × ${largo.toFixed(1)}cm | ${aprov}%`;
+    document.getElementById('log').textContent = layout.map(r => r.log).join('\n');
+    btn.disabled = false;
+    document.getElementById('btnAnalizar').disabled = false;
+  }
+}
+//======== fun tick dentro 
+  setTimeout(tick, 20);
+});
+</script>
+</body>
+</html>
