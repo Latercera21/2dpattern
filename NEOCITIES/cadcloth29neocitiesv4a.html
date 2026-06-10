@@ -1991,7 +1991,7 @@ function projectOntoLine(pt, a, b) {
     }
 
     function handleTouchEnd(e){
-        if(e.touches.length<2)pinchStartDist=null;
+        if(e.touches.length<2){pinchStartDist=null;pinchLastCx=null;pinchLastCy=null;}
         if(e.touches.length===0){ dragData=null; curveActiveDrag=null; }
     }
 
