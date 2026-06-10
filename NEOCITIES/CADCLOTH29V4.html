@@ -390,7 +390,7 @@
         return{start:s,end:e,curved:false,cubic:false,controlX:null,controlY:null,control2X:null,control2Y:null};
     }
 
-    function createPolygon(cx,cy,sides,radius=50) {
+    function createPolygon(cx,cy,sides,radius=150) {
         const vertices=[],edges=[];
         for (let i=0;i<sides;i++) {
             //const ang=(i*2*Math.PI)/sides-Math.PI/2;
