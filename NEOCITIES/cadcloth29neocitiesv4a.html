@@ -1980,13 +1980,14 @@ function projectOntoLine(pt, a, b) {
             viewOffX=(cx-r.left)-(cx-r.left-viewOffX)*(ns/viewScale);
             viewOffY=(cy-r.top )-(cy-r.top -viewOffY)*(ns/viewScale);
             viewScale=ns;
-            // pan con dos dedos
             if(pinchLastCx!==null){
                 viewOffX+=(cx-r.left)-pinchLastCx;
                 viewOffY+=(cy-r.top)-pinchLastCy;
             }
             pinchLastCx=(cx-r.left); pinchLastCy=(cy-r.top);
             updateZoomIndicator();redrawAll();
+        } else if(e.touches.length===1&&(dragData||curveActiveDrag)){
+            e.preventDefault();handlePointerMove(getPos(e));
         }
     }
 
