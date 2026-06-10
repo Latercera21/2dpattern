@@ -151,7 +151,7 @@
     // --- Estado de curva midpoint drag ---
     let curveActiveDrag = null; // {figureIndex, edgeIndex, dragging}
 
-    let viewScale = 1, viewOffX = 0, viewOffY = 0;
+    let viewScale = 0.2, viewOffX = 0, viewOffY = 0;
     let isPanning = false, panStart = {x:0,y:0};
     let pinchStartDist = null, pinchStartScale = 1;
     let isTouchDevice = false, lastTouchTime = 0;
@@ -390,11 +390,11 @@
         return{start:s,end:e,curved:false,cubic:false,controlX:null,controlY:null,control2X:null,control2Y:null};
     }
 
-    function createPolygon(cx,cy,sides,radius=150) {
+    function createPolygon(cx,cy,sides,radius=1000) {
         const vertices=[],edges=[];
         for (let i=0;i<sides;i++) {
             //const ang=(i*2*Math.PI)/sides-Math.PI/2;
-const ang = (i * 2 * Math.PI) / sides - Math.PI / sides;
+            const ang = (i * 2 * Math.PI) / sides - Math.PI / sides;
             vertices.push({x:cx+radius*Math.cos(ang),y:cy+radius*Math.sin(ang)});
         }
         for (let i=0;i<sides;i++) edges.push(makeEdge(i,(i+1)%sides));
