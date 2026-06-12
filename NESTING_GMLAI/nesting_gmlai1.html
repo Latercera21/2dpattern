@@ -159,23 +159,20 @@ function alturaEnRango(skyline, x, w){
 function buscarPosSkyline(skyline, rast){
   let mejorPos = null;
   let mejorScore = Infinity;
+  const maxCol = Math.ceil((TELA_W - rast.bb_w + 0.01) / GRID_RES);
 
-  for(let c = 0; c * GRID_RES + rast.bb_w <= TELA_W + 0.01; c++){
+  for(let c = 0; c <= maxCol; c++){
     const tx = c * GRID_RES;
-
-    // Punto de partida: altura skyline en este rango menos altura de pieza
-    // No empezar desde 0, empezar desde donde el skyline lo permite
+    // Poda: si tx solo ya supera el score, las siguientes columnas también
+    if(tx >= mejorScore) break;
     const skyH = alturaEnRango(skyline, tx, rast.bb_w);
     const tyStart = Math.max(0, skyH - rast.bb_h);
     const rStart = Math.floor(tyStart / GRID_RES);
-
-    // Score mínimo posible en esta columna — si ya tenemos mejor, saltar
-    const scoreMinimoColumna = (skyH) * TELA_W + tx;
-    if(scoreMinimoColumna >= mejorScore) continue;
-
+    // Poda: score mínimo posible en esta columna
+    if((skyH) * TELA_W + tx >= mejorScore) continue;
     const maxRow = Math.ceil((skyH + rast.bb_h + MARGEN*2) / GRID_RES) + 4;
-    expandirGrid((maxRow + 2) * GRID_RES);
-
+    const needH=(maxRow+2)*GRID_RES;
+    if(needH>gridH*GRID_RES)expandirGrid(needH);
     for(let r = rStart; r < maxRow; r++){
       const ty = r * GRID_RES;
       if(cabeEnGrid(rast, tx, ty)){
@@ -251,12 +248,14 @@ function marcarEnGrid(rast,tx,ty){
     }
   }
 }
+
 function cabeEnGrid(rast,tx,ty){
   if(tx<0||ty<0)return false;
   const c0=Math.floor((tx+rast.offX)/GRID_RES);
   const r0=Math.floor((ty+rast.offY)/GRID_RES);
   if(c0<0||r0<0)return false;
-  expandirGrid((r0+rast.rows+2)*GRID_RES);
+  const needH=(r0+rast.rows+2)*GRID_RES;
+  if(needH>gridH*GRID_RES)expandirGrid(needH);
   for(let c=0;c<rast.cols;c++){if(rast.mask[c]&&(c0+c)>=GRID_W)return false;}
   for(let r=0;r<rast.rows;r++){
     const gr=r0+r;if(gr>=gridH)continue;
@@ -310,21 +309,25 @@ function nestingUnaPassada(orden){
   iniciarGrid();
   let skyline=crearSkyline();
   const res=[];
+  const cache=new Map();
 
   for(const pieza of orden){
     const variantes=[pieza, rotar180(pieza)];
     let mejor=null;
     for(const v of variantes){
-      const rast=rasterizarPieza(v.poly,v.bb,MARGEN);
+      const key=v.rotada?'r_'+pieza.id:'n_'+pieza.id;
+      let rast=cache.get(key);
+      if(!rast){rast=rasterizarPieza(v.poly,v.bb,MARGEN);cache.set(key,rast);}
       const pos=buscarPosSkyline(skyline, rast);
       if(!pos) continue;
       const score=(pos.ty+v.bb.h)*TELA_W+pos.tx;
       if(!mejor||score<mejor.score) mejor={tx:pos.tx,ty:pos.ty,score,variante:v,rast};
     }
     if(!mejor){
-      const v=variantes[0];
-      const rast=rasterizarPieza(v.poly,v.bb,MARGEN);
-      mejor={tx:MARGEN,ty:gridH*GRID_RES,score:Infinity,variante:v,rast};
+      const key='n_'+pieza.id;
+      let rast=cache.get(key);
+      if(!rast){rast=rasterizarPieza(pieza.poly,pieza.bb,MARGEN);cache.set(key,rast);}
+      mejor={tx:MARGEN,ty:gridH*GRID_RES,score:Infinity,variante:pieza,rast};
     }
     const{tx,ty,variante,rast}=mejor;
     expandirGrid(ty+variante.bb.h+MARGEN*2);
@@ -351,28 +354,40 @@ function shuffle(arr){
 function compactar(res){
   iniciarGrid();
   const compactado = [];
+  const cache=new Map();
   for(const r of res){
     const variantes = [
-      {segs:r.segs, poly:r.poly, bb:r.bb, rotada:r.rotada},
-      (()=>{ const v=rotar180(r.pieza); return {segs:v.segs,poly:v.poly,bb:v.bb,rotada:true}; })()
+      {segs:r.segs, poly:r.poly, bb:r.bb, rotada:r.rotada, pieza:r.pieza},
+      (()=>{ const v=rotar180(r.pieza); return {segs:v.segs,poly:v.poly,bb:v.bb,rotada:true,pieza:r.pieza}; })()
     ];
     let mejor = null;
     for(const v of variantes){
-      const rast = rasterizarPieza(v.poly, v.bb, MARGEN);
-      for(let row = 0; row * GRID_RES <= r.ty + v.bb.h; row++){
+      const key=v.rotada?'r_'+r.pieza.id:'n_'+r.pieza.id;
+      let rast=cache.get(key);
+      if(!rast){rast=rasterizarPieza(v.poly,v.bb,MARGEN);cache.set(key,rast);}
+      // Buscar posición óptima: lo más arriba y a la izquierda posible
+      for(let row = 0; row * GRID_RES <= r.ty + v.bb.h + 2; row++){
         const tyVal = row * GRID_RES;
-        expandirGrid(tyVal + v.bb.h + MARGEN*2);
-        if(cabeEnGrid(rast, r.tx, tyVal)){
-          const score = (tyVal + v.bb.h) * TELA_W + r.tx;
-          if(!mejor || score < mejor.score){
-            mejor = {tx:r.tx, ty:tyVal, score, segs:v.segs, poly:v.poly, bb:v.bb, rotada:v.rotada, rast};
+        const needH=(Math.floor((tyVal+rast.offY)/GRID_RES)+rast.rows+2)*GRID_RES;
+        if(needH>gridH*GRID_RES)expandirGrid(needH);
+        // Buscar columna más a la izquierda donde cabe
+        for(let col = 0; col * GRID_RES + rast.bb_w <= TELA_W + 0.01; col++){
+          const txVal = col * GRID_RES;
+          if(cabeEnGrid(rast, txVal, tyVal)){
+            const score = (tyVal + v.bb.h) * TELA_W + txVal;
+            if(!mejor || score < mejor.score){
+              mejor = {tx:txVal, ty:tyVal, score, segs:v.segs, poly:v.poly, bb:v.bb, rotada:v.rotada, rast};
+            }
+            break; // primera columna que cabe es la más a la izquierda para esta fila
           }
-          break;
         }
+        if(mejor && mejor.ty === tyVal) break; // ya encontré posición en esta fila, no sigo bajando
       }
     }
     if(!mejor){
-      const rast = rasterizarPieza(r.poly, r.bb, MARGEN);
+      const key='n_'+r.pieza.id;
+      let rast=cache.get(key);
+      if(!rast){rast=rasterizarPieza(r.poly,r.bb,MARGEN);cache.set(key,rast);}
       mejor = {tx:r.tx, ty:r.ty, score:Infinity, segs:r.segs, poly:r.poly, bb:r.bb, rotada:r.rotada, rast};
     }
     expandirGrid(mejor.ty + mejor.bb.h + MARGEN*2);
