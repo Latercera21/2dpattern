@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nesting</title>
+<style>
+  body { margin:0; font-family:monospace; font-size:12px; }
+  #controls { display:flex; gap:6px; padding:6px; align-items:center; flex-wrap:wrap; border-bottom:1px solid #ccc; }
+  button { padding:4px 10px; cursor:pointer; }
+  button:disabled { opacity:0.4; }
+  #jsonPanel { padding:6px; border-bottom:1px solid #ccc; display:none; }
+  #jsonPanel textarea { width:100%; box-sizing:border-box; height:80px; font-size:10px; }
+  #canvasWrap { overflow:auto; }
+  canvas { display:block; }
+  #log { font-size:10px; padding:4px; max-height:120px; overflow:auto; border-top:1px solid #ccc; margin:0; }
+</style>
+</head>
+<body>
+<div id="controls">
+  <button id="btnTogglePanel">Pegar JSON ▾</button>
+  <input type="file" id="fileInput" accept=".json" style="font-size:11px">
+  <button id="btnNesting" disabled>Ejecutar Nesting</button>
+  <label>Ancho: <input type="number" id="inputAncho" value="160" min="50" max="300" step="1" style="width:50px"> cm</label>
+  <label>Iteraciones: <input type="number" id="inputIter" value="50" min="1" max="500" step="1" style="width:50px"></label>
+  <span id="info">—</span>
+  <button id="btnCopiarJSON" disabled>Copiar JSON</button>
+  <button id="btnDescargarJSON" disabled>↓ JSON</button>
+</div>
+<div id="resultPanel" style="display:none;padding:4px 6px;border-bottom:1px solid #ccc;">
+  <textarea id="resultTxt" style="width:100%;box-sizing:border-box;height:60px;font-size:9px;" readonly></textarea>
+</div>
+<div id="jsonPanel" style="display:none;padding:6px;border-bottom:1px solid #ccc;">
+  <textarea id="jsonTxt" placeholder="Pega el JSON aquí..."></textarea>
+  <button id="btnCargarTxt">Cargar</button>
+</div>
+<div id="canvasWrap"><canvas id="c"></canvas></div>
+<div style="border-top:1px solid #ccc;padding:4px;">
+  <button id="btnCopiarLog" style="font-size:10px;">Copiar log</button>
+</div>
+<pre id="log"></pre>
+
+<script>
+const PX_CM   = 4;
+const MARGEN  = 0.5;
+const N_SAMP  = 96;
+const GRID_RES = 0.5;
+
+let TELA_W = 160;
+let GRID_W = Math.ceil(TELA_W / GRID_RES);
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let piezas   = [];
+let layout   = [];
+
+// ── Geometría ──
+const lerp   = (a,b,t) => a+(b-a)*t;
+const ptLerp = (a,b,t) => ({x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t)});
+const ptQuad = (p0,cp,p1,t) => ptLerp(ptLerp(p0,cp,t), ptLerp(cp,p1,t), t);
+const dist   = (a,b) => Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
+
+function segLen(seg){
+  if(seg.type==='line') return dist(seg.pts[0],seg.pts[1]);
+  let l=0,prev=seg.pts[0];
+  for(let i=1;i<=24;i++){const p=ptQuad(seg.pts[0],seg.pts[1],seg.pts[2],i/24);l+=dist(prev,p);prev=p;}
+  return l;
+}
+function ptOnSeg(seg,t){
+  if(seg.type==='line') return ptLerp(seg.pts[0],seg.pts[1],t);
+  return ptQuad(seg.pts[0],seg.pts[1],seg.pts[2],t);
+}
+function samplearFigura(segs,n){
+  const lens=segs.map(segLen);
+  const total=lens.reduce((a,b)=>a+b,0);
+  const pts=[],step=total/n;
+  let acum=0,si=0;
+  for(let k=0;k<n;k++){
+    const target=k*step;
+    while(si<segs.length-1&&acum+lens[si]<target){acum+=lens[si];si++;}
+    const t=lens[si]>1e-9?Math.min(1,(target-acum)/lens[si]):0;
+    pts.push(ptOnSeg(segs[si],t));
+  }
+  return pts;
+}
+
+// ── BBox / área ──
+function bboxPoly(poly){
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of poly){if(p.x<minX)minX=p.x;if(p.x>maxX)maxX=p.x;if(p.y<minY)minY=p.y;if(p.y>maxY)maxY=p.y;}
+  return {minX,minY,maxX,maxY,w:maxX-minX,h:maxY-minY};
+}
+function areaPoly(poly){
+  let a=0;const n=poly.length;
+  for(let i=0;i<n;i++){const j=(i+1)%n;a+=poly[i].x*poly[j].y-poly[j].x*poly[i].y;}
+  return Math.abs(a)/2;
+}
+function normPoly(poly){
+  const bb=bboxPoly(poly);
+  return poly.map(p=>({x:p.x-bb.minX,y:p.y-bb.minY}));
+}
+function normSegs(segs){
+  const allPts=segs.flatMap(s=>s.pts);
+  const minX=Math.min(...allPts.map(p=>p.x));
+  const minY=Math.min(...allPts.map(p=>p.y));
+  return segs.map(s=>({type:s.type,pts:s.pts.map(p=>({x:p.x-minX,y:p.y-minY}))}));
+}
+
+// ── Punto en polígono ──
+function puntoEnPoly(px,py,poly){
+  let inside=false;const n=poly.length;
+  for(let i=0,j=n-1;i<n;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+
+// ── Rasterización ──
+function rasterizarPieza(poly,bb,margen){
+  const cx=poly.reduce((s,p)=>s+p.x,0)/poly.length;
+  const cy=poly.reduce((s,p)=>s+p.y,0)/poly.length;
+  const polyExp=poly.map(p=>{
+    const dx=p.x-cx,dy=p.y-cy,d=Math.sqrt(dx*dx+dy*dy)||1;
+    return {x:p.x+dx/d*margen,y:p.y+dy/d*margen};
+  });
+  const cols=Math.ceil((bb.w+margen*2)/GRID_RES)+2;
+  const rows=Math.ceil((bb.h+margen*2)/GRID_RES)+2;
+  const offX=-margen,offY=-margen;
+  const mask=new Uint8Array(cols*rows);
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const px2=offX+(c+0.5)*GRID_RES,py2=offY+(r+0.5)*GRID_RES;
+      if(puntoEnPoly(px2,py2,polyExp))mask[r*cols+c]=1;
+    }
+  }
+  return {mask,cols,rows,offX,offY,bb_w:bb.w,bb_h:bb.h};
+}
+
+// ── Skyline ──
+// El skyline es un array de segmentos {x, w, h} donde h es la altura ocupada
+// en esa franja horizontal. Buscamos el hueco más bajo donde cabe la pieza.
+
+function crearSkyline(){
+  return [{x:0, w:TELA_W, h:0}];
+}
+
+// Obtener la altura máxima del skyline en el rango [x, x+w]
+function alturaEnRango(skyline, x, w){
+  let maxH = 0;
+  for(const seg of skyline){
+    const overlapX = Math.max(0, Math.min(seg.x+seg.w, x+w) - Math.max(seg.x, x));
+    if(overlapX > 0.01 && seg.h > maxH) maxH = seg.h;
+  }
+  return maxH;
+}
+
+// Buscar la mejor posición usando descenso real por grilla
+function buscarPosSkyline(skyline, rast){
+  let mejorPos = null;
+  let mejorScore = Infinity;
+
+  for(let c = 0; c * GRID_RES + rast.bb_w <= TELA_W + 0.01; c++){
+    const tx = c * GRID_RES;
+
+    // Punto de partida: altura skyline en este rango menos altura de pieza
+    // No empezar desde 0, empezar desde donde el skyline lo permite
+    const skyH = alturaEnRango(skyline, tx, rast.bb_w);
+    const tyStart = Math.max(0, skyH - rast.bb_h);
+    const rStart = Math.floor(tyStart / GRID_RES);
+
+    // Score mínimo posible en esta columna — si ya tenemos mejor, saltar
+    const scoreMinimoColumna = (skyH) * TELA_W + tx;
+    if(scoreMinimoColumna >= mejorScore) continue;
+
+    const maxRow = Math.ceil((skyH + rast.bb_h + MARGEN*2) / GRID_RES) + 4;
+    expandirGrid((maxRow + 2) * GRID_RES);
+
+    for(let r = rStart; r < maxRow; r++){
+      const ty = r * GRID_RES;
+      if(cabeEnGrid(rast, tx, ty)){
+        const score = (ty + rast.bb_h) * TELA_W + tx;
+        if(score < mejorScore){ mejorScore = score; mejorPos = {tx, ty}; }
+        break;
+      }
+    }
+  }
+  return mejorPos;
+}
+
+// Actualizar skyline tras colocar una pieza
+function actualizarSkyline(skyline, tx, ty, bw, bh){
+  const x1 = tx;
+  const x2 = tx + bw;
+  const newH = ty + bh + MARGEN;
+
+  // Partir y reconstruir segmentos afectados
+  const result = [];
+  for(const seg of skyline){
+    const sx1 = seg.x;
+    const sx2 = seg.x + seg.w;
+    if(sx2 <= x1 || sx1 >= x2){
+      // Sin solapamiento
+      result.push({...seg});
+    } else {
+      // Parte izquierda
+      if(sx1 < x1) result.push({x:sx1, w:x1-sx1, h:seg.h});
+      // Parte solapada — elevar si newH es mayor
+      result.push({x:Math.max(sx1,x1), w:Math.min(sx2,x2)-Math.max(sx1,x1), h:Math.max(seg.h, newH)});
+      // Parte derecha
+      if(sx2 > x2) result.push({x:x2, w:sx2-x2, h:seg.h});
+    }
+  }
+
+  // Fusionar segmentos contiguos con igual altura
+  const merged = [];
+  for(const seg of result){
+    if(seg.w < 0.01) continue;
+    if(merged.length && Math.abs(merged[merged.length-1].h - seg.h) < 0.01){
+      merged[merged.length-1].w += seg.w;
+    } else {
+      merged.push({...seg});
+    }
+  }
+  return merged;
+}
+
+// ── Grilla global (para colisión precisa) ──
+let gridH=0,grid=null;
+
+function iniciarGrid(){
+  gridH=4;
+  grid=new Uint8Array(GRID_W*gridH);
+}
+function expandirGrid(nuevaH){
+  const newGridH=Math.ceil(nuevaH/GRID_RES)+4;
+  if(newGridH<=gridH)return;
+  const newGrid=new Uint8Array(GRID_W*newGridH);
+  newGrid.set(grid);
+  grid=newGrid;gridH=newGridH;
+}
+function marcarEnGrid(rast,tx,ty){
+  const c0=Math.floor((tx+rast.offX)/GRID_RES);
+  const r0=Math.floor((ty+rast.offY)/GRID_RES);
+  expandirGrid((r0+rast.rows+2)*GRID_RES);
+  for(let r=0;r<rast.rows;r++){
+    const gr=r0+r;if(gr<0||gr>=gridH)continue;
+    for(let c=0;c<rast.cols;c++){
+      const gc=c0+c;if(gc<0||gc>=GRID_W)continue;
+      if(rast.mask[r*rast.cols+c])grid[gr*GRID_W+gc]=1;
+    }
+  }
+}
+function cabeEnGrid(rast,tx,ty){
+  if(tx<0||ty<0)return false;
+  const c0=Math.floor((tx+rast.offX)/GRID_RES);
+  const r0=Math.floor((ty+rast.offY)/GRID_RES);
+  if(c0<0||r0<0)return false;
+  expandirGrid((r0+rast.rows+2)*GRID_RES);
+  for(let c=0;c<rast.cols;c++){if(rast.mask[c]&&(c0+c)>=GRID_W)return false;}
+  for(let r=0;r<rast.rows;r++){
+    const gr=r0+r;if(gr>=gridH)continue;
+    for(let c=0;c<rast.cols;c++){
+      if(!rast.mask[r*rast.cols+c])continue;
+      const gc=c0+c;if(gc>=GRID_W)return false;
+      if(grid[gr*GRID_W+gc])return false;
+    }
+  }
+  return true;
+}
+
+// ── Parseo JSON ──
+function parsearJSON(data){
+  const pxPerCm=data.pxPerCm||37.79527559055118;
+  const figs=data.figures.filter(f=>f.closed!==false&&f.vertices&&f.vertices.length>=3);
+  return figs.map((fig,idx)=>{
+    const verts=fig.vertices.map(v=>({
+      x:v.xCm!==undefined?v.xCm:v.x/pxPerCm,
+      y:v.yCm!==undefined?v.yCm:v.y/pxPerCm
+    }));
+    const n=verts.length,edgeMap={};
+    fig.edges.forEach(e=>{edgeMap[e.start+'_'+e.end]=e;});
+    const segs=[];
+    for(let i=0;i<n;i++){
+      const j=(i+1)%n,e=edgeMap[i+'_'+j];
+      if(!e)segs.push({type:'line',pts:[{...verts[i]},{...verts[j]}]});
+      else if(!e.curved)segs.push({type:'line',pts:[{...verts[e.start]},{...verts[e.end]}]});
+      else segs.push({type:'quad',pts:[{...verts[e.start]},{x:e.controlX/pxPerCm,y:e.controlY/pxPerCm},{...verts[e.end]}]});
+    }
+    const segsN=normSegs(segs);
+    const poly=samplearFigura(segsN,N_SAMP);
+    const polyN=normPoly(poly);
+    const bb=bboxPoly(polyN);
+    const area=areaPoly(polyN);
+    return{id:idx,grain:fig.grain||data.grainDirection||'vertical',segs:segsN,poly:polyN,bb,area};
+  });
+}
+
+// ── Rotación 180° ──
+function rotar180(pieza){
+  const{bb}=pieza;
+  const segsR=pieza.segs.map(s=>({type:s.type,pts:s.pts.map(p=>({x:bb.w-p.x,y:bb.h-p.y}))}));
+  const polyR=pieza.poly.map(p=>({x:bb.w-p.x,y:bb.h-p.y}));
+  const polyN=normPoly(polyR),bbR=bboxPoly(polyN);
+  return{...pieza,segs:segsR,poly:polyN,bb:bbR,rotada:true};
+}
+
+// ── Una pasada con skyline ──
+function nestingUnaPassada(orden){
+  iniciarGrid();
+  let skyline=crearSkyline();
+  const res=[];
+
+  for(const pieza of orden){
+    const variantes=[pieza, rotar180(pieza)];
+    let mejor=null;
+    for(const v of variantes){
+      const rast=rasterizarPieza(v.poly,v.bb,MARGEN);
+      const pos=buscarPosSkyline(skyline, rast);
+      if(!pos) continue;
+      const score=(pos.ty+v.bb.h)*TELA_W+pos.tx;
+      if(!mejor||score<mejor.score) mejor={tx:pos.tx,ty:pos.ty,score,variante:v,rast};
+    }
+    if(!mejor){
+      const v=variantes[0];
+      const rast=rasterizarPieza(v.poly,v.bb,MARGEN);
+      mejor={tx:MARGEN,ty:gridH*GRID_RES,score:Infinity,variante:v,rast};
+    }
+    const{tx,ty,variante,rast}=mejor;
+    expandirGrid(ty+variante.bb.h+MARGEN*2);
+    marcarEnGrid(rast,tx,ty);
+    skyline=actualizarSkyline(skyline,tx,ty,variante.bb.w,variante.bb.h);
+    res.push({
+      pieza,segs:variante.segs,poly:variante.poly,bb:variante.bb,tx,ty,
+      rotada:!!variante.rotada,
+      log:`#${pieza.id} ${variante.bb.w.toFixed(1)}×${variante.bb.h.toFixed(1)}cm tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} ${variante.rotada?'180°':'normal'}`
+    });
+  }
+  return compactar(res);
+}
+
+function largoLayout(res){return res.reduce((m,r)=>Math.max(m,r.ty+r.bb.h),0);}
+
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+// ── Compactación post-layout: subir cada pieza hacia ty=0, probando también rotación ──
+function compactar(res){
+  iniciarGrid();
+  const compactado = [];
+  for(const r of res){
+    const variantes = [
+      {segs:r.segs, poly:r.poly, bb:r.bb, rotada:r.rotada},
+      (()=>{ const v=rotar180(r.pieza); return {segs:v.segs,poly:v.poly,bb:v.bb,rotada:true}; })()
+    ];
+    let mejor = null;
+    for(const v of variantes){
+      const rast = rasterizarPieza(v.poly, v.bb, MARGEN);
+      for(let row = 0; row * GRID_RES <= r.ty + v.bb.h; row++){
+        const tyVal = row * GRID_RES;
+        expandirGrid(tyVal + v.bb.h + MARGEN*2);
+        if(cabeEnGrid(rast, r.tx, tyVal)){
+          const score = (tyVal + v.bb.h) * TELA_W + r.tx;
+          if(!mejor || score < mejor.score){
+            mejor = {tx:r.tx, ty:tyVal, score, segs:v.segs, poly:v.poly, bb:v.bb, rotada:v.rotada, rast};
+          }
+          break;
+        }
+      }
+    }
+    if(!mejor){
+      const rast = rasterizarPieza(r.poly, r.bb, MARGEN);
+      mejor = {tx:r.tx, ty:r.ty, score:Infinity, segs:r.segs, poly:r.poly, bb:r.bb, rotada:r.rotada, rast};
+    }
+    expandirGrid(mejor.ty + mejor.bb.h + MARGEN*2);
+    marcarEnGrid(mejor.rast, mejor.tx, mejor.ty);
+    compactado.push({
+      ...r,
+      segs:mejor.segs, poly:mejor.poly, bb:mejor.bb,
+      tx:mejor.tx, ty:mejor.ty, rotada:mejor.rotada,
+      log:`#${r.pieza.id} ${mejor.bb.w.toFixed(1)}×${mejor.bb.h.toFixed(1)}cm tx=${mejor.tx.toFixed(1)} ty=${mejor.ty.toFixed(1)} ${mejor.rotada?'180°':'normal'}`
+    });
+  }
+  return compactado;
+}
+
+// ── Dibujo ──
+const px=v=>v*PX_CM;
+
+function dibujarSegs(segs,tx,ty){
+  if(!segs.length)return;
+  ctx.beginPath();
+  ctx.moveTo(px(segs[0].pts[0].y+ty),px(segs[0].pts[0].x+tx));
+  for(const s of segs){
+    if(s.type==='line')ctx.lineTo(px(s.pts[1].y+ty),px(s.pts[1].x+tx));
+    else ctx.quadraticCurveTo(px(s.pts[1].y+ty),px(s.pts[1].x+tx),px(s.pts[2].y+ty),px(s.pts[2].x+tx));
+  }
+  ctx.closePath();
+}
+
+function dibujarFlecha(cx,cy,grain,largo){
+  const L=largo/2;
+  const[ddx,ddy]=grain==='vertical'?[1,0]:[0,1];
+  const sx=px(cy),sy=px(cx);
+  const x0=sx-ddx*px(L),y0=sy-ddy*px(L),x1=sx+ddx*px(L),y1=sy+ddy*px(L);
+  const sz=5,ang=Math.atan2(y1-y0,x1-x0);
+  ctx.save();ctx.strokeStyle='#555';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+  for(const[ex,ey]of[[x1,y1],[x0,y0]]){
+    const a=ex===x1?ang:ang+Math.PI;
+    ctx.beginPath();ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-sz*Math.cos(a-0.4),ey-sz*Math.sin(a-0.4));
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-sz*Math.cos(a+0.4),ey-sz*Math.sin(a+0.4));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function renderizarItems(items,maxLargo){
+  canvas.width=px(maxLargo);canvas.height=px(TELA_W);
+  ctx.fillStyle='#f8f8f8';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.save();ctx.strokeStyle='#bbb';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+  ctx.beginPath();
+  ctx.moveTo(0,0);ctx.lineTo(canvas.width,0);
+  ctx.moveTo(0,canvas.height);ctx.lineTo(canvas.width,canvas.height);
+  ctx.stroke();ctx.restore();
+  for(const r of items){
+    const cx2=r.tx+r.bb.w/2,cy2=r.ty+r.bb.h/2;
+    ctx.save();
+    ctx.fillStyle=r.rotada?'#dde':'#e4e4e4';
+    ctx.strokeStyle='#000';ctx.lineWidth=1;
+    dibujarSegs(r.segs,r.tx,r.ty);
+    ctx.fill();ctx.stroke();ctx.restore();
+    dibujarFlecha(cx2,cy2,(r.pieza||r).grain,Math.min(r.bb.w,r.bb.h)*0.4);
+    ctx.save();ctx.fillStyle='#000';
+    ctx.font=`${Math.max(7,px(1.5))}px monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(`#${(r.pieza||r).id}${r.rotada?' ↺':''}`,px(cy2),px(cx2));
+    ctx.restore();
+  }
+}
+
+function renderizar(modo,resOverride){
+  const src=resOverride||(modo==='nesting'?layout:null);
+  const items=src
+    ?src.map(r=>({...r,pieza:r.pieza}))
+    :piezas.map(p=>({...p,tx:0,ty:0,rotada:false,pieza:p}));
+  if(!src){
+    let cx=MARGEN,cy=MARGEN,rowH=0;
+    for(const it of items){
+      if(cy+it.bb.h>TELA_W){cx+=rowH+MARGEN*2;cy=MARGEN;rowH=0;}
+      it.tx=cx;it.ty=cy;cy+=it.bb.h+MARGEN*2;
+      if(it.bb.w>rowH)rowH=it.bb.w;
+    }
+  }
+  const maxLargo=items.reduce((m,r)=>Math.max(m,r.ty+r.bb.h),0)+MARGEN*2;
+  renderizarItems(items,maxLargo);
+  if(!resOverride){
+    document.getElementById('log').textContent=
+      (modo==='nesting'&&layout.length)?layout.map(r=>r.log).join('\n'):'';
+  }
+}
+
+// ── Carga ──
+function cargarDatos(texto){
+  try{
+    piezas=parsearJSON(JSON.parse(texto));
+    layout=[];
+    document.getElementById('btnNesting').disabled=false;
+    renderizar('preview');
+    document.getElementById('info').textContent=`${piezas.length} piezas cargadas`;
+  }catch(err){alert('Error JSON: '+err.message);}
+}
+
+document.getElementById('btnTogglePanel').addEventListener('click',()=>{
+  const p=document.getElementById('jsonPanel');
+  p.style.display=p.style.display==='none'?'block':'none';
+});
+document.getElementById('btnCargarTxt').addEventListener('click',()=>{
+  const txt=document.getElementById('jsonTxt').value.trim();
+  if(!txt){alert('Pega el JSON primero.');return;}
+  cargarDatos(txt);
+  document.getElementById('jsonPanel').style.display='none';
+});
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>cargarDatos(ev.target.result);
+  r.readAsText(f);
+});
+
+// ── Copiar resultado JSON ──
+document.getElementById('btnCopiarJSON').addEventListener('click',()=>{
+  if(!layout.length) return;
+  const largo = largoLayout(layout);
+  const totalArea = piezas.reduce((s,p)=>s+p.area,0);
+  const aprov = (totalArea/(TELA_W*largo)*100).toFixed(1);
+  const resultado = {
+    anchoTela: TELA_W,
+    largoFinal: parseFloat(largo.toFixed(1)),
+    aprovechamientoFinal: parseFloat(aprov),
+    mejoras: (window._historialMejoras||[])
+  };
+  const txt = JSON.stringify(resultado, null, 2);
+  document.getElementById('resultTxt').value = txt;
+  document.getElementById('resultPanel').style.display = 'block';
+  // Intentar clipboard, si falla el texto ya está visible para copiar manual
+  try {
+    navigator.clipboard.writeText(txt).then(()=>{
+      document.getElementById('info').textContent += ' — copiado';
+    }).catch(()=>{
+      document.getElementById('info').textContent += ' — selecciona el texto arriba';
+    });
+  } catch(e) {
+    document.getElementById('info').textContent += ' — selecciona el texto arriba';
+  }
+  // Seleccionar el texto automáticamente para facilitar copia manual
+  const ta = document.getElementById('resultTxt');
+  ta.focus();
+  ta.select();
+});
+
+document.getElementById('btnDescargarJSON').addEventListener('click',()=>{
+  if(!layout.length) return;
+  const largo = largoLayout(layout);
+  const totalArea = piezas.reduce((s,p)=>s+p.area,0);
+  const aprov = (totalArea/(TELA_W*largo)*100).toFixed(1);
+  const resultado = {
+    anchoTela: TELA_W,
+    largoUsado: parseFloat(largo.toFixed(1)),
+    aprovechamiento: parseFloat(aprov),
+    piezas: layout.map(r=>({
+      id: r.pieza.id,
+      w: parseFloat(r.bb.w.toFixed(1)),
+      h: parseFloat(r.bb.h.toFixed(1)),
+      tx: parseFloat(r.tx.toFixed(1)),
+      ty: parseFloat(r.ty.toFixed(1)),
+      rotada: r.rotada
+    }))
+  };
+  const blob = new Blob([JSON.stringify(resultado, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `nesting_${TELA_W}x${largo.toFixed(0)}.json`;
+  a.click();
+});
+
+document.getElementById('btnCopiarLog').addEventListener('click',()=>{
+  const txt = document.getElementById('log').textContent;
+  if(txt) navigator.clipboard.writeText(txt);
+});
+
+// ── Botón nesting ──
+document.getElementById('btnNesting').addEventListener('click',()=>{
+  if(!piezas.length)return;
+  const btn=document.getElementById('btnNesting');
+  const info=document.getElementById('info');
+  btn.disabled=true;
+
+  TELA_W=parseFloat(document.getElementById('inputAncho').value)||160;
+  GRID_W=Math.ceil(TELA_W/GRID_RES);
+  const N_ITER=parseInt(document.getElementById('inputIter').value)||50;
+  const N_FIJOS=Math.ceil(piezas.length*0.3);
+  const porArea=[...piezas].sort((a,b)=>(b.bb.w*b.bb.h)-(a.bb.w*a.bb.h));
+
+  let mejorRes=null,mejorLargo=Infinity,iter=0;
+  const historialMejoras = [];
+  window._historialMejoras = historialMejoras;
+
+  function registrarMejora(iterN, largo, res){
+    const totalArea=piezas.reduce((s,p)=>s+p.area,0);
+    const aprov=(totalArea/(TELA_W*largo)*100).toFixed(1);
+    historialMejoras.push({
+      iteracion: iterN,
+      largo: parseFloat(largo.toFixed(1)),
+      aprovechamiento: parseFloat(aprov),
+      piezas: res.map(r=>({
+        id: r.pieza.id,
+        w: parseFloat(r.bb.w.toFixed(1)),
+        h: parseFloat(r.bb.h.toFixed(1)),
+        tx: parseFloat(r.tx.toFixed(1)),
+        ty: parseFloat(r.ty.toFixed(1)),
+        rotada: r.rotada
+      }))
+    });
+  }
+
+  // Función para intercalar grandes y pequeñas
+  function intercalar(grandes, pequenas){
+    const res=[], g=[...grandes], p=[...pequenas];
+    while(g.length||p.length){
+      if(g.length) res.push(g.shift());
+      if(p.length) res.push(p.shift());
+      if(p.length) res.push(p.shift());
+    }
+    return res;
+  }
+  const porAlto=[...piezas].sort((a,b)=>b.bb.h-a.bb.h);
+  const mitad=Math.ceil(porAlto.length/2);
+  const grandes=porAlto.slice(0,mitad);
+  const pequenas=porAlto.slice(mitad);
+
+  // nestingUnaPassada con orientaciones forzadas para piezas grandes
+  function nestingConOrientaciones(orden, rotarGrandes){
+    // Crea versiones pre-rotadas de las piezas grandes
+    const ordenMod = orden.map((p, i) => {
+      if(rotarGrandes && p.bb.h > 40) return rotar180(p);
+      return p;
+    });
+    return nestingUnaPassada(ordenMod);
+  }
+
+  // Pasadas deterministas iniciales con distintos órdenes y orientaciones
+  for(const [orden, rotarGrandes] of [
+    [porArea, false],
+    [porArea, true],
+    [[...piezas].sort((a,b)=>b.bb.h-a.bb.h), false],
+    [[...piezas].sort((a,b)=>b.bb.h-a.bb.h), true],
+    [[...piezas].sort((a,b)=>b.bb.w-a.bb.w), false],
+    [[...piezas].sort((a,b)=>(b.bb.w+b.bb.h)-(a.bb.w+a.bb.h)), false],
+    [[...piezas].sort((a,b)=>b.area-a.area), false],
+    [intercalar(grandes, pequenas), false],
+    [intercalar(grandes, pequenas), true],
+    [[...pequenas, ...grandes], false],
+    [intercalar([...grandes].reverse(), pequenas), false],
+    [intercalar(grandes, [...pequenas].reverse()), true],
+  ]){
+    const res = nestingConOrientaciones(orden, rotarGrandes);
+    const largo=largoLayout(res);
+    if(largo<mejorLargo){mejorLargo=largo;mejorRes=res;}
+  }
+  registrarMejora(0, mejorLargo, mejorRes);
+
+  renderizar('nesting',mejorRes);
+  info.textContent=`Iteración 0/${N_ITER} — mejor: ${mejorLargo.toFixed(1)}cm`;
+
+  const CHUNK=5;
+  let mejorOrden = mejorRes.map(r=>r.pieza);
+  let sinMejora = 0;
+  function tick(){
+    for(let k=0;k<CHUNK&&iter<N_ITER;k++,iter++){
+      let orden;
+      if(sinMejora>0 && sinMejora%5===0){
+        orden = shuffle(piezas);
+      } else {
+        orden = [...mejorOrden];
+        const nSwaps = Math.min(2 + Math.floor(sinMejora/5), Math.floor(orden.length/2));
+        for(let s=0;s<nSwaps;s++){
+          const i=Math.floor(Math.random()*orden.length);
+          const j=Math.floor(Math.random()*orden.length);
+          [orden[i],orden[j]]=[orden[j],orden[i]];
+        }
+      }
+      const res=nestingUnaPassada(orden);
+      const largo=largoLayout(res);
+      if(largo<mejorLargo){
+        mejorLargo=largo;
+        mejorRes=res;
+        mejorOrden=res.map(r=>r.pieza);
+        sinMejora=0;
+        registrarMejora(iter+1, largo, res);
+      } else {
+        sinMejora++;
+      }
+    }
+    info.textContent=`Iteración ${iter}/${N_ITER} — mejor: ${mejorLargo.toFixed(1)}cm`;
+    renderizar('nesting',mejorRes);
+    if(iter<N_ITER){
+      setTimeout(tick,0);
+    }else{
+      layout=mejorRes;
+      renderizar('nesting');
+      const largo=largoLayout(layout);
+      const totalArea=piezas.reduce((s,p)=>s+p.area,0);
+      const aprov=(totalArea/(TELA_W*largo)*100).toFixed(1);
+      info.textContent=`${TELA_W}cm × ${largo.toFixed(1)}cm | ${aprov}% | ${historialMejoras.length} mejoras`;
+      document.getElementById('log').textContent=layout.map(r=>r.log).join('\n');
+      btn.disabled=false;
+      document.getElementById('btnCopiarJSON').disabled=false;
+      document.getElementById('btnDescargarJSON').disabled=false;
+    }
+  }
+  setTimeout(tick,20);
+});
+</script>
+</body>
+</html>
