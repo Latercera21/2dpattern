@@ -1917,7 +1917,7 @@ function projectOntoLine(pt, a, b) {
             if(fig.grain && fig.closed) drawGrainArrow(fig);
         });
         if(mode==='resize'&&selectedEdge) drawResizeIndicator();
-        if(mode==='addVertex') drawAllVertices();
+        if(mode==='vertex' || mode==='addVertex') drawAllVertices();
         if(mode==='line' && lineStartPoint) {
             ctx.beginPath(); ctx.arc(lineStartPoint.x, lineStartPoint.y, 4/viewScale, 0, 2*Math.PI);
             ctx.fillStyle = '#e67e22'; ctx.fill();
@@ -1996,7 +1996,7 @@ function projectOntoLine(pt, a, b) {
     }
 
     function drawAllVertices(){
-        const r=6/viewScale;
+        const r=3/viewScale;
         figures.forEach(fig=>{fig.vertices.forEach(v=>{ctx.beginPath();ctx.arc(v.x,v.y,r,0,Math.PI*2);ctx.fillStyle='rgba(52,152,219,0.5)';ctx.fill();ctx.strokeStyle='#2980b9';ctx.lineWidth=1.5/viewScale;ctx.stroke();});});
     }
 
