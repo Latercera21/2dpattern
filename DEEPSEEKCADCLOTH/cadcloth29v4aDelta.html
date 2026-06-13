@@ -65,7 +65,7 @@
         <button id="curveBtn"      onclick="toggleCurve()"      title="Curvar arista">〜</button>                  
         <button id="vertexBtn"     onclick="toggleVertex()"     title="Editar vértice">📌</button>
         <button id="snapBtn"       onclick="toggleSnap()"       title="Snap">🧲</button>
-        <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vértice">➕</button>
+        <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vértice">⚫</button>
         <button id="resizeBtn"     onclick="toggleResize()"     title="Cambiar longitud">📏</button>
         <button id="straightenBtn" onclick="toggleStraighten()" title="Curva→Recta">📐</button>
         
@@ -99,12 +99,10 @@
     </div>
 
 <div id="vertexInputs" class="float-inputs">
-    <label><input type="checkbox" id="vertexFijar"> Fijar</label>
-    <span class="lbl">X:</span><input type="text" id="vertexX" placeholder="ej: 25.5">
-    <span class="lbl">Y:</span><input type="text" id="vertexY" placeholder="ej: 30,2">
-    <button onclick="applyVertexCoordinates()">✓</button>
-    <span class="lbl">ΔX:</span><input type="text" id="vertexDX" placeholder="ej: -3" style="width:45px">
-    <span class="lbl">ΔY:</span><input type="text" id="vertexDY" placeholder="ej: 4.2" style="width:45px">
+    <label><input type="checkbox" id="vertexFijar">🔒</label>
+    
+    <span class="lbl">↔:</span><input type="text" id="vertexDX" placeholder="↔:" style="width:45px">
+    <span class="lbl">↕:</span><input type="text" id="vertexDY" placeholder="↕:" style="width:45px">
     <button onclick="applyVertexDelta()">✓</button>
     <button onclick="hidePanel('vertexInputs')">✕</button>
 </div>
