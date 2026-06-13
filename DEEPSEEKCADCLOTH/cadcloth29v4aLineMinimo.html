@@ -125,6 +125,7 @@
 
 <script>
     const PX_PER_CM = 96 / 2.54;
+    const MIN_LINE_LENGTH_CM = 0.5; // mínimo 0.5 cm para crear línea al arrastrar
 
     function cmToPx(str) {
         const v = parseFloat(String(str).trim().replace(',', '.'));
@@ -2071,9 +2072,12 @@ function projectOntoLine(pt, a, b) {
         if(e.touches.length === 0){
             if(isDrawingLine && window.lastTouchPos){
                 let end = {x: window.lastTouchPos.x, y: window.lastTouchPos.y};
-                if (snapEnabled) end = applySnap(end.x, end.y, -1, -1);
-                saveState();
-                figures.push(createLine(lineStartPoint, end));
+                const dist = Math.hypot(end.x - lineStartPoint.x, end.y - lineStartPoint.y);
+                if(dist >= MIN_LINE_LENGTH_CM * PX_PER_CM){
+                    if (snapEnabled) end = applySnap(end.x, end.y, -1, -1);
+                    saveState();
+                    figures.push(createLine(lineStartPoint, end));
+                }
                 lineStartPoint = null;
                 isDrawingLine = false;
             }
@@ -2108,9 +2112,12 @@ function projectOntoLine(pt, a, b) {
         if(isDrawingLine){
             const pos = getPos(e);
             let end = {x: pos.x, y: pos.y};
-            if (snapEnabled) end = applySnap(pos.x, pos.y, -1, -1);
-            saveState();
-            figures.push(createLine(lineStartPoint, end));
+            const dist = Math.hypot(end.x - lineStartPoint.x, end.y - lineStartPoint.y);
+            if(dist >= MIN_LINE_LENGTH_CM * PX_PER_CM){
+                if (snapEnabled) end = applySnap(end.x, end.y, -1, -1);
+                saveState();
+                figures.push(createLine(lineStartPoint, end));
+            }
             lineStartPoint = null;
             isDrawingLine = false;
         }
