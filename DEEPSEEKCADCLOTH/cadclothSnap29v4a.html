@@ -160,6 +160,9 @@
     let isTouchDevice = false, lastTouchTime = 0;
 
     const SNAP_THR_PX = 20;
+    function getToolbarHeight() {
+        return document.querySelector('.toolbar').getBoundingClientRect().height;
+    }
     function getSnapThreshold() { return SNAP_THR_PX / viewScale; }
 
     function resizeCanvas() {
