@@ -1919,10 +1919,7 @@ function projectOntoLine(pt, a, b) {
         });
         if(mode==='resize'&&selectedEdge) drawResizeIndicator();
         if(mode==='vertex' || mode==='addVertex' || mode==='deleteVertex') drawAllVertices();
-        if(mode==='line' && lineStartPoint) {
-            ctx.beginPath(); ctx.arc(lineStartPoint.x, lineStartPoint.y, 4/viewScale, 0, 2*Math.PI);
-            ctx.fillStyle = '#e67e22'; ctx.fill();
-        }
+        
         // Resaltar lÃ¯Â¿Â½neas de corte seleccionadas
         if(mode==='cut') {
             cutLineIndices.forEach(li => {
