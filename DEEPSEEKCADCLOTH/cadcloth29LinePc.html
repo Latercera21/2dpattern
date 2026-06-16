@@ -86,7 +86,7 @@
         <button id="cutApplyBtn"   onclick="applyCut()"         title="Aplicar corte">✔</button>
 
         <button id="grainBtn"      onclick="toggleGrainMode()"  title="Asignar hilo a figura">🧵</button>
-        <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Dirección del hilo">→</button>
+        <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Dirección del hilo" style="display:none">→</button>
         <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">🔄</button>
         <input  type="number" id="rotateInput" value="90" step="1" title="Grados">
         <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">⛓</button>
@@ -268,8 +268,9 @@
 
     function toggleGrainDir() {
         grainDir = grainDir==='horizontal' ? 'vertical' : 'horizontal';
-        document.getElementById('grainDirBtn').textContent = grainDir==='horizontal' ? '?' : '?';
+        document.getElementById('grainDirBtn').textContent = grainDir==='horizontal' ? '→' : '↕';
     }
+
     function toggleGrainMode()  { setMode('grain'); }
     function toggleCreate()     { setMode('create'); }
     function toggleLine()       { setMode('line'); }
@@ -363,9 +364,10 @@
         if (prev==='line')       { lineStartPoint = null; }
         if (prev==='curve')      { curveActiveDrag = null; }
 
-        if (newMode===prev || newMode==='none') { mode='none'; redrawAll(); return; }
+        if (newMode===prev || newMode==='none') { mode='none'; document.getElementById('grainDirBtn').style.display='none'; redrawAll(); return; }
 
         mode = newMode;
+        document.getElementById('grainDirBtn').style.display = newMode==='grain' ? 'inline-block' : 'none';
         const btn = document.getElementById(newMode+'Btn');
         if (btn) btn.classList.add('on');
         if (newMode==='resize')     showPanel('resizeInputs');
