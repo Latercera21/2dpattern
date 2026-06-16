@@ -106,22 +106,21 @@
 
 <div id="vertexInputs" class="float-inputs">
     <label><input type="checkbox" id="vertexFijar">🔒</label>
-
-    <span class="lbl">x=>:</span><input type="text" id="vertexDX" placeholder="x=>" style="width:45px">
-    <span class="lbl">y↑:</span><input type="text" id="vertexDY" placeholder="y↑" style="width:45px">
+    <span class="lbl">x=>:</span><input type="number" inputmode="decimal" id="vertexDX" placeholder="x=>" style="width:45px">
+    <span class="lbl">y↑:</span><input type="number" inputmode="decimal" id="vertexDY" placeholder="y↑" style="width:45px">
     <button onclick="applyVertexDelta()">✓</button>
     <button onclick="hidePanel('vertexInputs')">✕</button>
 </div>
 <div id="resizeInputs" class="float-inputs">
     <span class="lbl">cm:</span>
-    <input type="text" id="resizeValue" placeholder="ej: 25.5" style="width:70px">
+    <input type="number" inputmode="decimal" id="resizeValue" placeholder="ej: 25.5" style="width:70px">
     <button onclick="applyResize()">✓</button>
     <button onclick="hidePanel('resizeInputs')">?</button>
     <span id="resizeIndicator"></span>
 </div>
 <div id="offsetInputs" class="float-inputs">
     <span class="lbl">cm:</span>
-    <input type="text" id="offsetValue" placeholder="ej: 1.5" style="width:70px">
+    <input type="number" inputmode="decimal" id="offsetValue" placeholder="ej: 1.5" style="width:70px">
     <button onclick="applyOffset()">✓</button>
     <button onclick="hidePanel('offsetInputs')">?</button>
 </div>
