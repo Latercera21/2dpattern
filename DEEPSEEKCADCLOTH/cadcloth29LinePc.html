@@ -72,22 +72,25 @@
 
         <button id="mirrorBtn"     onclick="toggleMirror()"     title="Desdoblar">📖</button>
         <button id="moveBtn"       onclick="toggleMove()"       title="Mover figura">✋</button>
-        <button id="lockBtn"       onclick="toggleLock()"       title="Bloquear/desbloquear">🔐</button>  
+        <button id="lockBtn"       onclick="toggleLock()"       title="Bloquear/desbloquear">🔐</button>
+        <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">⇄</button>  
         <button id="closeShapeBtn" onclick="toggleCloseShape()" title="Cerrar figura">🔒</button>
         <button id="closeApplyBtn" onclick="applyCloseShape()"  title="Aplicar cierre">✔</button>
-        <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">⛓</button>
-        <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar unión" style="display:none">✔</button>       
-        <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">🔄</button>
-        <input  type="number" id="rotateInput" value="90" step="1" title="Grados">
+             
+        
         <button id="duplicateBtn"  onclick="toggleDuplicate()"  title="Duplicar">⧉</button>
         <button id="reflectBtn"    onclick="toggleReflect()"    title="Reflejar">🪞</button>
         <button onclick="undoAction()" title="Deshacer" >↩</button>       
-        <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">⇄</button>
+        
         <button id="cutBtn"        onclick="toggleCut()"        title="Cortar figura con línea(s)">✂</button>
         <button id="cutApplyBtn"   onclick="applyCut()"         title="Aplicar corte">✔</button>
 
         <button id="grainBtn"      onclick="toggleGrainMode()"  title="Asignar hilo a figura">🧵</button>
         <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Dirección del hilo">→</button>
+        <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">🔄</button>
+        <input  type="number" id="rotateInput" value="90" step="1" title="Grados">
+        <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">⛓</button>
+        <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar unión" style="display:none">✔</button>  
         <button id="deleteBtn"     onclick="toggleDelete()"     title="Eliminar figura">🗑️</button>
               
         <button onclick="clearAll()"   title="Eliminar todo">💥</button>
