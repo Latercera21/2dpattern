@@ -2485,19 +2485,17 @@ const offsets = sortedIndices.map(ei => {
             return;
         }
 
-        if(!dragData) {
-            // Vista previa de lÃ¯Â¿Â½nea en modo line
-            if(mode==='line' && lineStartPoint) {
-                redrawAll();
-                const dpr=window.devicePixelRatio||1;
-                ctx.save();
-                ctx.setTransform(dpr*viewScale,0,0,dpr*viewScale,dpr*viewOffX,dpr*viewOffY);
-                ctx.beginPath(); ctx.moveTo(lineStartPoint.x, lineStartPoint.y); ctx.lineTo(wx, wy);
-                ctx.strokeStyle='#000'; ctx.setLineDash([]); ctx.lineWidth=2/viewScale; ctx.stroke();
-                ctx.restore();
-            }
+        if(mode==='line' && lineStartPoint) {
+            redrawAll();
+            const dpr=window.devicePixelRatio||1;
+            ctx.save();
+            ctx.setTransform(dpr*viewScale,0,0,dpr*viewScale,dpr*viewOffX,dpr*viewOffY);
+            ctx.beginPath(); ctx.moveTo(lineStartPoint.x, lineStartPoint.y); ctx.lineTo(wx, wy);
+            ctx.strokeStyle='#000'; ctx.setLineDash([]); ctx.lineWidth=2/viewScale; ctx.stroke();
+            ctx.restore();
             return;
         }
+        if(!dragData) return;
 
         if(dragData.type==='figure'){
             const dx=wx-dragData.startX,dy=wy-dragData.startY;
