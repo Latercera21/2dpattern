@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nesting V2 - Motor Geométrico</title>
 <style>
-  body { margin:0; font-family:monospace; font-size:12px; background:#f0f2f5; }
-  #controls { display:flex; gap:6px; padding:6px; align-items:center; flex-wrap:wrap; background:#fff; border-bottom:1px solid #ccc; }
-  button { padding:5px 12px; cursor:pointer; background:#007bff; color:#fff; border:none; border-radius:3px; }
-  button:disabled { background:#aaa; }
-  canvas { background:#fff; display:block; margin:10px auto; box-shadow:0 0 10px rgba(0,0,0,0.1); }
-  #status { padding:10px; text-align:center; font-weight:bold; color:#333; }
-  #jsonPanel { padding:6px; border-bottom:1px solid #ccc; background:#fff; display:none; }
-  #jsonPanel textarea { width:100%; box-sizing:border-box; height:100px; font-size:10px; }
+    body { margin:0; font-family:monospace; font-size:12px; background:#f0f2f5; overflow-y: auto; }
+    #controls { display:flex; gap:6px; padding:6px; align-items:center; flex-wrap:wrap; background:#fff; border-bottom:1px solid #ccc; }
+    button { padding:5px 12px; cursor:pointer; background:#007bff; color:#fff; border:none; border-radius:3px; }
+    button:disabled { background:#aaa; }
+    canvas { background:#fff; display:block; margin:10px auto; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+    #status { padding:10px; text-align:center; font-weight:bold; color:#333; }
+    #jsonPanel { padding:6px; border-bottom:1px solid #ccc; background:#fff; display:none; }
+    #jsonPanel textarea { width:100%; box-sizing:border-box; height:100px; font-size:10px; }
 </style>
 </head>
 <body>
@@ -262,10 +262,15 @@ function cargarJSON(texto) {
       else segs.push({type:'quad', pts:[{...verts[e.start]}, {x:e.controlX/pxPerCm, y:e.controlY/pxPerCm}, {...verts[e.end]}]});
     }
     
-    // Convertir curvas en 96 puntos para geometría real
-    const poly = samplearFigura(segs, 96);
-    const bb = Geo.bbox(poly);
-    return { id: idx, poly, bb };
+        // Convertir curvas en 48 puntos (suficiente para precisión visual y rápido para celular)
+    const poly = samplearFigura(segs, 48);
+    
+    // Normalizar a (0,0) para que no se dibuje fuera del lienzo
+    const minX = Math.min(...poly.map(p => p.x));
+    const minY = Math.min(...poly.map(p => p.y));
+    const polyN = poly.map(p => ({ x: p.x - minX, y: p.y - minY }));
+    const bb = Geo.bbox(polyN);
+    return { id: idx, poly: polyN, bb };
   });
   
   document.getElementById('status').textContent = piezas.length + ' piezas cargadas. Listo para nesting.';
@@ -284,13 +289,17 @@ function dibujarVistaPrevia() {
 function dibujarLayout(layout) {
   const PX = 4;
   let maxY = 0;
+  // Calcular el límite real inferior considerando los polígonos completos
   layout.forEach(item => {
     const p = piezas.find(pz => pz.id === item.id);
-    if (p && item.ty + p.bb.h > maxY) maxY = item.ty + p.bb.h;
+    if (p) {
+      const bbT = Geo.bbox(Geo.translate(p.poly, item.tx, item.ty));
+      if (bbT.maxY > maxY) maxY = bbT.maxY;
+    }
   });
   
   canvas.width = TELA_W * PX;
-  canvas.height = (maxY + 10) * PX;
+  canvas.height = (maxY + 5) * PX; // +5cm de margen inferior para que no se corte
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
   layout.forEach(item => {
