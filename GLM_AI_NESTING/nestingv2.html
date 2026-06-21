@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nesting V2 - Motor Geométrico</title>
+<style>
+  body { margin:0; font-family:monospace; font-size:12px; background:#f0f2f5; }
+  #controls { display:flex; gap:6px; padding:6px; align-items:center; flex-wrap:wrap; background:#fff; border-bottom:1px solid #ccc; }
+  button { padding:5px 12px; cursor:pointer; background:#007bff; color:#fff; border:none; border-radius:3px; }
+  button:disabled { background:#aaa; }
+  canvas { background:#fff; display:block; margin:10px auto; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+  #status { padding:10px; text-align:center; font-weight:bold; color:#333; }
+  #jsonPanel { padding:6px; border-bottom:1px solid #ccc; background:#fff; display:none; }
+  #jsonPanel textarea { width:100%; box-sizing:border-box; height:100px; font-size:10px; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <button id="btnTogglePanel">Pegar JSON ▾</button>
+  <input type="file" id="fileInput" accept=".json">
+  <button id="btnNesting" disabled>Ejecutar Nesting V2</button>
+  <label>Ancho: <input type="number" id="inputAncho" value="160" style="width:50px"> cm</label>
+</div>
+
+<div id="jsonPanel">
+  <textarea id="jsonTxt" placeholder="Pega el JSON aquí..."></textarea>
+  <button id="btnCargarTxt" style="margin-top:5px;">Cargar JSON</button>
+</div>
+
+<div id="status">Carga un JSON para comenzar.</div>
+<canvas id="c"></canvas>
+
+<script>
+// ======================================================================
+// 1. MOTOR GEOMÉTRICO Y PARSEO DE CURVAS
+// ======================================================================
+const lerp = (a,b,t) => a+(b-a)*t;
+const ptLerp = (a,b,t) => ({x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t)});
+const ptQuad = (p0,cp,p1,t) => ptLerp(ptLerp(p0,cp,t), ptLerp(cp,p1,t), t);
+const dist = (a,b) => Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
+
+function segLen(seg){
+  if(seg.type==='line') return dist(seg.pts[0],seg.pts[1]);
+  let l=0,prev=seg.pts[0];
+  for(let i=1;i<=24;i++){const p=ptQuad(seg.pts[0],seg.pts[1],seg.pts[2],i/24);l+=dist(prev,p);prev=p;}
+  return l;
+}
+function ptOnSeg(seg,t){
+  if(seg.type==='line') return ptLerp(seg.pts[0],seg.pts[1],t);
+  return ptQuad(seg.pts[0],seg.pts[1],seg.pts[2],t);
+}
+function samplearFigura(segs,n){
+  const lens=segs.map(segLen); const total=lens.reduce((a,b)=>a+b,0);
+  const pts=[],step=total/n; let acum=0,si=0;
+  for(let k=0;k<n;k++){
+    const target=k*step;
+    while(si<segs.length-1&&acum+lens[si]<target){acum+=lens[si];si++;}
+    const t=lens[si]>1e-9?Math.min(1,(target-acum)/lens[si]):0;
+    pts.push(ptOnSeg(segs[si],t));
+  }
+  return pts;
+}
+
+const Geo = {
+  bbox(poly) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of poly) {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    }
+    return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+  },
+  translate(poly, dx, dy) { return poly.map(p => ({ x: p.x + dx, y: p.y + dy })); },
+  rotate180(poly) {
+    const bb = this.bbox(poly);
+    return poly.map(p => ({ x: bb.w - (p.x - bb.minX), y: bb.h - (p.y - bb.minY) }));
+  },
+  pointInPoly(pt, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const intersect = ((poly[i].y > pt.y) !== (poly[j].y > pt.y)) &&
+        (pt.x < (poly[j].x - poly[i].x) * (pt.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  },
+  segmentsIntersect(p1, p2, p3, p4) {
+    const d1 = (p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x);
+    const d2 = (p4.x - p3.x) * (p2.y - p3.y) - (p4.y - p3.y) * (p2.x - p3.x);
+    const d3 = (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
+    const d4 = (p2.x - p1.x) * (p4.y - p1.y) - (p2.y - p1.y) * (p4.x - p1.x);
+    return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+  },
+  collide(polyA, polyB) {
+    const bbA = this.bbox(polyA); const bbB = this.bbox(polyB);
+    if (bbA.maxX < bbB.minX || bbA.minX > bbB.maxX || bbA.maxY < bbB.minY || bbA.minY > bbB.maxY) return false;
+    for (let i = 0; i < polyA.length; i++) {
+      const a1 = polyA[i], a2 = polyA[(i + 1) % polyA.length];
+      for (let j = 0; j < polyB.length; j++) {
+        const b1 = polyB[j], b2 = polyB[(j + 1) % polyB.length];
+        if (this.segmentsIntersect(a1, a2, b1, b2)) return true;
+      }
+    }
+    if (this.pointInPoly(polyA[0], polyB)) return true;
+    if (this.pointInPoly(polyB[0], polyA)) return true;
+    return false;
+  }
+};
+
+// ======================================================================
+// 2. LÓGICA DE LA INTERFAZ Y EL WEB WORKER
+// ======================================================================
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let piezas = [];
+let TELA_W = 160;
+
+const workerCode = `
+  const Geo = {
+    bbox(poly) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of poly) {
+        if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+      }
+      return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+    },
+    translate(poly, dx, dy) { return poly.map(p => ({ x: p.x + dx, y: p.y + dy })); },
+    rotate180(poly) {
+      const bb = this.bbox(poly);
+      return poly.map(p => ({ x: bb.w - (p.x - bb.minX), y: bb.h - (p.y - bb.minY) }));
+    },
+    pointInPoly(pt, poly) {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const intersect = ((poly[i].y > pt.y) !== (poly[j].y > pt.y)) &&
+          (pt.x < (poly[j].x - poly[i].x) * (pt.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    },
+    segmentsIntersect(p1, p2, p3, p4) {
+      const d1 = (p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x);
+      const d2 = (p4.x - p3.x) * (p2.y - p3.y) - (p4.y - p3.y) * (p2.x - p3.x);
+      const d3 = (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
+      const d4 = (p2.x - p1.x) * (p4.y - p1.y) - (p2.y - p1.y) * (p4.x - p1.x);
+      return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+    },
+    collide(polyA, polyB) {
+      const bbA = this.bbox(polyA); const bbB = this.bbox(polyB);
+      if (bbA.maxX < bbB.minX || bbA.minX > bbB.maxX || bbA.maxY < bbB.minY || bbA.minY > bbB.maxY) return false;
+      for (let i = 0; i < polyA.length; i++) {
+        const a1 = polyA[i], a2 = polyA[(i + 1) % polyA.length];
+        for (let j = 0; j < polyB.length; j++) {
+          const b1 = polyB[j], b2 = polyB[(j + 1) % polyB.length];
+          if (this.segmentsIntersect(a1, a2, b1, b2)) return true;
+        }
+      }
+      if (this.pointInPoly(polyA[0], polyB)) return true;
+      if (this.pointInPoly(polyB[0], polyA)) return true;
+      return false;
+    }
+  };
+
+  self.onmessage = function(e) {
+    if (e.data.cmd === 'start') {
+      const piezas = e.data.piezas;
+      const telaW = e.data.telaW;
+      const margen = 0.5;
+      self.postMessage({ cmd: 'progress', msg: 'Iniciando algoritmo Bottom-Left...' });
+
+      const orden = [...piezas].sort((a, b) => (b.bb.w * b.bb.h) - (a.bb.w * a.bb.h));
+      const colocadas = [];
+      let candidatos = [{x: 0, y: 0}];
+
+      for (let i = 0; i < orden.length; i++) {
+        const p = orden[i];
+        let mejorPos = null;
+        let mejorRot = false;
+        let mejorScore = Infinity;
+
+        const variantes = [
+          { poly: p.poly, bb: p.bb, rot: false },
+          { poly: Geo.rotate180(p.poly), bb: Geo.bbox(Geo.rotate180(p.poly)), rot: true }
+        ];
+
+        for (const v of variantes) {
+          candidatos.sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
+          for (const c of candidatos) {
+            const tx = c.x, ty = c.y;
+            if (tx + v.bb.w > telaW) continue;
+            
+            const polyTx = Geo.translate(v.poly, tx + margen, ty + margen);
+            let choca = false;
+            for (const col of colocadas) {
+              if (Geo.collide(polyTx, col.poly)) { choca = true; break; }
+            }
+
+            if (!choca) {
+              const score = ty * telaW + tx;
+              if (score < mejorScore) {
+                mejorScore = score; mejorPos = { tx, ty }; mejorRot = v.rot; break;
+              }
+            }
+          }
+        }
+
+        if (mejorPos) {
+          const v = variantes.find(v => v.rot === mejorRot);
+          const polyFinal = Geo.translate(v.poly, mejorPos.tx + margen, mejorPos.ty + margen);
+          colocadas.push({ id: p.id, poly: polyFinal, tx: mejorPos.tx, ty: mejorPos.ty, bb: v.bb });
+          candidatos.push({ x: mejorPos.tx + v.bb.w + margen, y: mejorPos.ty });
+          candidatos.push({ x: mejorPos.tx, y: mejorPos.ty + v.bb.h + margen });
+          self.postMessage({ cmd: 'progress', msg: 'Colocada pieza ' + (i+1) + '/' + orden.length });
+        } else {
+          let maxY = 0;
+          colocadas.forEach(c => { if(c.ty + c.bb.h > maxY) maxY = c.ty + c.bb.h; });
+          colocadas.push({ id: p.id, poly: Geo.translate(p.poly, 0, maxY + margen), tx: 0, ty: maxY, bb: p.bb });
+        }
+      }
+      const layout = colocadas.map(c => ({ id: c.id, tx: c.tx, ty: c.ty, rotada: c.rotada || false }));
+      self.postMessage({ cmd: 'done', layout: layout });
+    }
+  };
+`;
+
+const blob = new Blob([workerCode], { type: 'application/javascript' });
+const worker = new Worker(URL.createObjectURL(blob));
+
+worker.onmessage = function(e) {
+  if (e.data.cmd === 'progress') {
+    document.getElementById('status').textContent = e.data.msg;
+  } else if (e.data.cmd === 'done') {
+    document.getElementById('status').textContent = 'Nesting completado.';
+    dibujarLayout(e.data.layout);
+    document.getElementById('btnNesting').disabled = false;
+  }
+};
+
+// ======================================================================
+// 3. PARSEO Y DIBUJO
+// ======================================================================
+function cargarJSON(texto) {
+  const data = JSON.parse(texto);
+  const pxPerCm = data.pxPerCm || 37.79527559055118;
+  const figs = data.figures.filter(f => f.closed !== false && f.vertices && f.vertices.length >= 3);
+  
+  piezas = figs.map((fig, idx) => {
+    const verts = fig.vertices.map(v => ({
+      x: v.xCm !== undefined ? v.xCm : v.x / pxPerCm,
+      y: v.yCm !== undefined ? v.yCm : v.y / pxPerCm
+    }));
+    const n = verts.length, edgeMap = {};
+    fig.edges.forEach(e => { edgeMap[e.start + '_' + e.end] = e; });
+    const segs = [];
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, e = edgeMap[i + '_' + j];
+      if (!e) segs.push({type:'line', pts:[{...verts[i]}, {...verts[j]}]});
+      else if (!e.curved) segs.push({type:'line', pts:[{...verts[e.start]}, {...verts[e.end]}]});
+      else segs.push({type:'quad', pts:[{...verts[e.start]}, {x:e.controlX/pxPerCm, y:e.controlY/pxPerCm}, {...verts[e.end]}]});
+    }
+    
+    // Convertir curvas en 96 puntos para geometría real
+    const poly = samplearFigura(segs, 96);
+    const bb = Geo.bbox(poly);
+    return { id: idx, poly, bb };
+  });
+  
+  document.getElementById('status').textContent = piezas.length + ' piezas cargadas. Listo para nesting.';
+  document.getElementById('btnNesting').disabled = false;
+  dibujarVistaPrevia();
+}
+
+function dibujarVistaPrevia() {
+  const PX = 4;
+  canvas.width = TELA_W * PX;
+  canvas.height = 600;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Se podría dibujar una vista previa simple aquí si se desea
+}
+
+function dibujarLayout(layout) {
+  const PX = 4;
+  let maxY = 0;
+  layout.forEach(item => {
+    const p = piezas.find(pz => pz.id === item.id);
+    if (p && item.ty + p.bb.h > maxY) maxY = item.ty + p.bb.h;
+  });
+  
+  canvas.width = TELA_W * PX;
+  canvas.height = (maxY + 10) * PX;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  layout.forEach(item => {
+    const pieza = piezas.find(p => p.id === item.id);
+    if (!pieza) return;
+    
+    let poly = pieza.poly;
+    if (item.rotada) poly = Geo.rotate180(poly);
+    poly = Geo.translate(poly, item.tx, item.ty);
+    
+    ctx.beginPath();
+    ctx.moveTo(poly[0].x * PX, poly[0].y * PX);
+    for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x * PX, poly[i].y * PX);
+    ctx.closePath();
+    
+    ctx.fillStyle = item.rotada ? '#cce5ff' : '#e4e4e4';
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+}
+
+// ======================================================================
+// 4. EVENTOS
+// ======================================================================
+document.getElementById('btnTogglePanel').addEventListener('click', () => {
+  const p = document.getElementById('jsonPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('btnCargarTxt').addEventListener('click', () => {
+  const txt = document.getElementById('jsonTxt').value.trim();
+  if (!txt) { alert('Pega el JSON primero.'); return; }
+  try { cargarJSON(txt); } catch(e) { alert('Error: ' + e.message); }
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => cargarJSON(ev.target.result);
+  r.readAsText(f);
+});
+
+document.getElementById('btnNesting').addEventListener('click', () => {
+  if (!piezas.length) return;
+  document.getElementById('btnNesting').disabled = true;
+  TELA_W = parseFloat(document.getElementById('inputAncho').value) || 160;
+  worker.postMessage({ cmd: 'start', piezas: piezas, telaW: TELA_W });
+});
+</script>
+</body>
+</html>
