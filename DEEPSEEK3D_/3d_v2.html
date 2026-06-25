@@ -1736,8 +1736,8 @@ const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
 dirLight.position.set(50, 200, 100);
 scene.add(dirLight);
 
-// Maniquí: esfera simple
-const bodyGeo = new THREE.CylinderGeometry(20, 20, 60, 32); // radio 20, altura 60
+// Maniquí: torso con cilindro
+const bodyGeo = new THREE.CylinderGeometry(20, 20, 60, 32);
 const bodyMat = new THREE.MeshPhongMaterial({ color: 0xccaa88, transparent: true, opacity: 0.5 });
 const body = new THREE.Mesh(bodyGeo, bodyMat);
 body.position.set(0, 30, 0);
@@ -1750,9 +1750,6 @@ const floor = new THREE.Mesh(floorGeo, floorMat);
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -30;
 scene.add(floor);
-
-
-
 
 // ------------- SISTEMA DE TELA (basado en partículas) -------------
 class Particle {
@@ -1769,6 +1766,7 @@ class Cloth {
     this.particles = particles;
     this.indices = indices;
     this.constraints = [];
+    
     // Crear restricciones de distancia para cada arista
     const edgeSet = new Set();
     for (let i = 0; i < indices.length; i += 3) {
@@ -1777,11 +1775,20 @@ class Cloth {
       this.addEdgeConstraint(b, c, edgeSet);
       this.addEdgeConstraint(c, a, edgeSet);
     }
+    
+    // Agregar restricciones de flexión
+    this.addBendingConstraints();
+    
     // Crear geometría Three.js que se actualiza
     this.geometry = new THREE.BufferGeometry();
     this.updateGeometry();
     this.mesh = new THREE.Mesh(this.geometry, new THREE.MeshPhongMaterial({
-      color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.8
+      color: 0xffffff,
+      side: THREE.DoubleSide,
+      specular: 0x111111,
+      shininess: 10,
+      transparent: true,
+      opacity: 0.7
     }));
     this.mesh.castShadow = false;
     this.mesh.receiveShadow = false;
@@ -1796,6 +1803,25 @@ class Cloth {
     this.constraints.push({ i, j, restLength: dist });
   }
 
+  addBendingConstraints() {
+    const bendingSet = new Set();
+    for (let i = 0; i < this.indices.length; i += 3) {
+      const a = this.indices[i], b = this.indices[i+1], c = this.indices[i+2];
+      this.addBendingEdge(a, b, c, bendingSet);
+      this.addBendingEdge(b, c, a, bendingSet);
+      this.addBendingEdge(c, a, b, bendingSet);
+    }
+  }
+
+  addBendingEdge(i, j, k, set) {
+    const key = [i, k].sort().join('-');
+    if (set.has(key)) return;
+    set.add(key);
+    const p1 = this.particles[i], p2 = this.particles[k];
+    const dist = p1.pos.distanceTo(p2.pos);
+    this.constraints.push({ i, j: k, restLength: dist * 1.2 });
+  }
+
   updateGeometry() {
     const positions = [];
     for (const p of this.particles) {
@@ -1807,21 +1833,35 @@ class Cloth {
   }
 
   simulate(dt, gravity) {
-    const damp = 0.98; // amortiguación
+    const damp = 0.95;
+    const floorY = -30;
+    const stopThreshold = 0.1; // velocidad por debajo de esto = detener
+    
+    // Verlet integration
     for (const p of this.particles) {
       if (p.pinned) continue;
       const vx = (p.pos.x - p.old.x) * damp;
       const vy = (p.pos.y - p.old.y) * damp;
       const vz = (p.pos.z - p.old.z) * damp;
+      
+      // Si la velocidad es muy baja, simplemente no mover
+      const speed = Math.sqrt(vx*vx + vy*vy + vz*vz);
+      if (speed < stopThreshold) {
+        p.old.copy(p.pos);
+        continue;
+      }
+      
       p.old.set(p.pos.x, p.pos.y, p.pos.z);
       p.pos.x += vx + gravity.x * dt;
       p.pos.y += vy + gravity.y * dt;
       p.pos.z += vz + gravity.z * dt;
     }
-    // Resolver restricciones (varias iteraciones)
+    
+    // Resolver restricciones (solo 5 iteraciones para rapidez)
     for (let iter = 0; iter < 5; iter++) {
       for (const c of this.constraints) {
         const p1 = this.particles[c.i], p2 = this.particles[c.j];
+        if (p1.pinned && p2.pinned) continue; // si ambas están pineadas, saltar
         const dx = p2.pos.x - p1.pos.x;
         const dy = p2.pos.y - p1.pos.y;
         const dz = p2.pos.z - p1.pos.z;
@@ -1834,28 +1874,44 @@ class Cloth {
         if (!p2.pinned) { p2.pos.x -= moveX; p2.pos.y -= moveY; p2.pos.z -= moveZ; }
       }
     }
-    // Colisión simple con esfera (maniquí)
-    const sphereCenter = new THREE.Vector3(0, 10, 0);
-    const sphereRadius = 15 + 1; // margen
+    
+    // Colisión con el maniquí
+    const sphereCenter = new THREE.Vector3(0, 30, 0);
+    const sphereRadius = 22;
     for (const p of this.particles) {
       if (p.pinned) continue;
       const toCenter = p.pos.clone().sub(sphereCenter);
       const dist = toCenter.length();
       if (dist < sphereRadius) {
         p.pos.copy(sphereCenter.clone().add(toCenter.normalize().multiplyScalar(sphereRadius)));
+        p.old.copy(p.pos);
       }
     }
-
-    // Colisión con el piso (y = -30)
+    
+    // Colisión con el piso y auto-pinear
     for (const p of this.particles) {
       if (p.pinned) continue;
-      if (p.pos.y < -30) {
-        p.pos.y = -30;
+      if (p.pos.y <= floorY) {
+        p.pos.y = floorY;
+        // Calcular velocidad
+        const vx = p.pos.x - p.old.x;
+        const vy = p.pos.y - p.old.y;
+        const vz = p.pos.z - p.old.z;
+        const speed = Math.sqrt(vx*vx + vy*vy + vz*vz);
+        
+        if (speed < 0.5) {
+          // Si va muy lento, pinear al piso permanentemente
+          p.pinned = true;
+          p.old.copy(p.pos);
+        } else {
+          // Si va rápido, fricción fuerte
+          p.old.x = p.pos.x - vx * 0.1;
+          p.old.y = p.pos.y;
+          p.old.z = p.pos.z - vz * 0.1;
+        }
       }
     }
-
     
-
     this.updateGeometry();
   }
 }
@@ -1869,7 +1925,7 @@ const cloths = [];
 allFigures.forEach(fig => {
   const points2D = fig.vertices.map(v => new THREE.Vector2(v.xCm, v.yCm));
 
-  // Crear Shape con coordenadas originales (sin centrar)
+  // Crear Shape con coordenadas originales
   const shape = new THREE.Shape();
   shape.moveTo(points2D[0].x, points2D[0].y);
   for (let i = 1; i < points2D.length; i++) shape.lineTo(points2D[i].x, points2D[i].y);
@@ -1898,18 +1954,12 @@ allFigures.forEach(fig => {
   particles.forEach(p => p.old.copy(p.pos));
 
   const cloth = new Cloth(particles, indices);
-  cloth.mesh.material = new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    side: THREE.DoubleSide,
-    transparent: true,
-    opacity: 0.8
-  });
   scene.add(cloth.mesh);
   cloths.push(cloth);
 });
 
-// ========== ANIMACIÓN (con gravedad más suave) ==========
-const gravity = new THREE.Vector3(0, -150, 0); // cm/s² (antes -500, demasiado rápido)
+// ========== ANIMACIÓN ==========
+const gravity = new THREE.Vector3(0, -30, 0); // caída más suave
 const clock = new THREE.Clock();
 
 function animate() {
