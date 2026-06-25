@@ -1737,11 +1737,22 @@ dirLight.position.set(50, 200, 100);
 scene.add(dirLight);
 
 // Maniquí: esfera simple
-const bodyGeo = new THREE.SphereGeometry(15, 32, 32);
+const bodyGeo = new THREE.CylinderGeometry(20, 20, 60, 32); // radio 20, altura 60
 const bodyMat = new THREE.MeshPhongMaterial({ color: 0xccaa88, transparent: true, opacity: 0.5 });
 const body = new THREE.Mesh(bodyGeo, bodyMat);
-body.position.set(0, 10, 0);
+body.position.set(0, 30, 0);
 scene.add(body);
+
+// Piso
+const floorGeo = new THREE.PlaneGeometry(200, 200);
+const floorMat = new THREE.MeshPhongMaterial({ color: 0x444444, side: THREE.DoubleSide });
+const floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -30;
+scene.add(floor);
+
+
+
 
 // ------------- SISTEMA DE TELA (basado en partículas) -------------
 class Particle {
@@ -1834,75 +1845,79 @@ class Cloth {
         p.pos.copy(sphereCenter.clone().add(toCenter.normalize().multiplyScalar(sphereRadius)));
       }
     }
+
+    // Colisión con el piso (y = -30)
+    for (const p of this.particles) {
+      if (p.pinned) continue;
+      if (p.pos.y < -30) {
+        p.pos.y = -30;
+      }
+    }
+
+    
+
     this.updateGeometry();
   }
 }
 
-// ========== PROCESAR UNA FIGURA DE EJEMPLO ==========
-const figure = jsonData.figures.find(f => f.closed && f.vertices.length > 2);
-if (!figure) throw new Error("No hay figuras cerradas");
+// ========== PROCESAR TODAS LAS FIGURAS CERRADAS ==========
+const allFigures = jsonData.figures.filter(f => f.closed && f.vertices && f.vertices.length > 2);
+if (allFigures.length === 0) throw new Error("No hay figuras cerradas");
 
-// 1. Obtener puntos en cm
-const points2D = figure.vertices.map(v => new THREE.Vector2(v.xCm, v.yCm));
+const cloths = [];
 
-// 2. Calcular centroide para centrar la pieza
-let cx = 0, cy = 0;
-points2D.forEach(p => { cx += p.x; cy += p.y; });
-cx /= points2D.length;
-cy /= points2D.length;
+allFigures.forEach(fig => {
+  const points2D = fig.vertices.map(v => new THREE.Vector2(v.xCm, v.yCm));
 
-// 3. Crear Shape con coordenadas centradas
-const shape = new THREE.Shape();
-shape.moveTo(points2D[0].x - cx, points2D[0].y - cy);
-for (let i = 1; i < points2D.length; i++) {
-  shape.lineTo(points2D[i].x - cx, points2D[i].y - cy);
-}
-shape.closePath();
+  // Crear Shape con coordenadas originales (sin centrar)
+  const shape = new THREE.Shape();
+  shape.moveTo(points2D[0].x, points2D[0].y);
+  for (let i = 1; i < points2D.length; i++) shape.lineTo(points2D[i].x, points2D[i].y);
+  shape.closePath();
 
-// 4. Generar geometría triangulada
-const shapeGeo = new THREE.ShapeGeometry(shape);
-const positionAttribute = shapeGeo.attributes.position;
-const indexAttribute = shapeGeo.index;
+  const shapeGeo = new THREE.ShapeGeometry(shape);
+  const posAttr = shapeGeo.attributes.position;
+  const idxAttr = shapeGeo.index;
 
-// 5. Extraer vértices
-const allVertices = [];
-for (let i = 0; i < positionAttribute.count; i++) {
-  allVertices.push(new THREE.Vector3().fromBufferAttribute(positionAttribute, i));
-}
+  const allVertices = [];
+  for (let i = 0; i < posAttr.count; i++) {
+    allVertices.push(new THREE.Vector3().fromBufferAttribute(posAttr, i));
+  }
 
-// 6. Obtener índices
-let indices;
-if (indexAttribute) {
-  indices = Array.from(indexAttribute.array);
-} else {
-  indices = [];
-  for (let i = 0; i < allVertices.length; i += 3) indices.push(i, i+1, i+2);
-}
+  let indices;
+  if (idxAttr) {
+    indices = Array.from(idxAttr.array);
+  } else {
+    indices = [];
+    for (let i = 0; i < allVertices.length; i += 3) indices.push(i, i+1, i+2);
+  }
 
-// 7. Posición inicial elevada sobre el maniquí
-const startHeight = 40; // esfera en y=10, radio=15 → tope=25; 40 es seguro
-// Crear partículas: plano XZ, centradas, altura Y=startHeight
-const particles = allVertices.map(v => new Particle(v.x, startHeight, v.y));
-particles.forEach(p => p.old.copy(p.pos));
+  // Mapear: X original → X, Y original → Z, altura inicial = 40
+  const startHeight = 40;
+  const particles = allVertices.map(v => new Particle(v.x, startHeight, v.y));
+  particles.forEach(p => p.old.copy(p.pos));
 
-// 8. Crear tela
-const cloth = new Cloth(particles, indices);
-// Color rojo opaco para depuración (luego puedes cambiarlo)
-cloth.mesh.material.color.setHex(0xff0000);
-cloth.mesh.material.opacity = 1.0;
-scene.add(cloth.mesh);
+  const cloth = new Cloth(particles, indices);
+  cloth.mesh.material = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8
+  });
+  scene.add(cloth.mesh);
+  cloths.push(cloth);
+});
 
-scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(cloth.geometry), new THREE.LineBasicMaterial({color: 0x00ff00})));
-
-console.log('Partículas:', particles.length, '| Centroide original:', cx.toFixed(2), cy.toFixed(2));
-
-// ========== ANIMACIÓN ==========
-const gravity = new THREE.Vector3(0, -500, 0); // cm/s²
+// ========== ANIMACIÓN (con gravedad más suave) ==========
+const gravity = new THREE.Vector3(0, -150, 0); // cm/s² (antes -500, demasiado rápido)
 const clock = new THREE.Clock();
+
 function animate() {
   requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.033); // limitar paso
-  cloth.simulate(dt, gravity);
+  const dt = Math.min(clock.getDelta(), 0.033);
+  for (const cloth of cloths) {
+    cloth.simulate(dt, gravity);
+  }
   controls.update();
   renderer.render(scene, camera);
 }
