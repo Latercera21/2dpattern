@@ -1835,7 +1835,7 @@ class Cloth {
   simulate(dt, gravity) {
     const damp = 0.95;
     const floorY = -30;
-    const stopThreshold = 0.1; // velocidad por debajo de esto = detener
+    const stopThreshold = 0.01; // antes 0.1, ahora casi inmóvil
     
     // Verlet integration
     for (const p of this.particles) {
@@ -1875,7 +1875,7 @@ class Cloth {
       }
     }
     
-    // Colisión con el maniquí
+    // Colisión con el maniquí (SIN PINEAR)
     const sphereCenter = new THREE.Vector3(0, 30, 0);
     const sphereRadius = 22;
     for (const p of this.particles) {
@@ -1884,33 +1884,53 @@ class Cloth {
       const dist = toCenter.length();
       if (dist < sphereRadius) {
         p.pos.copy(sphereCenter.clone().add(toCenter.normalize().multiplyScalar(sphereRadius)));
-        p.old.copy(p.pos);
+        // Solo amortiguar, NO pinear
+        const vx = p.pos.x - p.old.x;
+        const vy = p.pos.y - p.old.y;
+        const vz = p.pos.z - p.old.z;
+        p.old.x = p.pos.x - vx * 0.3;
+        p.old.y = p.pos.y - vy * 0.3;
+        p.old.z = p.pos.z - vz * 0.3;
       }
     }
     
     // Colisión con el piso y auto-pinear
-    for (const p of this.particles) {
-      if (p.pinned) continue;
-      if (p.pos.y <= floorY) {
-        p.pos.y = floorY;
-        // Calcular velocidad
-        const vx = p.pos.x - p.old.x;
-        const vy = p.pos.y - p.old.y;
-        const vz = p.pos.z - p.old.z;
-        const speed = Math.sqrt(vx*vx + vy*vy + vz*vz);
-        
-        if (speed < 0.5) {
-          // Si va muy lento, pinear al piso permanentemente
-          p.pinned = true;
-          p.old.copy(p.pos);
-        } else {
-          // Si va rápido, fricción fuerte
-          p.old.x = p.pos.x - vx * 0.1;
-          p.old.y = p.pos.y;
-          p.old.z = p.pos.z - vz * 0.1;
+    // Colisión con el piso y auto-pinear en grupo
+for (const p of this.particles) {
+  if (p.pinned) continue;
+  if (p.pos.y <= floorY + 0.5) { // margen de 0.5 para detectar cercanía
+    p.pos.y = floorY;
+    const vx = p.pos.x - p.old.x;
+    const vy = p.pos.y - p.old.y;
+    const vz = p.pos.z - p.old.z;
+    const speed = Math.sqrt(vx*vx + vy*vy + vz*vz);
+    
+    if (speed < 0.5) {
+      // Pinear esta partícula y sus vecinas cercanas
+      p.pinned = true;
+      p.old.copy(p.pos);
+      
+      // Pinear vecinas que estén cerca del piso
+      for (const other of this.particles) {
+        if (other.pinned) continue;
+        if (other.pos.y <= floorY + 2) { // vecinas a menos de 2 unidades del piso
+          const dx = other.pos.x - p.pos.x;
+          const dz = other.pos.z - p.pos.z;
+          const dist = Math.sqrt(dx*dx + dz*dz);
+          if (dist < 10) { // radio de 10 unidades
+            other.pinned = true;
+            other.pos.y = floorY;
+            other.old.copy(other.pos);
+          }
         }
       }
+    } else {
+      p.old.x = p.pos.x - vx * 0.1;
+      p.old.y = p.pos.y;
+      p.old.z = p.pos.z - vz * 0.1;
     }
+  }
+}
     
     this.updateGeometry();
   }
@@ -1962,15 +1982,38 @@ allFigures.forEach(fig => {
 const gravity = new THREE.Vector3(0, -30, 0); // caída más suave
 const clock = new THREE.Clock();
 
+let allPinned = false;
+const startTime = Date.now();
+
+let allPinned = false;
+const startTime = Date.now();
+
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.033);
   for (const cloth of cloths) {
     cloth.simulate(dt, gravity);
   }
+  
+  // Después de 10 segundos, pinear todo lo que esté en el piso
+  if (!allPinned && Date.now() - startTime > 10000) {
+    for (const cloth of cloths) {
+      for (const p of cloth.particles) {
+        if (p.pos.y <= -29) {
+          p.pinned = true;
+          p.pos.y = -30;
+          p.old.copy(p.pos);
+        }
+      }
+    }
+    allPinned = true;
+    console.log('Todas las piezas en el piso han sido pineadas');
+  }
+  
   controls.update();
   renderer.render(scene, camera);
 }
+
 animate();
 </script>
 </body>
