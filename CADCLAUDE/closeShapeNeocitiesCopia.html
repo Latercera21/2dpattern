@@ -8,16 +8,16 @@
         * { box-sizing: border-box; }
         html, body {
             margin: 0; padding: 0; overflow: hidden; height: 100%; font-size: 14px;
-            background-color: #908f91;
+            background-color: #a1a1a1e5;
         }
         #canvas { display: block; touch-action: none; }
         button {
             padding: 3px 5px; margin: 1px;
             font-size: 15px; cursor: pointer;
-            border: 1px solid #999; background: #b3adad;
+            border: 1px solid #999; background: #a09898;
             border-radius: 3px; line-height: 1;
         }
-        button.on { background: #a2b1a2; color: white; border-color: #81b984; }
+        button.on { background: #556be6; color: white; border-color: #81b984; }
         #closeApplyBtn, #cutApplyBtn { display: none; }
         .toolbar {
             position: fixed; top: 0; left: 0; right: 0;
@@ -107,8 +107,8 @@
 
 <div id="vertexInputs" class="float-inputs">
     <label><input type="checkbox" id="vertexFijar">🔒</label>
-    <span class="lbl">x=>:</span><input type="number" inputmode="decimal" id="vertexDX" placeholder="x=>" style="width:45px">
-    <span class="lbl">y↑:</span><input type="number" inputmode="decimal" id="vertexDY" placeholder="y↑" style="width:45px">
+    <span class="lbl">X=>:</span><input type="number" inputmode="decimal" id="vertexDX" placeholder="X=>" style="width:40px">
+    <span class="lbl">Y⬇︎:</span><input type="number" inputmode="decimal" id="vertexDY" placeholder="Y⬇︎" style="width:40px">
     <button onclick="applyVertexDelta()">✓</button>
     <button onclick="hidePanel('vertexInputs')">✕</button>
 </div>
@@ -116,14 +116,14 @@
     <span class="lbl">cm:</span>
     <input type="number" inputmode="decimal" id="resizeValue" placeholder="ej: 25.5" style="width:70px">
     <button onclick="applyResize()">✓</button>
-    <button onclick="hidePanel('resizeInputs')">?</button>
+    <button onclick="hidePanel('resizeInputs')">x</button>
     <span id="resizeIndicator"></span>
 </div>
 <div id="offsetInputs" class="float-inputs">
     <span class="lbl">cm:</span>
     <input type="number" inputmode="decimal" id="offsetValue" placeholder="ej: 1.5" style="width:70px">
     <button onclick="applyOffset()">✓</button>
-    <button onclick="hidePanel('offsetInputs')">?</button>
+    <button onclick="hidePanel('offsetInputs')">X</button>
 </div>
 
 <canvas id="canvas"></canvas>
