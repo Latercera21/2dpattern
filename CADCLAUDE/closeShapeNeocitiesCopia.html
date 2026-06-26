@@ -114,14 +114,14 @@
 </div>
 <div id="resizeInputs" class="float-inputs">
     <span class="lbl">cm:</span>
-    <input type="number" inputmode="decimal" id="resizeValue" placeholder="ej: 25.5" style="width:70px">
+    <input type="number" inputmode="decimal" id="resizeValue" placeholder="ej: 25.5" style="width:50px">
     <button onclick="applyResize()">✓</button>
     <button onclick="hidePanel('resizeInputs')">X</button>
     <span id="resizeIndicator"></span>
 </div>
 <div id="offsetInputs" class="float-inputs">
     <span class="lbl">cm:</span>
-    <input type="number" inputmode="decimal" id="offsetValue" placeholder="ej: 1.5" style="width:70px">
+    <input type="number" inputmode="decimal" id="offsetValue" placeholder="ej: 1.5" style="width:50px">
     <button onclick="applyOffset()">✓</button>
     <button onclick="hidePanel('offsetInputs')">X</button>
 </div>
@@ -2314,7 +2314,7 @@ const offsets = sortedIndices.map(ei => {
             }
         }
         else if(mode==='closeShape'){
-            // Seleccionar/deseleccionar lÃ¯Â¿Â½neas abiertas para cerrar figura
+            // Seleccionar/deseleccionar lIneas abiertas para cerrar figura
             for(let fi=figures.length-1;fi>=0;fi--){
                 const fig=figures[fi];
                 if(fig.closed) continue;
@@ -2500,7 +2500,7 @@ const offsets = sortedIndices.map(ei => {
     function applyResize(){
         if(!selectedEdge){showModal({title:'Error',body:'Primero selecciona una arista.',buttons:[{label:'OK'}]});return;}
         const newPx=cmToPx(document.getElementById('resizeValue').value);
-        if(isNaN(newPx)||newPx<=0){showModal({title:'Valor invÃ¯Â¿Â½lido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
+        if(isNaN(newPx)||newPx<=0){showModal({title:'Valor invAlido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
         saveState();resizeEdge(selectedEdge.figureIndex,selectedEdge.edgeIndex,newPx,selectedEdge.clickX,selectedEdge.clickY);
         hidePanel('resizeInputs');redrawAll();
     }
@@ -2533,7 +2533,7 @@ const offsets = sortedIndices.map(ei => {
             }))
         };
         const json=JSON.stringify(data,null,2);
-        showModal({title:'Exportar Ã¯Â¿Â½ patron.json',textarea:json,
+        showModal({title:'Exportar patron.json',textarea:json,
             buttons:[{label:'?? Copiar',value:'copy'},{label:'?? Descargar',value:'dl'},{label:'? Cerrar',value:'close'}]
         }).then(a=>{
             if(a==='copy'){
