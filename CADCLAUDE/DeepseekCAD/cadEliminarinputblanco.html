@@ -108,8 +108,9 @@
 
 <div id="vertexInputs" class="float-inputs">
     <label><input type="checkbox" id="vertexFijar">🔒</label>
-    <span class="lbl">X=>:</span><input type="number" inputmode="decimal" id="vertexDX" placeholder="X=>" style="width:40px">
-    <span class="lbl">Y⬇︎:</span><input type="number" inputmode="decimal" id="vertexDY" placeholder="Y⬇︎" style="width:40px">
+    <span class="lbl">X=>:</span><input type="number" inputmode="decimal" id="vertexDX" placeholder="X=>" value="1" style="width:45px; background:#aaaaaa; border:1px solid #888; border-radius:3px; padding:1px 1px; font-size:14px;">
+    <span class="lbl">Y⬇︎:</span><input type="number" inputmode="decimal" id="vertexDY" placeholder="Y⬇︎" value="1" style="width:45px; background:#aaaaaa; border:1px solid #888; border-radius:3px; padding:1px 1px; font-size:14px;">
+
     <button onclick="applyVertexDelta()">✓</button>
     <button onclick="hidePanel('vertexInputs')">✕</button>
 </div>
@@ -2217,8 +2218,8 @@ const offsets = sortedIndices.map(ei => {
             const nv=findNearestVertex(wx,wy);
             if(nv){
                 selectedVertex=nv;
-                document.getElementById('vertexDX').value='';
-                document.getElementById('vertexDY').value='';
+                document.getElementById('vertexDX').value='1';
+                document.getElementById('vertexDY').value='1';
                 showPanel('vertexInputs');
                 if(!document.getElementById('vertexFijar').checked){
                     saveState();
@@ -2518,8 +2519,8 @@ const offsets = sortedIndices.map(ei => {
         if(!isNaN(dx)) v.x+=dx*PX_PER_CM;
         if(!isNaN(dy)) v.y+=dy*PX_PER_CM;
 
-        document.getElementById('vertexDX').value='';
-        document.getElementById('vertexDY').value='';
+        document.getElementById('vertexDX').value='1';
+        document.getElementById('vertexDY').value='1';
         redrawAll();
     }
 
