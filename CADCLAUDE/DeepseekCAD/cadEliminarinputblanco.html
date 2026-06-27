@@ -2507,8 +2507,6 @@ const offsets = sortedIndices.map(ei => {
         hidePanel('resizeInputs');redrawAll();
     }
 
-
-
     function applyVertexDelta(){
         if(!selectedVertex){showModal({title:'Error',body:'Primero selecciona un vértice.',buttons:[{label:'OK'}]});return;}
         const dx=parseFloat(String(document.getElementById('vertexDX').value).replace(',','.'));
