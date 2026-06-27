@@ -1,5 +1,15 @@
 import json, ezdxf
 
+# 2. Guardar el JSON
+# Guarda tu JSON como input.json en una carpeta, por ejemplo C:\patrones\input.json
+# 3. Guardar el script
+# Guarda este archivo como convertir.py en la misma carpeta:
+
+# cd /d C:\patrones
+# python convertir.py
+# python convertir.py
+# Sale output.dxf en la misma carpeta.
+
 def quad_bezier_points(p0, cp, p1, steps=20):
     pts = []
     for i in range(steps + 1):
