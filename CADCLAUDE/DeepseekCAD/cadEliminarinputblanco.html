@@ -3,33 +3,33 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-    <title>CAD Cloth29v4aBloq</title>
+    <title>CADCloth</title>
     <style>
         * { box-sizing: border-box; }
         html, body {
             margin: 0; padding: 0; overflow: hidden; height: 100%; font-size: 14px;
-            background-color: #c9c9c9;
+            background-color: #a1a1a1e5;
         }
         #canvas { display: block; touch-action: none; }
         button {
             padding: 3px 5px; margin: 1px;
             font-size: 15px; cursor: pointer;
-            border: 1px solid #999; background: #eee;
+            border: 1px solid #999; background: #a09898;
             border-radius: 3px; line-height: 1;
         }
-        button.on { background: #7db67f; color: white; border-color: #81b984; }
+        button.on { background: #556be6; color: white; border-color: #81b984; }
         #closeApplyBtn, #cutApplyBtn { display: none; }
         .toolbar {
             position: fixed; top: 0; left: 0; right: 0;
             display: flex; flex-wrap: wrap; gap: 2px;
-            padding: 3px 4px; background: #f5f5f5;
+            padding: 3px 4px; background: #adadad;
             border-bottom: 1px solid #ccc; z-index: 100;
             align-items: center;
         }
         input[type=number], input[type=text] { width: 52px; padding: 2px; font-size: 13px; }
         .float-inputs {
             position: fixed; z-index: 200;
-            background: #fff; border: 1px solid #aaa;
+            background: #a19f9f; border: 1px solid #aaa;
             border-radius: 4px; padding: 4px 6px;
             display: none; align-items: center; gap: 3px; flex-wrap: wrap;
             box-shadow: 0 2px 6px rgba(0,0,0,0.2);
@@ -43,7 +43,7 @@
             display: flex; align-items: center; justify-content: center;
         }
         .modal-box {
-            background: #fff; padding: 18px; border-radius: 8px;
+            background: #b6b4b4; padding: 18px; border-radius: 8px;
             width: 88%; max-width: 420px;
             display: flex; flex-direction: column; gap: 10px;
         }
@@ -58,66 +58,73 @@
 </head>
 <body>   
     <div class="toolbar">
-        <span style="font-weight:bold; margin-right:8px;">CadClothv4aBloq</span>
+        <span style="font-weight:bold; margin-right:8px;">CadCloth</span>
         <button id="createBtn"     onclick="toggleCreate()"     title="Crear polígono">◻️</button>
-        <input  type="number" id="sidesInput" min="3" max="10" value="4" title="Lados">
+        
+        <input  type="number" id="sidesInput" min="3" max="10" value="4" title="Lados" style="width:32px; background:#bebcbc; border:1px solid #888; border-radius:1px; padding:2px 2px; font-size:14px;">
         <button id="lineBtn"       onclick="toggleLine()"       title="Crear línea">🖊️</button>
         <button id="curveBtn"      onclick="toggleCurve()"      title="Curvar arista">〜</button>                  
         <button id="vertexBtn"     onclick="toggleVertex()"     title="Editar vértice">📌</button>
         <button id="snapBtn"       onclick="toggleSnap()"       title="Snap">🧲</button>
+        <button id="snapEdgeBtn" onclick="toggleSnapEdge()" title="Snap a arista" style="display:none">🧲📏</button>        
         <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vértice">⚫</button>
+        <button id="deleteVertexBtn" onclick="toggleDeleteVertex()" title="Eliminar vértice">➖</button>
         <button id="resizeBtn"     onclick="toggleResize()"     title="Cambiar longitud">📏</button>
         <button id="straightenBtn" onclick="toggleStraighten()" title="Curva→Recta">📐</button>
 
         <button id="mirrorBtn"     onclick="toggleMirror()"     title="Desdoblar">📖</button>
         <button id="moveBtn"       onclick="toggleMove()"       title="Mover figura">✋</button>
+        <button id="lockBtn"       onclick="toggleLock()"       title="Bloquear/desbloquear">🔐</button>
+        <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">⇄</button>  
         <button id="closeShapeBtn" onclick="toggleCloseShape()" title="Cerrar figura">🔒</button>
         <button id="closeApplyBtn" onclick="applyCloseShape()"  title="Aplicar cierre">✔</button>
-        <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">⛓</button>
-        <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar unión" style="display:none">✔</button>       
-        <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">🔄</button>
-        <input  type="number" id="rotateInput" value="90" step="1" title="Grados">
+             
+        
         <button id="duplicateBtn"  onclick="toggleDuplicate()"  title="Duplicar">⧉</button>
         <button id="reflectBtn"    onclick="toggleReflect()"    title="Reflejar">🪞</button>
         <button onclick="undoAction()" title="Deshacer" >↩</button>       
-        <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">⇄</button>
+        
         <button id="cutBtn"        onclick="toggleCut()"        title="Cortar figura con línea(s)">✂</button>
         <button id="cutApplyBtn"   onclick="applyCut()"         title="Aplicar corte">✔</button>
 
         <button id="grainBtn"      onclick="toggleGrainMode()"  title="Asignar hilo a figura">🧵</button>
-        <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Dirección del hilo">→</button>
+        <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Dirección del hilo" style="display:none">→</button>
+        <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">🔄</button>      
+        <input  type="number" id="rotateInput" value="180" step="1" title="Grados" style="width:45px; background:#b1b0b0; border:1px solid #888; border-radius:1px; padding:2px 2px; font-size:14px;">
+        <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">⛓</button>
+        <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar unión" style="display:none">✔</button>  
         <button id="deleteBtn"     onclick="toggleDelete()"     title="Eliminar figura">🗑️</button>
-        <button id="lockBtn"       onclick="toggleLock()"       title="Bloquear/desbloquear">🔐</button>        
+              
         <button onclick="clearAll()"   title="Eliminar todo">💥</button>
         <button onclick="exportJSON()" title="Exportar JSON">💾</button>
+        <button onclick="exportSVG()" title="Exportar SVG">🖼️</button>
         <button onclick="importJSON()" title="Importar JSON">📂</button>
         <span id="zoomIndicator">100%</span>
         <button onclick="resetView()" title="Restablecer vista">⊙</button>
         <button onclick="location.href='Nesting.html'">NestingPro</button>
-        <span style="font-weight:bold; color:#e67e22; margin:0 6px; font-size:15px; align-self:center;">R∆yøTęmper∆</span>
-        <span style="font-weight:bold; color:#797979; margin:0 6px; font-size:15px; align-self:center;">latercera21@hotmail.com</span>
+        <span style="font-weight:bold; color:#eff4fd; margin:0 6px; font-size:15px; align-self:center;">R∆yøTęmper∆</span>
+        <span style="font-weight:bold; color:#585858; margin:0 6px; font-size:15px; align-self:center;">latercera21@hotmail.com</span>
     </div>
 
 <div id="vertexInputs" class="float-inputs">
     <label><input type="checkbox" id="vertexFijar">🔒</label>
-
-    <span class="lbl">↔:</span><input type="text" id="vertexDX" placeholder="↔:" style="width:45px">
-    <span class="lbl">↕:</span><input type="text" id="vertexDY" placeholder="↕:" style="width:45px">
+    <span class="lbl">X=>:</span><input type="number" inputmode="decimal" id="vertexDX" placeholder="X=>" style="width:40px">
+    <span class="lbl">Y⬇︎:</span><input type="number" inputmode="decimal" id="vertexDY" placeholder="Y⬇︎" style="width:40px">
     <button onclick="applyVertexDelta()">✓</button>
     <button onclick="hidePanel('vertexInputs')">✕</button>
 </div>
 <div id="resizeInputs" class="float-inputs">
     <span class="lbl">cm:</span>
-    <input type="text" id="resizeValue" placeholder="ej: 25.5" style="width:70px">
+    <input type="number" inputmode="decimal" id="resizeValue" placeholder="ej: 25.5" style="width:50px">
     <button onclick="applyResize()">✓</button>
-    <button onclick="hidePanel('resizeInputs')">?</button>
+    <button onclick="hidePanel('resizeInputs')">X</button>
     <span id="resizeIndicator"></span>
 </div>
 <div id="offsetInputs" class="float-inputs">
     <span class="lbl">cm:</span>
-    <input type="text" id="offsetValue" placeholder="ej: 1.5" style="width:70px">
+    <input type="number" inputmode="decimal" id="offsetValue" placeholder="ej: 1.5" style="width:50px">
     <button onclick="applyOffset()">✓</button>
-    <button onclick="hidePanel('offsetInputs')">?</button>
+    <button onclick="hidePanel('offsetInputs')">X</button>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -141,9 +148,11 @@
     let selectedVertex = null;
     let selectedEdge   = null;
     let snapEnabled    = false;
+    let snapEdgeEnabled = false;    
     let joinSelection  = [];
     let grainDir       = 'horizontal';
     let lineStartPoint = null;
+    let offsetEdges = []; // reemplaza selectedEdge para offset
 
     // --- Estado de corte ---
     let cutLineIndices = [];   // Ã¯Â¿Â½ndices de lÃ¯Â¿Â½neas seleccionadas para cortar
@@ -159,7 +168,7 @@
     let pinchStartDist = null, pinchStartScale = 1, pinchLastCx = null, pinchLastCy = null;
     let isTouchDevice = false, lastTouchTime = 0;
 
-    const SNAP_THR_PX = 20;
+    const SNAP_THR_PX = 15;
     function getToolbarHeight() {
         return document.querySelector('.toolbar').getBoundingClientRect().height;
     }
@@ -193,33 +202,33 @@
         redrawAll();
     }
 
-    function showModal({ title, body, textarea, buttons }) {
-        return new Promise(resolve => {
-            const overlay = document.createElement('div');
-            overlay.className = 'modal-overlay';
-            const box = document.createElement('div');
-            box.className = 'modal-box';
-            const t = document.createElement('div');
-            t.className = 'modal-title'; t.textContent = title; box.appendChild(t);
-            if (body) { const p = document.createElement('div'); p.textContent = body; box.appendChild(p); }
-            let taEl = null;
-            if (textarea) {
-                taEl = document.createElement('textarea');
-                taEl.value = textarea; taEl.readOnly = true; box.appendChild(taEl);
-            }
-            const row = document.createElement('div'); row.className = 'modal-row';
-            buttons.forEach(btn => {
-                const b = document.createElement('button');
-                b.textContent = btn.label;
-                b.onclick = () => { document.body.removeChild(overlay); resolve(btn.value ?? btn.label); };
-                row.appendChild(b);
-            });
-            box.appendChild(row); overlay.appendChild(box);
-            overlay.addEventListener('click', e => { if(e.target===overlay){document.body.removeChild(overlay);resolve(null);} });
-            document.body.appendChild(overlay);
-            if (taEl) setTimeout(() => taEl.select(), 80);
+    function showModal({ title, body, textarea, buttons, editable = false }) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        const box = document.createElement('div');
+        box.className = 'modal-box';
+        const t = document.createElement('div');
+        t.className = 'modal-title'; t.textContent = title; box.appendChild(t);
+        if (body) { const p = document.createElement('div'); p.textContent = body; box.appendChild(p); }
+        let taEl = null;
+        if (textarea !== undefined) {
+            taEl = document.createElement('textarea');
+            taEl.value = textarea; taEl.readOnly = !editable; box.appendChild(taEl);
+        }
+        const row = document.createElement('div'); row.className = 'modal-row';
+        buttons.forEach(btn => {
+            const b = document.createElement('button');
+            b.textContent = btn.label;
+            b.onclick = () => { document.body.removeChild(overlay); resolve(btn.value ?? btn.label); };
+            row.appendChild(b);
         });
-    }
+        box.appendChild(row); overlay.appendChild(box);
+        overlay.addEventListener('click', e => { if(e.target===overlay){document.body.removeChild(overlay);resolve(null);} });
+        document.body.appendChild(overlay);
+        if (taEl) setTimeout(() => taEl.select(), 80);
+    });
+}
 
     function saveState() {
         figuresHistory.push(JSON.parse(JSON.stringify(figures)));
@@ -262,8 +271,9 @@
 
     function toggleGrainDir() {
         grainDir = grainDir==='horizontal' ? 'vertical' : 'horizontal';
-        document.getElementById('grainDirBtn').textContent = grainDir==='horizontal' ? '?' : '?';
+        document.getElementById('grainDirBtn').textContent = grainDir==='horizontal' ? '→' : '↕';
     }
+
     function toggleGrainMode()  { setMode('grain'); }
     function toggleCreate()     { setMode('create'); }
     function toggleLine()       { setMode('line'); }
@@ -273,20 +283,42 @@
     function toggleLock()       { setMode('lock'); } 
     function toggleMirror()     { setMode('mirror'); }
     function toggleAddVertex()  { setMode('addVertex'); }
+    function toggleDeleteVertex() { setMode('deleteVertex'); }
     function toggleResize()     { setMode('resize'); }
     function toggleRotate()     { setMode('rotate'); }
     function toggleDuplicate()  { setMode('duplicate'); }
     function toggleReflect()    { setMode('reflect'); }
-    function toggleOffset()     { setMode('offset'); }
+   
+    function toggleOffset() {
+    if (mode==='offset') {
+        setMode('none');
+        offsetEdges=[];
+        redrawAll();
+    } else {
+        setMode('offset');
+        offsetEdges=[];
+    }
+}
 
     function toggleVertex() {
         if (mode==='vertex') { setMode('none'); hidePanel('vertexInputs'); }
         else { setMode('vertex'); }
     }
+    
     function toggleSnap() {
-        snapEnabled = !snapEnabled;
-        document.getElementById('snapBtn').classList.toggle('on', snapEnabled);
-    }
+    snapEnabled = !snapEnabled;
+    document.getElementById('snapBtn').classList.toggle('on', snapEnabled);
+    const edgeBtn = document.getElementById('snapEdgeBtn');
+    edgeBtn.style.display = snapEnabled ? 'inline-block' : 'none';
+    if (!snapEnabled) { snapEdgeEnabled = false; edgeBtn.classList.remove('on'); }
+}
+
+function toggleSnapEdge() {
+    snapEdgeEnabled = !snapEdgeEnabled;
+    document.getElementById('snapEdgeBtn').classList.toggle('on', snapEdgeEnabled);
+}
+    
+    
     function toggleJoinCurves() {
         if (mode==='joinCurves') {
             setMode('none');
@@ -327,7 +359,7 @@
         else { setMode('curve'); }
     }
 
-    const ALL_MODES = ['create','line','move','vertex','addVertex','curve','straighten',
+    const ALL_MODES = ['create','line','move','vertex','addVertex','deleteVertex','curve','straighten',
         'delete','mirror','resize','rotate','duplicate','reflect',
         'joinCurves','grain','offset','cut','closeShape','lock'];
 
@@ -339,16 +371,17 @@
         });
         if (prev==='resize')     { hidePanel('resizeInputs'); }
         if (prev==='vertex')     { hidePanel('vertexInputs'); }
-        if (prev==='offset')     { hidePanel('offsetInputs'); }
+        if (prev==='offset') { hidePanel('offsetInputs'); offsetEdges=[]; }        
         if (prev==='joinCurves') { document.getElementById('joinApplyBtn').style.display='none'; joinSelection=[]; }
         if (prev==='cut')        { document.getElementById('cutApplyBtn').style.display='none'; cutLineIndices=[]; }
         if (prev==='closeShape') { document.getElementById('closeApplyBtn').style.display='none'; closeLineIndices=[]; }
         if (prev==='line')       { lineStartPoint = null; }
         if (prev==='curve')      { curveActiveDrag = null; }
 
-        if (newMode===prev || newMode==='none') { mode='none'; redrawAll(); return; }
+        if (newMode===prev || newMode==='none') { mode='none'; document.getElementById('grainDirBtn').style.display='none'; redrawAll(); return; }
 
         mode = newMode;
+        document.getElementById('grainDirBtn').style.display = newMode==='grain' ? 'inline-block' : 'none';
         const btn = document.getElementById(newMode+'Btn');
         if (btn) btn.classList.add('on');
         if (newMode==='resize')     showPanel('resizeInputs');
@@ -359,16 +392,17 @@
 
     // ===================== SNAP =====================
     function applySnap(x, y, exFi, exVi) {
-        let sx=x, sy=y, fx=false, fy=false;
-        for (let fi=0; fi<figures.length && (!fx||!fy); fi++)
-            for (let vi=0; vi<figures[fi].vertices.length && (!fx||!fy); vi++) {
-                if (fi===exFi && vi===exVi) continue;
-                const v=figures[fi].vertices[vi];               
-                if (!fy && Math.abs(y-v.y)<getSnapThreshold()) { sy=v.y; fy=true; }
-                if (!fx && Math.abs(x-v.x)<getSnapThreshold()) { sx=v.x; fx=true; }
-            }
-        return {x:sx,y:sy};
-    }
+    let sx=x, sy=y, fx=false, fy=false;
+    for (let fi=0; fi<figures.length && (!fx||!fy); fi++)
+        for (let vi=0; vi<figures[fi].vertices.length && (!fx||!fy); vi++) {
+            if (fi===exFi && vi===exVi) continue;
+            const v=figures[fi].vertices[vi];               
+            if (!fy && Math.abs(y-v.y)<getSnapThreshold()) { sy=v.y; fy=true; }
+            if (!fx && Math.abs(x-v.x)<getSnapThreshold()) { sx=v.x; fx=true; }
+        }
+    return {x:sx,y:sy};
+}
+    
     function drawSnapGuides(x, y, exFi, exVi) {
         ctx.save();
         ctx.strokeStyle='rgba(0,120,255,0.5)';
@@ -593,36 +627,7 @@
         return {vertices: verts, edges};
     }
 
-    function buildCutStroke(lineIndices) {
-        // Ahora solo muestreamos los edges encadenados para findCrossings
-        const cutData = buildCutEdges(lineIndices);
-        if (cutData.vertices.length < 2) return [];
-        const pts = [];
-        const tmpFig = {vertices: cutData.vertices, edges: cutData.edges};
-        return sampleFigureEdges(tmpFig, 60);
-    }
-
-    // ===================== ALGORITMO DE CORTE (del cÃ¯Â¿Â½digo pequeÃ¯Â¿Â½o) =====================
-    function segIntersect(a,b,c,d){
-        const dx1=b.x-a.x,dy1=b.y-a.y,dx2=d.x-c.x,dy2=d.y-c.y;
-        const den=dx1*dy2-dy1*dx2;
-        if(Math.abs(den)<1e-10) return null;
-        const dx3=c.x-a.x,dy3=c.y-a.y;
-        const t=(dx3*dy2-dy3*dx2)/den, s=(dx3*dy1-dy3*dx1)/den;
-        if(t<0||t>1||s<0||s>1) return null;
-        return {x:a.x+t*dx1,y:a.y+t*dy1,edgeIdx:-1,strokeIdx:-1};
-    }
-
-    function findCrossings(figure, cutEdges) {
-        const crossings = [];
-        for (let ci = 0; ci < cutEdges.length; ci++) {
-            const ce = cutEdges[ci];
-            const a = ce.start, b = ce.end; // índices en la "figura" temporal cutData
-            // No tenemos acceso directo a los vértices de cutData aquí, así que mejor
-            // recibimos el cutData completo. Reescribimos la función para que reciba
-            // la figura y el objeto cutData completo.
-        }
-     }
+    
 
      function findExactCrossings(figure, cutData) {
     // Muestreamos la figura y la línea de corte como polilíneas
@@ -701,47 +706,7 @@
 }
 //findExactCrossing fin
 
-    function subQuadraticBetweenPoints(p0, pc, p1, newStart, newEnd) {
-        function closestT(target) {
-            let best = Infinity, bt = 0;
-            for (let i = 0; i <= 1000; i++) {
-                const t = i / 1000;
-                const x = (1-t)*(1-t)*p0.x + 2*(1-t)*t*pc.x + t*t*p1.x;
-                const y = (1-t)*(1-t)*p0.y + 2*(1-t)*t*pc.y + t*t*p1.y;
-                const d = Math.hypot(x - target.x, y - target.y);
-                if (d < best) { best = d; bt = t; }
-            }
-            return bt;
-        }
-        const ta = closestT(newStart);
-        const tb = closestT(newEnd);
-        const t0 = Math.min(ta, tb);
-        const t1 = Math.max(ta, tb);
-        if (Math.abs(t1 - t0) < 1e-6) return pc;
-
-        const q0 = { x: (1-t0)*p0.x + t0*pc.x, y: (1-t0)*p0.y + t0*pc.y };
-        const q1 = { x: (1-t0)*pc.x + t0*p1.x, y: (1-t0)*pc.y + t0*p1.y };
-        const tRel = (t1 - t0) / (1 - t0);
-        const subC = { x: (1-tRel)*q0.x + tRel*q1.x, y: (1-tRel)*q0.y + tRel*q1.y };
-
-        const realA = {
-            x: (1-t0)*(1-t0)*p0.x + 2*(1-t0)*t0*pc.x + t0*t0*p1.x,
-            y: (1-t0)*(1-t0)*p0.y + 2*(1-t0)*t0*pc.y + t0*t0*p1.y
-        };
-        const realB = {
-            x: (1-t1)*(1-t1)*p0.x + 2*(1-t1)*t1*pc.x + t1*t1*p1.x,
-            y: (1-t1)*(1-t1)*p0.y + 2*(1-t1)*t1*pc.y + t1*t1*p1.y
-        };
-        const tMid = (t0 + t1) / 2;
-        const mid = {
-            x: (1-tMid)*(1-tMid)*p0.x + 2*(1-tMid)*tMid*pc.x + tMid*tMid*p1.x,
-            y: (1-tMid)*(1-tMid)*p0.y + 2*(1-tMid)*tMid*pc.y + tMid*tMid*p1.y
-        };
-        return {
-            x: (mid.x - 0.25*realA.x - 0.25*realB.x) / 0.5,
-            y: (mid.y - 0.25*realA.y - 0.25*realB.y) / 0.5
-        };
-    }
+    
 
     function edgeToSegment(figure, edge) {
     const a = figure.vertices[edge.start];
@@ -1134,48 +1099,9 @@ function segmentToEdge(seg, startIdx, endIdx) {
         return inside;
     }
 
-    function removeDuplicatePoints(points, eps = 0.5) {
-        const out = [];
+    
 
-        for (const p of points) {
-            const last = out[out.length - 1];
-
-            if (!last || Math.hypot(p.x - last.x, p.y - last.y) > eps) {
-                out.push(p);
-            }
-        }
-
-        return out;
-    }
-
-    function simplifyPoints(points, tolerance = 2) {
-        if (points.length < 3) return points;
-
-        const result = [points[0]];
-
-        for (let i = 1; i < points.length - 1; i++) {
-
-            const prev = result[result.length - 1];
-            const curr = points[i];
-            const next = points[i + 1];
-
-            const dx1 = curr.x - prev.x;
-            const dy1 = curr.y - prev.y;
-
-            const dx2 = next.x - curr.x;
-            const dy2 = next.y - curr.y;
-
-            const cross = Math.abs(dx1 * dy2 - dy1 * dx2);
-
-            if (cross > tolerance) {
-                result.push(curr);
-            }
-        }
-
-        result.push(points[points.length - 1]);
-
-        return result;
-    }
+    
 
     // Convierte array de puntos en figura CAD Cloth
     function ptsToFigure(pts, closed=true) {
@@ -1220,30 +1146,6 @@ function closestTOnQuad(pt, p0, cp, p1, steps = 100) {
   return best;
 }
 
-function quadLineIntersect(p0, cp, p1, q0, q1, samples = 200) {
-  const results = [];
-  let prevSign = sideOfLine(p0, q0, q1);
-  for (let i = 1; i <= samples; i++) {
-    const t = i / samples, tPrev = (i - 1) / samples;
-    const pt = {x:(1-t)*(1-t)*p0.x+2*(1-t)*t*cp.x+t*t*p1.x, y:(1-t)*(1-t)*p0.y+2*(1-t)*t*cp.y+t*t*p1.y};
-    const curSign = sideOfLine(pt, q0, q1);
-    if (prevSign * curSign < 0) {
-      let lo = tPrev, hi = t;
-      for (let iter = 0; iter < 20; iter++) {
-        const mid = (lo + hi) / 2;
-        const mPt = {x:(1-mid)*(1-mid)*p0.x+2*(1-mid)*mid*cp.x+mid*mid*p1.x, y:(1-mid)*(1-mid)*p0.y+2*(1-mid)*mid*cp.y+mid*mid*p1.y};
-        if (sideOfLine(mPt, q0, q1) * prevSign < 0) hi = mid;
-        else lo = mid;
-      }
-      const tF = (lo + hi) / 2;
-      const iPt = {x:(1-tF)*(1-tF)*p0.x+2*(1-tF)*tF*cp.x+tF*tF*p1.x, y:(1-tF)*(1-tF)*p0.y+2*(1-tF)*tF*cp.y+tF*tF*p1.y};
-      const tC = projectOntoLine(iPt, q0, q1);
-      if (tC >= -1e-6 && tC <= 1+1e-6) results.push({ t_fig: tF, t_cut: Math.max(0, Math.min(1, tC)) });
-    }
-    prevSign = curSign;
-  }
-  return results;
-}
 
 // Agregar después de projectOntoLine o antes de lineQuadIntersect
 function ptOnQuad(p0, cp, p1, t) {
@@ -1256,66 +1158,6 @@ function lerp(a, b, t) {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
-function lineQuadIntersect(p0, p1, q0, qcp, q1, samples = 200) {
-  // CORREGIDO: muestrea la CURVA de corte (q0,qcp,q1) y verifica contra la LÍNEA de figura (p0,p1)
-  const results = [];
-  let prevSign = sideOfLine(q0, p0, p1);
-  for (let i = 1; i <= samples; i++) {
-    const t = i / samples, tPrev = (i - 1) / samples;
-    const pt = ptOnQuad(q0, qcp, q1, t);
-    const curSign = sideOfLine(pt, p0, p1);
-    if (prevSign * curSign < 0) {
-      let lo = tPrev, hi = t;
-      for (let iter = 0; iter < 20; iter++) {
-        const mid = (lo + hi) / 2;
-        const mPt = ptOnQuad(q0, qcp, q1, mid);
-        if (sideOfLine(mPt, p0, p1) * prevSign < 0) hi = mid;
-        else lo = mid;
-      }
-      const tCut = (lo + hi) / 2;
-      const iPt = ptOnQuad(q0, qcp, q1, tCut);
-      const tFig = projectOntoLine(iPt, p0, p1);
-      if (tFig >= -1e-6 && tFig <= 1 + 1e-6) {
-        results.push({ t_fig: Math.max(0, Math.min(1, tFig)), t_cut: Math.max(0, Math.min(1, tCut)) });
-      }
-    }
-    prevSign = curSign;
-  }
-  return results;
-}
-
-function quadQuadIntersect(p0, cp, p1, q0, qcp, q1, samples = 300) {
-  // CORREGIDO: muestrea la curva de figura y verifica contra la curva de corte real
-  const results = [];
-  // Usamos muestreo más fino y verificamos lado contra la curva q
-  let prevSide = sideOfLine(p0, q0, q1);
-  for (let i = 1; i <= samples; i++) {
-    const tF = i / samples, tPrev = (i - 1) / samples;
-    const pt = ptOnQuad(p0, cp, p1, tF);
-    const curSide = sideOfLine(pt, q0, q1);
-    if (prevSide * curSide < 0) {
-      let lo = tPrev, hi = tF;
-      for (let iter = 0; iter < 20; iter++) {
-        const mid = (lo + hi) / 2;
-        const mPt = ptOnQuad(p0, cp, p1, mid);
-        if (sideOfLine(mPt, q0, q1) * prevSide < 0) hi = mid;
-        else lo = mid;
-      }
-      const tFig = (lo + hi) / 2;
-      const iPt = ptOnQuad(p0, cp, p1, tFig);
-      const tCut = closestTOnQuad(iPt, q0, qcp, q1, 150);
-      if (tCut >= -1e-6 && tCut <= 1 + 1e-6) {
-        // Verificar que realmente está cerca de la curva q
-        const qPt = ptOnQuad(q0, qcp, q1, Math.max(0, Math.min(1, tCut)));
-        if (Math.hypot(iPt.x - qPt.x, iPt.y - qPt.y) < 3) {
-          results.push({ t_fig: tFig, t_cut: Math.max(0, Math.min(1, tCut)) });
-        }
-      }
-    }
-    prevSide = curSide;
-  }
-  return results;
-}
 
 function projectOntoLine(pt, a, b) {
   const dx = b.x - a.x, dy = b.y - a.y;
@@ -1429,61 +1271,104 @@ function projectOntoLine(pt, a, b) {
 
     // ===================== CERRAR FIGURA =====================
     function applyCloseShape() {
-        if (closeLineIndices.length < 1) {
-            showModal({title:'Error',body:'Selecciona al menos una lÃƒÂ­nea.',buttons:[{label:'OK'}]});
-            return;
+    if (closeLineIndices.length < 1) {
+        showModal({title:'Error',body:'Selecciona al menos una línea.',buttons:[{label:'OK'}]});
+        return;
+    }
+
+    const THR = 20 / viewScale;
+
+    // Construir segmentos con edges originales
+    const segs = closeLineIndices.map(li => ({
+        vertices: figures[li].vertices.map(v => ({x:v.x, y:v.y})),
+        edges: figures[li].edges.map(e => Object.assign({}, e)),
+        reversed: false,
+        used: false
+    }));
+
+    // Encadenar por proximidad de extremos
+    const ordered = [segs[0]];
+    segs[0].used = true;
+
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (let i = 0; i < segs.length; i++) {
+            if (segs[i].used) continue;
+            const last  = ordered[ordered.length - 1];
+            const first = ordered[0];
+            const lastV  = last.reversed  ? last.vertices[0] : last.vertices[last.vertices.length - 1];
+            const firstV = first.reversed ? first.vertices[first.vertices.length - 1] : first.vertices[0];
+            const seg = segs[i];
+            const sFirst = seg.vertices[0];
+            const sLast  = seg.vertices[seg.vertices.length - 1];
+            const dEF = Math.hypot(lastV.x - sFirst.x,  lastV.y - sFirst.y);
+            const dEL = Math.hypot(lastV.x - sLast.x,   lastV.y - sLast.y);
+            const dSF = Math.hypot(firstV.x - sFirst.x, firstV.y - sFirst.y);
+            const dSL = Math.hypot(firstV.x - sLast.x,  firstV.y - sLast.y);
+            const best = Math.min(dEF, dEL, dSF, dSL);
+            if (best > THR) continue;
+            const clone = {vertices: seg.vertices, edges: seg.edges, reversed: false, used: true};
+            if      (best === dEF) { clone.reversed = false; ordered.push(clone); }
+            else if (best === dEL) { clone.reversed = true;  ordered.push(clone); }
+            else if (best === dSF) { clone.reversed = true;  ordered.unshift(clone); }
+            else                   { clone.reversed = false; ordered.unshift(clone); }
+            segs[i].used = true;
+            changed = true;
         }
-        const lines = closeLineIndices.map(i => figures[i]);
-        let segments = lines.map(fig => ({
-            pts: fig.vertices.map(v => ({x:v.x, y:v.y})),
-            used: false
-        }));
+    }
 
-        const THR = 20 / viewScale;
-        let chain = [...segments[0].pts];
-        segments[0].used = true;
+    // Aplanar en vertices + edges preservando curvas
+    const verts = [];
+    const edges = [];
 
-        let changed = true;
-        while (changed) {
-            changed = false;
-            for (let i=0; i<segments.length; i++) {
-                if (segments[i].used) continue;
-                const seg = segments[i].pts;
-                const chainEnd = chain[chain.length-1];
-                const chainStart = chain[0];
-                if (Math.hypot(chainEnd.x-seg[0].x, chainEnd.y-seg[0].y) < THR) {
-                    chain = [...chain, ...seg.slice(1)];
-                    segments[i].used=true; changed=true;
-                } else if (Math.hypot(chainEnd.x-seg[seg.length-1].x, chainEnd.y-seg[seg.length-1].y) < THR) {
-                    chain = [...chain, ...[...seg].reverse().slice(1)];
-                    segments[i].used=true; changed=true;
-                } else if (Math.hypot(chainStart.x-seg[seg.length-1].x, chainStart.y-seg[seg.length-1].y) < THR) {
-                    chain = [...seg.slice(0,-1), ...chain];
-                    segments[i].used=true; changed=true;
-                } else if (Math.hypot(chainStart.x-seg[0].x, chainStart.y-seg[0].y) < THR) {
-                    chain = [[...seg].reverse().slice(0,-1), ...chain].flat();
-                    segments[i].used=true; changed=true;
+    for (const seg of ordered) {
+        const vs = seg.reversed ? [...seg.vertices].reverse() : seg.vertices;
+        const es = seg.reversed ? [...seg.edges].reverse()    : seg.edges;
+
+        const offset = verts.length === 0 ? 0 : verts.length - 1;
+
+        for (let vi = 0; vi < vs.length; vi++) {
+            if (vi === 0 && verts.length > 0) continue;
+            verts.push({x: vs[vi].x, y: vs[vi].y});
+        }
+
+        for (let ei = 0; ei < es.length; ei++) {
+            const e = Object.assign({}, es[ei]);
+            if (seg.reversed) {
+                const tmp = e.start; e.start = e.end; e.end = tmp;
+                // invertir controles cúbicos
+                if (e.cubic && e.control2X != null) {
+                    const tx = e.controlX,  ty = e.controlY;
+                    e.controlX  = e.control2X; e.controlY  = e.control2Y;
+                    e.control2X = tx;          e.control2Y = ty;
                 }
             }
+            e.start = offset + ei;
+            e.end   = offset + ei + 1;
+            edges.push(e);
         }
-
-        if (Math.hypot(chain[0].x-chain[chain.length-1].x, chain[0].y-chain[chain.length-1].y) < THR) {
-            chain = chain.slice(0, -1);
-        }
-
-        if (chain.length > 1 && Math.hypot(chain[0].x - chain[chain.length-1].x, chain[0].y - chain[chain.length-1].y) < THR) {
-            chain = chain.slice(0, -1);
-        }
-
-        saveState();
-        const sortedIdx = [...closeLineIndices].sort((a,b)=>b-a);
-        for (const idx of sortedIdx) figures.splice(idx, 1);
-        figures.push(ptsToFigure(chain, true));
-        closeLineIndices = [];
-        document.getElementById('closeApplyBtn').style.display = 'none';
-        setMode('none');
-        redrawAll();
     }
+
+    // Cerrar: conectar último vértice con el primero
+    if (verts.length > 1 && Math.hypot(verts[0].x - verts[verts.length-1].x, verts[0].y - verts[verts.length-1].y) < THR) {
+        verts.pop();
+        // el último edge ya apunta a verts.length que ahora es 0
+        edges[edges.length - 1].end = 0;
+    } else {
+        // agregar edge de cierre recto
+        edges.push(makeEdge(verts.length - 1, 0));
+    }
+
+    saveState();
+    const sortedIdx = [...closeLineIndices].sort((a,b)=>b-a);
+    for (const idx of sortedIdx) figures.splice(idx, 1);
+    figures.push({vertices: verts, edges, closed: true, grain: null, locked: false});
+    closeLineIndices = [];
+    document.getElementById('closeApplyBtn').style.display = 'none';
+    setMode('none');
+    redrawAll();
+}
 
     // ===================== OPERACIONES =====================
     function addVertexOnEdge(fi,ei,x,y){
@@ -1511,10 +1396,100 @@ function projectOntoLine(pt, a, b) {
         }else{edge.end=nvi;figure.edges.splice(ei+1,0,makeEdge(nvi,nvi+1));}
     }
 
+    function deleteVertex(fi, vi) {
+        const fig = figures[fi];
+        // Si la figura tiene solo 2 vértices, se elimina completa
+        if (fig.vertices.length <= 2) {
+            figures.splice(fi, 1);
+            return;
+        }
+
+        const n = fig.vertices.length;
+        const isClosed = fig.closed;
+        const edges = fig.edges;
+
+        // Encontrar aristas adyacentes
+        let edgeIn = null, edgeOut = null;
+        for (let ei = 0; ei < edges.length; ei++) {
+            const e = edges[ei];
+            if (e.end === vi) edgeIn = ei;
+            if (e.start === vi) edgeOut = ei;
+        }
+
+        // Si no se encuentran ambas, es un extremo en figura abierta
+        if (edgeIn === null || edgeOut === null) {
+            // Eliminar el vértice y la arista que lo conecta
+            const edgeIdx = edgeIn !== null ? edgeIn : edgeOut;
+            if (edgeIdx !== null) {
+                edges.splice(edgeIdx, 1);
+                // Ajustar índices
+                edges.forEach(e => {
+                    if (e.start > vi) e.start--;
+                    if (e.end > vi) e.end--;
+                });
+                fig.vertices.splice(vi, 1);
+            }
+        } else {
+            // Fusionar las dos aristas en una
+            const eIn = edges[edgeIn];
+            const eOut = edges[edgeOut];
+            const newStart = eIn.start;
+            const newEnd = eOut.end;
+
+            // Eliminar ambas aristas (primero la de mayor índice para no desordenar)
+            if (edgeIn > edgeOut) {
+                edges.splice(edgeIn, 1);
+                edges.splice(edgeOut, 1);
+            } else {
+                edges.splice(edgeOut, 1);
+                edges.splice(edgeIn, 1);
+            }
+
+            // Crear nueva arista recta (pierde curvatura)
+            const newEdge = makeEdge(newStart, newEnd);
+            // Insertar en la posición de la primera arista eliminada
+            edges.splice(Math.min(edgeIn, edgeOut), 0, newEdge);
+
+            // Eliminar el vértice
+            fig.vertices.splice(vi, 1);
+
+            // Ajustar índices en todas las aristas
+            edges.forEach(e => {
+                if (e.start > vi) e.start--;
+                if (e.end > vi) e.end--;
+            });
+        }
+    }
+    
+    function edgeLength(fig, edge) {
+    const a = fig.vertices[edge.start], b = fig.vertices[edge.end];
+    const STEPS = 200;
+    let len = 0, px = a.x, py = a.y;
+    for (let i = 1; i <= STEPS; i++) {
+        const t = i / STEPS;
+        let x, y;
+        if (edge.cubic && edge.control2X != null) {
+            const mt = 1-t;
+            x = mt*mt*mt*a.x + 3*mt*mt*t*edge.controlX + 3*mt*t*t*edge.control2X + t*t*t*b.x;
+            y = mt*mt*mt*a.y + 3*mt*mt*t*edge.controlY + 3*mt*t*t*edge.control2Y + t*t*t*b.y;
+        } else if (edge.curved && edge.controlX != null) {
+            x = (1-t)*(1-t)*a.x + 2*(1-t)*t*edge.controlX + t*t*b.x;
+            y = (1-t)*(1-t)*a.y + 2*(1-t)*t*edge.controlY + t*t*b.y;
+        } else {
+            x = a.x + (b.x-a.x)*t;
+            y = a.y + (b.y-a.y)*t;
+        }
+        len += Math.hypot(x-px, y-py);
+        px = x; py = y;
+    }
+    return len;
+}
+    
+
     function resizeEdge(fi,ei,newPx,clickX,clickY){
         const figure=figures[fi],edge=figure.edges[ei];
         const a=figure.vertices[edge.start],b=figure.vertices[edge.end];
-        const cur=Math.hypot(b.x-a.x,b.y-a.y);if(!cur)return;
+        const cur=edgeLength(figure, edge);if(!cur)return;        
         const moveB=Math.hypot(clickX-b.x,clickY-b.y)<Math.hypot(clickX-a.x,clickY-a.y);
         const sf=newPx/cur;
         if(moveB){
@@ -1806,29 +1781,141 @@ function projectOntoLine(pt, a, b) {
         return perp;
     }
 
-    function offsetEdgeInPlace(fi, ei, distancePx) {
-        const fig = figures[fi], edge = fig.edges[ei];
-        const a = fig.vertices[edge.start], b = fig.vertices[edge.end];
-        const normal = computeOutwardNormal(fig, ei);
-        const offX = normal.x * distancePx, offY = normal.y * distancePx;
-
-        a.x += offX; a.y += offY;
-        b.x += offX; b.y += offY;
-        if (edge.controlX  != null) { edge.controlX  += offX; edge.controlY  += offY; }
-        if (edge.control2X != null) { edge.control2X += offX; edge.control2Y += offY; }
-    }
+    
 
     function applyOffset() {
-        if (!selectedEdge) { showModal({title:'Error',body:'Primero selecciona una arista (modo Desfase).',buttons:[{label:'OK'}]}); return; }
-        const fig = figures[selectedEdge.figureIndex];
-        if (!fig.closed) { showModal({title:'Error',body:'El desfase solo funciona en figuras cerradas.',buttons:[{label:'OK'}]}); return; }
-        const distCm = parseFloat(document.getElementById('offsetValue').value.replace(',','.'));
-        if (isNaN(distCm) || distCm <= 0) { showModal({title:'Valor invÃ¯Â¿Â½lido',body:'Introduce una distancia positiva en cm.',buttons:[{label:'OK'}]}); return; }
-        saveState();
-        offsetEdgeInPlace(selectedEdge.figureIndex, selectedEdge.edgeIndex, distCm * PX_PER_CM);
-        hidePanel('offsetInputs');
-        redrawAll();
+    if (offsetEdges.length===0) { showModal({title:'Error',body:'Selecciona al menos una arista.',buttons:[{label:'OK'}]}); return; }
+    const distCm = parseFloat(document.getElementById('offsetValue').value.replace(',','.'));
+    if (isNaN(distCm)||distCm<=0) { showModal({title:'Valor inválido',body:'Introduce una distancia positiva en cm.',buttons:[{label:'OK'}]}); return; }
+    saveState();
+    const distPx = distCm * PX_PER_CM;
+
+    const fi = offsetEdges[0].figureIndex;
+    const fig = figures[fi];
+
+    const sortedIndices = [...offsetEdges].sort((a,b)=>a.edgeIndex-b.edgeIndex).map(o=>o.edgeIndex);
+
+    function isAdjPrev(i) {
+        if (i===0) return false;
+        return fig.edges[sortedIndices[i-1]].end === fig.edges[sortedIndices[i]].start;
     }
+    function isAdjNext(i) {
+        if (i===sortedIndices.length-1) return false;
+        return fig.edges[sortedIndices[i]].end === fig.edges[sortedIndices[i+1]].start;
+    }
+
+    let area=0;
+for(let k=0;k<fig.vertices.length;k++){const v1=fig.vertices[k],v2=fig.vertices[(k+1)%fig.vertices.length];area+=(v1.x*v2.y-v2.x*v1.y);}
+const cw = area > 0;
+
+const offsets = sortedIndices.map(ei => {
+    const edge = fig.edges[ei];
+    const a = fig.vertices[edge.start];
+    const b = fig.vertices[edge.end];
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+    const n = cw ? {x: dy/len, y: -dx/len} : {x: -dy/len, y: dx/len};
+    return {
+        a2: {x: a.x+n.x*distPx, y: a.y+n.y*distPx},
+        b2: {x: b.x+n.x*distPx, y: b.y+n.y*distPx},
+        normal: n, edge
+    };
+});
+
+
+
+    // Resolver vértices compartidos: intersección de líneas desplazadas
+    function lineIntersect(p1,p2,p3,p4){
+        const d1x=p2.x-p1.x,d1y=p2.y-p1.y,d2x=p4.x-p3.x,d2y=p4.y-p3.y;
+        const denom=d1x*d2y-d1y*d2x;
+        if(Math.abs(denom)<1e-10) return null;
+        const t=((p3.x-p1.x)*d2y-(p3.y-p1.y)*d2x)/denom;
+        return {x:p1.x+t*d1x, y:p1.y+t*d1y};
+    }
+
+    for (let i=0; i<sortedIndices.length-1; i++) {
+        if (isAdjNext(i)) {
+            const inter = lineIntersect(offsets[i].a2, offsets[i].b2, offsets[i+1].a2, offsets[i+1].b2);
+            if (inter) { offsets[i].b2=inter; offsets[i+1].a2=inter; }
+        }
+    }
+
+    // Construir índices de vértices nuevos
+    // Para adyacentes: el vértice compartido del medio se MUEVE, no se duplica
+    const newVI = []; // {startIdx, endIdx} para cada arista
+
+    // Primero recolectar qué vértices mover y cuáles crear
+    const movedVertices = new Set(); // índices de vértices originales que se mueven
+
+    for (let i=0; i<sortedIndices.length; i++) {
+        const edge = offsets[i].edge;
+        if (isAdjPrev(i)) movedVertices.add(edge.start);
+        if (isAdjNext(i)) movedVertices.add(edge.end);
+    }
+
+    // Mover vértices compartidos a su nueva posición
+    for (let i=0; i<sortedIndices.length; i++) {
+        const edge = offsets[i].edge;
+        if (isAdjNext(i)) {
+            // El vértice edge.end es compartido, moverlo
+            fig.vertices[edge.end].x = offsets[i].b2.x;
+            fig.vertices[edge.end].y = offsets[i].b2.y;
+        }
+    }
+
+    // Ahora agregar vértices nuevos solo en extremos no adyacentes
+    // y construir tabla de índices
+    for (let i=0; i<sortedIndices.length; i++) {
+        const edge = offsets[i].edge;
+        let startIdx, endIdx;
+
+        if (isAdjPrev(i)) {
+            // startIdx es el vértice compartido ya movido
+            startIdx = edge.start;
+        } else {
+            startIdx = fig.vertices.length;
+            fig.vertices.push({x: offsets[i].a2.x, y: offsets[i].a2.y});
+        }
+
+        if (isAdjNext(i)) {
+            // endIdx es el vértice compartido ya movido
+            endIdx = edge.end;
+        } else {
+            endIdx = fig.vertices.length;
+            fig.vertices.push({x: offsets[i].b2.x, y: offsets[i].b2.y});
+        }
+
+        newVI.push({startIdx, endIdx});
+    }
+
+    // Insertar aristas en orden descendente
+    for (let i=sortedIndices.length-1; i>=0; i--) {
+        const ei = sortedIndices[i];
+        const edge = offsets[i].edge;
+        const {startIdx, endIdx} = newVI[i];
+        const normal = offsets[i].normal;
+
+        const newParallel = {
+            start: startIdx, end: endIdx,
+            curved: edge.curved, cubic: edge.cubic,
+            controlX: edge.curved&&edge.controlX!=null ? edge.controlX+normal.x*distPx : null,
+            controlY: edge.curved&&edge.controlY!=null ? edge.controlY+normal.y*distPx : null,
+            control2X: edge.cubic&&edge.control2X!=null ? edge.control2X+normal.x*distPx : null,
+            control2Y: edge.cubic&&edge.control2Y!=null ? edge.control2Y+normal.y*distPx : null
+        };
+
+        const replacement = [];
+        if (!isAdjPrev(i)) replacement.push(makeEdge(edge.start, startIdx));
+        replacement.push(newParallel);
+        if (!isAdjNext(i)) replacement.push(makeEdge(endIdx, edge.end));
+
+        fig.edges.splice(ei, 1, ...replacement);
+    }
+
+    offsetEdges=[];
+    hidePanel('offsetInputs');
+    selectedEdge=null;
+    redrawAll();
+}
 
     // ===================== CURVA MIDPOINT DRAG =====================
     // Calcula el punto de control cuadrÃ¯Â¿Â½tico a partir del punto medio donde arrastra el usuario
@@ -1850,11 +1937,8 @@ function projectOntoLine(pt, a, b) {
             if(fig.grain && fig.closed) drawGrainArrow(fig);
         });
         if(mode==='resize'&&selectedEdge) drawResizeIndicator();
-        if(mode==='addVertex') drawAllVertices();
-        if(mode==='line' && lineStartPoint) {
-            ctx.beginPath(); ctx.arc(lineStartPoint.x, lineStartPoint.y, 4/viewScale, 0, 2*Math.PI);
-            ctx.fillStyle = '#e67e22'; ctx.fill();
-        }
+        if(mode==='vertex' || mode==='addVertex' || mode==='deleteVertex') drawAllVertices();
+        
         // Resaltar lÃ¯Â¿Â½neas de corte seleccionadas
         if(mode==='cut') {
             cutLineIndices.forEach(li => {
@@ -1894,6 +1978,23 @@ function projectOntoLine(pt, a, b) {
                 }
             });
         }
+        if(mode==='offset') {
+    offsetEdges.forEach(oe => {
+        const fig=figures[oe.figureIndex];
+        if(!fig) return;
+        const e=fig.edges[oe.edgeIndex];
+        const a=fig.vertices[e.start], b=fig.vertices[e.end];
+        ctx.save();
+        ctx.strokeStyle='#27ae60'; ctx.lineWidth=3/viewScale;
+        ctx.setLineDash([6/viewScale,4/viewScale]);
+        ctx.beginPath(); ctx.moveTo(a.x,a.y);
+        if(e.cubic&&e.control2X!=null) ctx.bezierCurveTo(e.controlX,e.controlY,e.control2X,e.control2Y,b.x,b.y);
+        else if(e.curved&&e.controlX!=null) ctx.quadraticCurveTo(e.controlX,e.controlY,b.x,b.y);
+        else ctx.lineTo(b.x,b.y);
+        ctx.stroke();
+        ctx.restore();
+    });
+}
     }
 
     function drawFigure(figure,fi){
@@ -1929,7 +2030,7 @@ function projectOntoLine(pt, a, b) {
     }
 
     function drawAllVertices(){
-        const r=6/viewScale;
+        const r=4/viewScale;
         figures.forEach(fig=>{fig.vertices.forEach(v=>{ctx.beginPath();ctx.arc(v.x,v.y,r,0,Math.PI*2);ctx.fillStyle='rgba(52,152,219,0.5)';ctx.fill();ctx.strokeStyle='#2980b9';ctx.lineWidth=1.5/viewScale;ctx.stroke();});});
     }
 
@@ -1977,30 +2078,60 @@ function projectOntoLine(pt, a, b) {
     }
 
     function handleTouchMove(e){
-        if(e.touches.length===2&&pinchStartDist!==null){
-            e.preventDefault();
-            const dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-            const cx=(e.touches[0].clientX+e.touches[1].clientX)/2,cy=(e.touches[0].clientY+e.touches[1].clientY)/2;
-            const r=canvas.getBoundingClientRect();
-            const ns=Math.min(10,Math.max(0.01,pinchStartScale*(dist/pinchStartDist)));
-            viewOffX=(cx-r.left)-(cx-r.left-viewOffX)*(ns/viewScale);
-            viewOffY=(cy-r.top )-(cy-r.top -viewOffY)*(ns/viewScale);
-            viewScale=ns;
-            if(pinchLastCx!==null){
-                viewOffX+=(cx-r.left)-pinchLastCx;
-                viewOffY+=(cy-r.top)-pinchLastCy;
-            }
-            pinchLastCx=(cx-r.left); pinchLastCy=(cy-r.top);
-            updateZoomIndicator();redrawAll();
-        } else if(e.touches.length===1&&(dragData||curveActiveDrag)){
-            e.preventDefault();handlePointerMove(getPos(e));
+    if(e.touches.length===2&&pinchStartDist!==null){
+        e.preventDefault();
+        const dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+        const cx=(e.touches[0].clientX+e.touches[1].clientX)/2,cy=(e.touches[0].clientY+e.touches[1].clientY)/2;
+        const r=canvas.getBoundingClientRect();
+        const ns=Math.min(10,Math.max(0.01,pinchStartScale*(dist/pinchStartDist)));
+        viewOffX=(cx-r.left)-(cx-r.left-viewOffX)*(ns/viewScale);
+        viewOffY=(cy-r.top )-(cy-r.top -viewOffY)*(ns/viewScale);
+        viewScale=ns;
+        if(pinchLastCx!==null){
+            viewOffX+=(cx-r.left)-pinchLastCx;
+            viewOffY+=(cy-r.top)-pinchLastCy;
+        }
+        pinchLastCx=(cx-r.left); pinchLastCy=(cy-r.top);
+        updateZoomIndicator();redrawAll();
+    } else if(e.touches.length===1){
+        e.preventDefault();
+        if(mode==='line' && dragData && dragData.type==='line'){
+            const pos=getPos(e);
+            redrawAll();
+            const dpr=window.devicePixelRatio||1;
+            ctx.save();
+            ctx.setTransform(dpr*viewScale,0,0,dpr*viewScale,dpr*viewOffX,dpr*viewOffY);
+            ctx.beginPath(); ctx.moveTo(lineStartPoint.x, lineStartPoint.y); ctx.lineTo(pos.x, pos.y);
+            ctx.strokeStyle='#000'; ctx.setLineDash([]); ctx.lineWidth=2/viewScale; ctx.stroke();
+            ctx.restore();
+        } else if(dragData||curveActiveDrag){
+            handlePointerMove(getPos(e));
         }
     }
+}
 
     function handleTouchEnd(e){
-        if(e.touches.length<2){pinchStartDist=null;pinchLastCx=null;pinchLastCy=null;}
-        if(e.touches.length===0){ dragData=null; curveActiveDrag=null; }
+    if(e.touches.length<2){pinchStartDist=null;pinchLastCx=null;pinchLastCy=null;}
+    if(e.touches.length===0){
+        if(mode==='line' && dragData && dragData.type==='line'){
+            const lastTouch = e.changedTouches[0];
+            const r = canvas.getBoundingClientRect();
+            const sx = lastTouch.clientX - r.left, sy = lastTouch.clientY - r.top;
+            const wp = screenToWorld(sx, sy);
+            let end = {x: wp.x, y: wp.y};
+            if(snapEnabled) end = applySnap(end.x, end.y, -1, -1);
+            if(lineStartPoint && Math.hypot(end.x-lineStartPoint.x, end.y-lineStartPoint.y) > 2/viewScale){
+                saveState();
+                figures.push(createLine(lineStartPoint, end));
+            }
+            lineStartPoint = null;
+            dragData = null;
+            redrawAll();
+            return;
+        }
+        dragData=null; curveActiveDrag=null;
     }
+}
 
     function handleMouseDown(e){
         e.preventDefault();
@@ -2010,6 +2141,7 @@ function projectOntoLine(pt, a, b) {
         }
         handlePointerDown(pos);
     }
+
     function handleMouseMove(e){
         e.preventDefault();
         if(isPanning){
@@ -2022,12 +2154,27 @@ function projectOntoLine(pt, a, b) {
         }
         handlePointerMove(getPos(e));
     }
+    
     function handleMouseUp(e){
-        e.preventDefault();
-        isPanning=false;
-        dragData=null;
-        curveActiveDrag=null;
+    e.preventDefault();
+    isPanning=false;
+    if(mode==='line' && dragData && dragData.type==='line'){
+        const pos=getPos(e);
+        let end = {x: pos.x, y: pos.y};
+        if(snapEnabled) end = applySnap(end.x, end.y, -1, -1);
+        if(lineStartPoint && Math.hypot(end.x-lineStartPoint.x, end.y-lineStartPoint.y) > 2/viewScale){
+            saveState();
+            figures.push(createLine(lineStartPoint, end));
+        }
+        lineStartPoint = null;
+        dragData = null;
+        redrawAll();
+        return;
     }
+    dragData=null;
+    curveActiveDrag=null;
+}
+    
     function handleMouseLeave(e){
         isPanning=false;
         dragData=null;
@@ -2048,20 +2195,12 @@ function projectOntoLine(pt, a, b) {
             if(s>=3&&s<=10){saveState();figures.push(createPolygon(wx,wy,s));redrawAll();}
         }
         else if(mode==='line'){
-            if (!lineStartPoint) {
-                let start = {x: wx, y: wy};
-                if (snapEnabled) start = applySnap(wx, wy, -1, -1);
-                lineStartPoint = start;
-                redrawAll();
-            } else {
-                let end = {x: wx, y: wy};
-                if (snapEnabled) end = applySnap(wx, wy, -1, -1);
-                saveState();
-                figures.push(createLine(lineStartPoint, end));
-                lineStartPoint = null;
-                redrawAll();
-            }
-        }
+    let start = {x: wx, y: wy};
+    if (snapEnabled) start = applySnap(wx, wy, -1, -1);
+    lineStartPoint = start;
+    dragData = {type: 'line'};
+    redrawAll();
+}
         else if(mode==='grain'){
             const fi=findClickedFigure(wx,wy);
             if(fi!==-1 && figures[fi].closed){
@@ -2083,7 +2222,7 @@ function projectOntoLine(pt, a, b) {
                 showPanel('vertexInputs');
                 if(!document.getElementById('vertexFijar').checked){
                     saveState();
-                    dragData={type:'vertex',figureIndex:nv.figureIndex,vertexIndex:nv.vertexIndex};
+                    dragData={type:'vertex',figureIndex:nv.figureIndex,vertexIndex:nv.vertexIndex,lastX:figures[nv.figureIndex].vertices[nv.vertexIndex].x,lastY:figures[nv.figureIndex].vertices[nv.vertexIndex].y};
                 }
             }
         }
@@ -2091,6 +2230,16 @@ function projectOntoLine(pt, a, b) {
             const ne=findNearestEdge(wx,wy);
             if(ne){saveState();addVertexOnEdge(ne.figureIndex,ne.edgeIndex,wx,wy);redrawAll();}
         }
+
+        else if(mode==='deleteVertex'){
+            const nv = findNearestVertex(wx,wy);
+            if(nv && !figures[nv.figureIndex].locked){
+                saveState();
+                deleteVertex(nv.figureIndex, nv.vertexIndex);                
+                redrawAll();
+            }
+        }
+//---------
         else if(mode==='curve'){
             // Midpoint drag: al presionar sobre una arista se activa el arrastre de curva
             const ne=findNearestEdge(wx,wy);
@@ -2126,18 +2275,27 @@ function projectOntoLine(pt, a, b) {
                 const fig=figures[ne.figureIndex],edge=fig.edges[ne.edgeIndex];
                 const a=fig.vertices[edge.start],b=fig.vertices[edge.end];
                 selectedEdge={figureIndex:ne.figureIndex,edgeIndex:ne.edgeIndex,clickX:wx,clickY:wy};
-                document.getElementById('resizeValue').value=pxToCm(Math.hypot(b.x-a.x,b.y-a.y));
+                document.getElementById('resizeValue').value=pxToCm(edgeLength(fig, edge));                
                 showPanel('resizeInputs');redrawAll();
             }
         }
         else if(mode==='offset'){
-            const ne=findNearestEdge(wx,wy);
-            if(ne){
-                selectedEdge = {figureIndex:ne.figureIndex, edgeIndex:ne.edgeIndex};
-                document.getElementById('offsetValue').value = '1.0';
-                showPanel('offsetInputs'); redrawAll();
-            }
+    const ne=findNearestEdge(wx,wy);
+    if(ne){
+        const fig=figures[ne.figureIndex];
+        if(!fig.closed) return;
+        if(offsetEdges.length>0 && offsetEdges[0].figureIndex !== ne.figureIndex){
+            showModal({title:'Aviso',body:'Solo puedes seleccionar lados de la misma figura.',buttons:[{label:'OK'}]});
+            return;
         }
+        const idx=offsetEdges.findIndex(o=>o.figureIndex===ne.figureIndex&&o.edgeIndex===ne.edgeIndex);
+        if(idx>=0) offsetEdges.splice(idx,1);
+        else offsetEdges.push({figureIndex:ne.figureIndex, edgeIndex:ne.edgeIndex});
+        if(offsetEdges.length>0) showPanel('offsetInputs');
+        else hidePanel('offsetInputs');
+        redrawAll();
+    }
+}
         else if(mode==='cut'){
             // Seleccionar/deseleccionar solo lÃ¯Â¿Â½neas (no cerradas) como lÃ¯Â¿Â½neas de corte
             for(let fi=figures.length-1;fi>=0;fi--){
@@ -2157,7 +2315,7 @@ function projectOntoLine(pt, a, b) {
             }
         }
         else if(mode==='closeShape'){
-            // Seleccionar/deseleccionar lÃ¯Â¿Â½neas abiertas para cerrar figura
+            // Seleccionar/deseleccionar lIneas abiertas para cerrar figura
             for(let fi=figures.length-1;fi>=0;fi--){
                 const fig=figures[fi];
                 if(fig.closed) continue;
@@ -2199,12 +2357,10 @@ function projectOntoLine(pt, a, b) {
     function handlePointerMove(pos){
         const wx=pos.x,wy=pos.y;
 
-        // Curva midpoint drag Ã¯Â¿Â½ arrastrar mientras presionado
         if(mode==='curve' && curveActiveDrag){
             const fig=figures[curveActiveDrag.figureIndex];
             const edge=fig.edges[curveActiveDrag.edgeIndex];
             const a=fig.vertices[edge.start], b=fig.vertices[edge.end];
-            // Calcular control point desde midpoint donde estÃ¯Â¿Â½ el puntero
             const cp = controlFromMidpoint(a, {x:wx,y:wy}, b);
             edge.curved=true; edge.cubic=false;
             edge.controlX=cp.x; edge.controlY=cp.y;
@@ -2213,18 +2369,17 @@ function projectOntoLine(pt, a, b) {
             return;
         }
 
-        if(!dragData) {
-            // Vista previa de lÃ¯Â¿Â½nea en modo line
-            if(mode==='line' && lineStartPoint) {
-                redrawAll();
-                ctx.save();
-                ctx.setTransform(viewScale,0,0,viewScale,viewOffX,viewOffY);
-                ctx.beginPath(); ctx.moveTo(lineStartPoint.x, lineStartPoint.y); ctx.lineTo(wx, wy);
-                ctx.strokeStyle='#000'; ctx.setLineDash([]); ctx.lineWidth=2/viewScale; ctx.stroke();
-                ctx.restore();
-            }
+        if(mode==='line' && lineStartPoint) {
+            redrawAll();
+            const dpr=window.devicePixelRatio||1;
+            ctx.save();
+            ctx.setTransform(dpr*viewScale,0,0,dpr*viewScale,dpr*viewOffX,dpr*viewOffY);
+            ctx.beginPath(); ctx.moveTo(lineStartPoint.x, lineStartPoint.y); ctx.lineTo(wx, wy);
+            ctx.strokeStyle='#000'; ctx.setLineDash([]); ctx.lineWidth=2/viewScale; ctx.stroke();
+            ctx.restore();
             return;
         }
+        if(!dragData) return;
 
         if(dragData.type==='figure'){
             const dx=wx-dragData.startX,dy=wy-dragData.startY;
@@ -2232,13 +2387,16 @@ function projectOntoLine(pt, a, b) {
             f.vertices.forEach(v=>{v.x+=dx;v.y+=dy;});
             f.edges.forEach(e=>{if(e.controlX!=null){e.controlX+=dx;e.controlY+=dy;}if(e.control2X!=null){e.control2X+=dx;e.control2Y+=dy;}});
             if (snapEnabled) {
+                const thr = getSnapThreshold();
+
+                // snap vértice a vértice
                 for (let vi=0; vi<f.vertices.length; vi++) {
                     const v = f.vertices[vi];
                     for (let ofi=0; ofi<figures.length; ofi++) {
                         if (ofi === dragData.figureIndex) continue;
                         for (let ovi=0; ovi<figures[ofi].vertices.length; ovi++) {
                             const ov = figures[ofi].vertices[ovi];
-                            if (Math.hypot(v.x-ov.x, v.y-ov.y) < getSnapThreshold()) {
+                            if (Math.hypot(v.x-ov.x, v.y-ov.y) < thr) {
                                 const offsetX = ov.x - v.x, offsetY = ov.y - v.y;
                                 f.vertices.forEach(vert => {vert.x += offsetX; vert.y += offsetY;});
                                 f.edges.forEach(e => {if(e.controlX!=null){e.controlX+=offsetX;e.controlY+=offsetY;}if(e.control2X!=null){e.control2X+=offsetX;e.control2Y+=offsetY;}});
@@ -2248,28 +2406,107 @@ function projectOntoLine(pt, a, b) {
                         }
                     }
                 }
+
+                if (snapEdgeEnabled && !f.closed) {
+                    // PASO 1: snap vértice de figura que se mueve contra arista de otra (deslizarse como riel)
+                    let bestD1 = thr, bestOffX1 = 0, bestOffY1 = 0, snapped1 = false;
+                    for (let vi=0; vi<f.vertices.length; vi++) {
+                        const v = f.vertices[vi];
+                        for (let ofi=0; ofi<figures.length; ofi++) {
+                            if (ofi === dragData.figureIndex) continue;
+                            const fig2 = figures[ofi];
+                            for (let ei=0; ei<fig2.edges.length; ei++) {
+                                const e = fig2.edges[ei];
+                                const a = fig2.vertices[e.start], b = fig2.vertices[e.end];
+                                const cl = closestOnLine(v.x, v.y, a.x, a.y, b.x, b.y);
+                                const d = Math.hypot(v.x - cl.x, v.y - cl.y);
+                                if (d < bestD1) {
+                                    const dx2 = b.x-a.x, dy2 = b.y-a.y;
+                                    const len = Math.hypot(dx2, dy2);
+                                    if (len < 0.01) continue;
+                                    const nx = -dy2/len, ny = dx2/len;
+                                    const err = (v.x-cl.x)*nx + (v.y-cl.y)*ny;
+                                    bestD1 = d; bestOffX1 = -err*nx; bestOffY1 = -err*ny; snapped1 = true;
+                                }
+                            }
+                        }
+                    }
+                    if (snapped1) {
+                        f.vertices.forEach(vert => {vert.x+=bestOffX1; vert.y+=bestOffY1;});
+                        f.edges.forEach(e2 => {if(e2.controlX!=null){e2.controlX+=bestOffX1;e2.controlY+=bestOffY1;}if(e2.control2X!=null){e2.control2X+=bestOffX1;e2.control2Y+=bestOffY1;}});
+                    }
+
+                    // PASO 2: snap arista de figura que se mueve contra vértice de otra figura
+                    let bestD2 = thr, bestOffX2 = 0, bestOffY2 = 0, snapped2 = false;
+                    for (let ei=0; ei<f.edges.length; ei++) {
+                        const e = f.edges[ei];
+                        const a = f.vertices[e.start], b = f.vertices[e.end];
+                        for (let ofi=0; ofi<figures.length; ofi++) {
+                            if (ofi === dragData.figureIndex) continue;
+                            const fig2 = figures[ofi];
+                            for (let ovi=0; ovi<fig2.vertices.length; ovi++) {
+                                const ov = fig2.vertices[ovi];
+                                const cl = closestOnLine(ov.x, ov.y, a.x, a.y, b.x, b.y);
+                                const d = Math.hypot(ov.x - cl.x, ov.y - cl.y);
+                                if (d < bestD2) {
+                                    const dx2 = b.x-a.x, dy2 = b.y-a.y;
+                                    const len = Math.hypot(dx2, dy2);
+                                    if (len < 0.01) continue;
+                                    const nx = -dy2/len, ny = dx2/len;
+                                    const err = (cl.x-ov.x)*nx + (cl.y-ov.y)*ny;
+                                    bestD2 = d; bestOffX2 = -err*nx; bestOffY2 = -err*ny; snapped2 = true;
+                                }
+                            }
+                        }
+                    }
+                    if (snapped2) {
+                        f.vertices.forEach(vert => {vert.x+=bestOffX2; vert.y+=bestOffY2;});
+                        f.edges.forEach(e2 => {if(e2.controlX!=null){e2.controlX+=bestOffX2;e2.controlY+=bestOffY2;}if(e2.control2X!=null){e2.control2X+=bestOffX2;e2.control2Y+=bestOffY2;}});
+                    }
+
+                    if (snapped1 || snapped2) {
+                        dragData.startX=wx; dragData.startY=wy;
+                        redrawAll(); return;
+                    }
+                }
             }
             dragData.startX=wx;dragData.startY=wy;redrawAll();
         }
+        
         else if(dragData.type==='vertex'){
             let nx=wx,ny=wy;
             if(snapEnabled){const s=applySnap(wx,wy,dragData.figureIndex,dragData.vertexIndex);nx=s.x;ny=s.y;}
-            figures[dragData.figureIndex].vertices[dragData.vertexIndex].x=nx;
-            figures[dragData.figureIndex].vertices[dragData.vertexIndex].y=ny;
-                        
+            const fig=figures[dragData.figureIndex];
+            const vi=dragData.vertexIndex;
+            fig.vertices[vi].x=nx; fig.vertices[vi].y=ny;
+            fig.edges.forEach(e=>{
+                if(e.controlX!=null){
+                    const a=fig.vertices[e.start], b=fig.vertices[e.end];
+                    const oldA=e.start===vi?{x:dragData.lastX??nx,y:dragData.lastY??ny}:a;
+                    const oldB=e.end===vi  ?{x:dragData.lastX??nx,y:dragData.lastY??ny}:b;
+                    const denom=Math.hypot(oldB.x-oldA.x,oldB.y-oldA.y);
+                    if(denom>0.01){
+                        const tx=((e.controlX-oldA.x)*(oldB.x-oldA.x)+(e.controlY-oldA.y)*(oldB.y-oldA.y))/(denom*denom);
+                        const ty=((e.controlY-oldA.y)*(oldB.x-oldA.x)-(e.controlX-oldA.x)*(oldB.y-oldA.y))/(denom*denom);
+                        e.controlX=a.x+tx*(b.x-a.x)-ty*(b.y-a.y);
+                        e.controlY=a.y+tx*(b.y-a.y)+ty*(b.x-a.x);
+                    }
+                }
+            });
+            dragData.lastX=nx; dragData.lastY=ny;
             redrawAll(); if(snapEnabled) drawSnapGuides(nx,ny,dragData.figureIndex,dragData.vertexIndex);
         }
-    }
+}
 
     function applyResize(){
         if(!selectedEdge){showModal({title:'Error',body:'Primero selecciona una arista.',buttons:[{label:'OK'}]});return;}
         const newPx=cmToPx(document.getElementById('resizeValue').value);
-        if(isNaN(newPx)||newPx<=0){showModal({title:'Valor invÃ¯Â¿Â½lido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
+        if(isNaN(newPx)||newPx<=0){showModal({title:'Valor invAlido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
         saveState();resizeEdge(selectedEdge.figureIndex,selectedEdge.edgeIndex,newPx,selectedEdge.clickX,selectedEdge.clickY);
         hidePanel('resizeInputs');redrawAll();
     }
 
-    
+
 
     function applyVertexDelta(){
         if(!selectedVertex){showModal({title:'Error',body:'Primero selecciona un vértice.',buttons:[{label:'OK'}]});return;}
@@ -2280,7 +2517,7 @@ function projectOntoLine(pt, a, b) {
         const v=figures[selectedVertex.figureIndex].vertices[selectedVertex.vertexIndex];
         if(!isNaN(dx)) v.x+=dx*PX_PER_CM;
         if(!isNaN(dy)) v.y+=dy*PX_PER_CM;
-                
+
         document.getElementById('vertexDX').value='';
         document.getElementById('vertexDY').value='';
         redrawAll();
@@ -2297,7 +2534,7 @@ function projectOntoLine(pt, a, b) {
             }))
         };
         const json=JSON.stringify(data,null,2);
-        showModal({title:'Exportar Ã¯Â¿Â½ patron.json',textarea:json,
+        showModal({title:'Exportar patron.json',textarea:json,
             buttons:[{label:'?? Copiar',value:'copy'},{label:'?? Descargar',value:'dl'},{label:'? Cerrar',value:'close'}]
         }).then(a=>{
             if(a==='copy'){
@@ -2316,28 +2553,110 @@ function projectOntoLine(pt, a, b) {
             }
         });
     }
+    
+    function exportSVG(){
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    figures.forEach(fig=>{fig.vertices.forEach(v=>{minX=Math.min(minX,v.x);minY=Math.min(minY,v.y);maxX=Math.max(maxX,v.x);maxY=Math.max(maxY,v.y);});});
+    const pad=20;
+    const W=maxX-minX+pad*2, H=maxY-minY+pad*2;
+    const ox=minX-pad, oy=minY-pad;
+
+    function pathD(fig){
+        let d='';
+        fig.edges.forEach(e=>{
+            const a=fig.vertices[e.start], b=fig.vertices[e.end];
+            if(!d) d+=`M ${a.x-ox} ${a.y-oy} `;
+            if(e.cubic&&e.control2X!=null) d+=`C ${e.controlX-ox} ${e.controlY-oy} ${e.control2X-ox} ${e.control2Y-oy} ${b.x-ox} ${b.y-oy} `;
+            else if(e.curved&&e.controlX!=null) d+=`Q ${e.controlX-ox} ${e.controlY-oy} ${b.x-ox} ${b.y-oy} `;
+            else d+=`L ${b.x-ox} ${b.y-oy} `;
+        });
+        if(fig.closed) d+='Z';
+        return d.trim();
+    }
+
+    let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">\n`;
+    figures.forEach((fig,i)=>{
+        svg+=`  <path id="fig${i}" d="${pathD(fig)}" fill="none" stroke="black" stroke-width="2"/>\n`;
+    });
+    svg+=`</svg>`;
+
+    showModal({title:'Exportar SVG',textarea:svg,
+        buttons:[{label:'📋 Copiar',value:'copy'},{label:'💾 Descargar',value:'dl'},{label:'✕ Cerrar',value:'close'}]
+    }).then(a=>{
+        if(a==='copy'){
+            (navigator.clipboard?navigator.clipboard.writeText(svg):Promise.reject())
+                .catch(()=>{const ta=document.querySelector('.modal-box textarea');if(ta){ta.select();document.execCommand('copy');}});
+        } else if(a==='dl'){
+            const blob=new Blob([svg],{type:'image/svg+xml'});
+            const url=URL.createObjectURL(blob),el=document.createElement('a');
+            el.href=url;el.download='patron.svg';document.body.appendChild(el);el.click();
+            setTimeout(()=>{document.body.removeChild(el);URL.revokeObjectURL(url);},300);
+        }
+    });
+}
 
     function importJSON(){
-        const inp=document.createElement('input');inp.type='file';inp.accept='.json';
-        inp.onchange=e=>{
-            const file=e.target.files[0];if(!file)return;
-            const reader=new FileReader();
-            reader.onload=ev=>{
-                try{
-                    const data=JSON.parse(ev.target.result);
-                    if(data.figures&&Array.isArray(data.figures)){
-                        if(data.grainDirection){grainDir=data.grainDirection;document.getElementById('grainDirBtn').textContent=grainDir==='horizontal'?'?':'?';}
-                        saveState();figures=data.figures;redrawAll();
-                    } else if(Array.isArray(data)){
-                        if(!data.every(f=>f.vertices&&f.edges)){showModal({title:'Error',body:'Formato incorrecto.',buttons:[{label:'OK'}]});return;}
-                        saveState();figures=data;redrawAll();
-                    } else showModal({title:'Error',body:'Formato incorrecto.',buttons:[{label:'OK'}]});
-                }catch(err){showModal({title:'Error',body:err.message,buttons:[{label:'OK'}]});}
+    showModal({
+        title:'Importar JSON',
+        body:'¿Subir archivo o pegar texto?',
+        buttons:[{label:'📂 Archivo',value:'file'},{label:'📋 Pegar',value:'paste'},{label:'✕ Cancelar',value:'cancel'}]
+    }).then(action=>{
+        if(action==='file'){
+            const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+            inp.onchange=e=>{
+                const file=e.target.files[0];if(!file)return;
+                const reader=new FileReader();
+                reader.onload=ev=>{ parseImportJSON(ev.target.result); };
+                reader.readAsText(file);
             };
-            reader.readAsText(file);
-        };
-        inp.click();
-    }
+            inp.click();
+        } else if(action==='paste'){
+    let capturedText='';
+    showModal({
+        title:'Pegar JSON',
+        textarea:'',
+        editable:true,
+        buttons:[{label:'✓ Importar',value:'ok'},{label:'✕ Cancelar',value:'cancel'}]
+    }).then(r=>{
+        if(r==='ok') parseImportJSON(capturedText);
+    });
+    setTimeout(()=>{
+        const ta=document.querySelector('.modal-box textarea');
+        if(ta) ta.addEventListener('input',e=>capturedText=e.target.value);
+    },100);
+}
+    });
+}
+
+function parseImportJSON(text){
+    try{
+        const data=JSON.parse(text);
+        if(data.figures&&Array.isArray(data.figures)){
+            if(data.grainDirection){grainDir=data.grainDirection;document.getElementById('grainDirBtn').textContent=grainDir==='horizontal'?'→':'↕';}
+            saveState();figures=[...figures,...data.figures];
+            centerViewOnFigures();redrawAll();
+        } else if(Array.isArray(data)){
+            if(!data.every(f=>f.vertices&&f.edges)){showModal({title:'Error',body:'Formato incorrecto.',buttons:[{label:'OK'}]});return;}
+            saveState();figures=[...figures,...data];
+            centerViewOnFigures();redrawAll();
+        } else showModal({title:'Error',body:'Formato incorrecto.',buttons:[{label:'OK'}]});
+    }catch(err){showModal({title:'Error',body:err.message,buttons:[{label:'OK'}]});}
+}
+
+function centerViewOnFigures(){
+    if(figures.length===0) return;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    figures.forEach(fig=>fig.vertices.forEach(v=>{
+        minX=Math.min(minX,v.x);minY=Math.min(minY,v.y);
+        maxX=Math.max(maxX,v.x);maxY=Math.max(maxY,v.y);
+    }));
+    const W=window.innerWidth, H=window.innerHeight-getToolbarHeight();
+    const figW=maxX-minX, figH=maxY-minY;
+    viewScale=Math.min(W/figW, H/figH)*0.85;
+    viewOffX=W/2 - (minX+figW/2)*viewScale;
+    viewOffY=getToolbarHeight() + H/2 - (minY+figH/2)*viewScale;
+    updateZoomIndicator();
+}
 
     document.addEventListener('keydown',e=>{
         if(e.ctrlKey&&e.key==='z'&&!e.shiftKey){e.preventDefault();undoAction();}
