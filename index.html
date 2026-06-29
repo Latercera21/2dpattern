@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PocketCad</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Arial,sans-serif;
+    color:#222;
+    text-align:center;
+    padding:20px;
+}
+
+h2{
+    font-family:Georgia,"Times New Roman",serif;
+    
+    font-size:25px;
+    margin-bottom:8px;
+    color: #009fbe;
+}
+
+.subtitle{
+    margin-bottom:18px;
+    color:#555;
+    font-size: 15px;
+}
+
+.description{
+    max-width:700px;
+    margin:0 auto 20px;
+    line-height:1.5;
+    font-size: 14px;
+}
+
+.enter{
+    margin:18px 0 30px;
+}
+
+button{
+    padding:8px 18px;
+    font-size:15px;
+    border:1px solid #888;
+    border-radius:8px;
+    background:#fff;
+    cursor:pointer;
+    box-shadow:0 1px 3px rgba(0,0,0,.15);
+}
+
+button:hover{
+    background:#f4f4f4;
+}
+
+h3{
+    margin:25px 0 15px;
+    font-size:14px;
+    color: #c3b172;
+    font-family:Georgia,"Times New Roman",serif;
+
+}
+
+details{
+    margin:6px 0;
+}
+
+summary{
+    list-style:none;
+    cursor:pointer;
+    font-weight:bold;
+    outline:none;
+    color: #a1a1a1;
+    font-size: 14px;
+}
+
+summary::-webkit-details-marker{
+    display:none;
+    
+}
+
+details p{
+    margin:6px 0 12px;
+    color:#555;
+    line-height:1.5;
+    font-size: 13px;
+}
+</style>
+
+</head>
+<body>
+
+<h2>PocketCad</h2>
+
+<p class="subtitle">
+Moldería digital para la industria textil
+</p>
+
+<p class="description">
+PocketCad es una herramienta que nos permite trabajar en un celular o en una computadora de escritorio.
+Crear, editar y preparar moldes digitales.<br>
+Piezas, curvas, cortes, simetrías, dirección de hilo, exportación de proyectos, nesting: tizada digital y previsualización 3D.
+</p>
+
+<div class="enter">
+<button onclick="location.href='cadclothDelta29v4a.html'">
+Entrar al programa
+</button>
+</div>
+
+<h3>Guía rápida de herramientas</h3>
+
+<details>
+<summary>◻️ Crear polígono</summary>
+<p>Crea una nueva pieza base.</p>
+</details>
+
+<details>
+<summary>🖊️ Crear línea</summary>
+<p>Dibuja líneas de construcción o corte.</p>
+</details>
+
+<details>
+<summary>📌 Editar vértice</summary>
+<p>Permite mover vértices manualmente. Incluye un candado para fijar el vértice seleccionado y evitar movimientos libres. También permite aplicar desplazamientos horizontales y verticales mediante valores numéricos.</p>
+</details>
+
+<details>
+<summary>🧲 Snap</summary>
+<p>Activa el ajuste automático entre puntos y elementos cercanos para facilitar alineaciones precisas.</p>
+</details>
+
+<details>
+<summary>⚫ Agregar vértice</summary>
+<p>Inserta nuevos puntos en una arista.</p>
+</details>
+
+<details>
+<summary>➖ Eliminar vértice</summary>
+<p>Elimina puntos seleccionados de una figura manteniendo la continuidad de la geometría.</p>
+</details>
+
+<details>
+<summary>📏 Cambiar longitud</summary>
+<p>Modifica la longitud exacta de una arista seleccionada mediante una medida introducida en centímetros.</p>
+</details>
+
+<details>
+<summary>〰️ Curvar arista</summary>
+<p>Convierte una línea recta en curva.</p>
+</details>
+
+<details>
+<summary>📐 Curva a recta</summary>
+<p>Convierte una curva nuevamente en línea recta.</p>
+</details>
+
+<details>
+<summary>📖 Desdoblar</summary>
+<p>Crea automáticamente la parte opuesta de una pieza simétrica.</p>
+</details>
+
+<details>
+<summary>✋ Mover figura</summary>
+<p>Desplaza una pieza completa.</p>
+</details>
+
+<details>
+<summary>🔒 Cerrar figura</summary>
+<p>Marca una pieza como cerrada para completar su contorno. Algunas operaciones requieren una figura cerrada para funcionar correctamente.</p>
+</details>
+
+<details>
+<summary>⛓ Unir curvas</summary>
+<p>Combina curvas consecutivas para formar un trazado continuo más limpio y uniforme.</p>
+</details>
+
+<details>
+<summary>🔄 Rotar figura</summary>
+<p>Gira una figura según el ángulo indicado.</p>
+</details>
+
+<details>
+<summary>⧉ Duplicar figura</summary>
+<p>Crea una copia exacta.</p>
+</details>
+
+<details>
+<summary>🪞 Reflejar figura</summary>
+<p>Genera una versión simétrica.</p>
+</details>
+
+<details>
+<summary>⇄ Costura / Desfase</summary>
+<p>Genera una línea paralela a una arista seleccionada. Se utiliza para crear márgenes de costura, dobladillos y separaciones controladas. El valor se introduce en centímetros.</p>
+</details>
+
+<details>
+<summary>✂️ Cortar figura</summary>
+<p>Divide una pieza mediante líneas de corte.</p>
+</details>
+
+<details>
+<summary>🧵 Dirección de hilo</summary>
+<p>Define la orientación del tejido para corte y confección.</p>
+</details>
+
+<details>
+<summary>🗑️ Eliminar figura</summary>
+<p>Elimina completamente una pieza seleccionada del proyecto.</p>
+</details>
+
+<details>
+<summary>🔐 Bloquear figura</summary>
+<p>Impide modificaciones accidentales sobre una pieza. Una figura bloqueada no puede moverse ni editarse hasta ser desbloqueada nuevamente.</p>
+</details>
+
+<details>
+<summary>💾 Exportar JSON</summary>
+<p>Guarda el proyecto actual.</p>
+</details>
+
+<details>
+<summary>🖼️ Exportar SVG</summary>
+<p>Exporta las piezas en formato SVG para utilizarlas en otros programas de diseño, corte o anidado.</p>
+</details>
+
+<details>
+<summary>📂 Importar JSON</summary>
+<p>Carga un proyecto guardado.</p>
+</details>
+
+<details>
+<summary>↩️ Deshacer</summary>
+<p>Revierte la última acción realizada.</p>
+</details>
+<br>
+<div style="color: #8d110095">R∆yoTęmper∆</div>
+<br>
+<footer style="color: #000155a9; border-radius: 8px; padding: 8px 10px; display: inline-block;">latercera21@hotmail.com</footer>
+
+</body>
+</html>
