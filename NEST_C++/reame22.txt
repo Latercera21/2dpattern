@@ -1,0 +1,132 @@
+CONSTANTES
+MARGEN = 0.5
+STEP = 0.5
+ELITE_SIZE = 5
+RESTART = max(15, iteraciones*0.12)
+
+ESTRUCTURA PIEZA
+id, poly[], bb{minX,minY,maxX,maxY,w,h}, area
+
+CONSTRUCCION POLIGONO (piezas con curvas cuadraticas)
+para cada segmento:
+  si line: push punto inicial
+  si quad (bezier cuadratica con p0,cp,p1): 8 subdivisiones
+    ptQuad(p0,cp,p1,t) = lerp( lerp(p0,cp,t), lerp(cp,p1,t), t )
+normalizar poly restando minX,minY (bbox en origen)
+
+GEOMETRIA
+bbox(poly): min/max x,y -> {minX,minY,maxX,maxY,w,h}
+translate(poly,dx,dy)
+rotate180(poly): x' = bb.w-(x-bb.minX), y' = bb.h-(y-bb.minY)
+pointInPoly(pt,poly): ray casting even-odd
+segmentsIntersect(p1,p2,p3,p4): cross product sign test (d1..d4)
+collide(A,B):
+  bbA,bbB no solapan -> false
+  algun vertice de A dentro de B -> true
+  algun vertice de B dentro de A -> true
+  algun par de aristas se cruza -> true
+  si no -> false
+
+CAN PLACE(poly,x,y,colocadas,telaW)
+  tp = translate(poly, x+MARGEN, y+MARGEN)
+  bb = bbox(tp)
+  si bb.minX<0 || bb.maxX>telaW || bb.minY<0 -> false
+  para cada colocada: si bbox no solapa -> continue; si collide(tp,col.poly) -> false
+  true
+
+BUSCAR POSICION(vpoly,vbb,maxAltura,colocadas,telaW)
+  xSet = {0, telaW-vbb.w}
+  para cada colocada: agregar candidatos tx, tx+bb.w, tx-vbb.w, tx+bb.w-vbb.w (filtrar 0<=x<=maxX)
+  agregar 8 valores aleatorios en [0,maxX]
+  mejorScore = inf
+  para cada sx en xSet:
+    tx=sx; ty=maxAltura+STEP
+    drop=10
+    while ty-drop>=0 && canPlace(tx,ty-drop): ty-=drop
+    while ty-STEP>=0 && canPlace(tx,ty-STEP): ty-=STEP
+    // slide lateral buscando bajar mas
+    moved=true
+    while moved:
+      moved=false
+      para dx en [-STEP,+STEP]:
+        si canPlace(tx+dx,ty):
+          nx=tx+dx; ny=ty
+          while ny-STEP>=0 && canPlace(nx,ny-STEP): ny-=STEP
+          si ny<ty: tx=nx; ty=ny; moved=true
+    score = ty*100000 + tx
+    si score<mejorScore: guardar mejor tx,ty
+  return mejor tx,ty
+
+CALCULAR LAYOUT(ordenPiezas,telaW)
+  colocadas=[]; maxAltura=0
+  para cada pieza p en orden:
+    variantes = [ {poly:p.poly,bb:p.bb,rot:false}, {poly:rotate180(p.poly),bb:bbox(rot),rot:true} ]
+    para cada variante (si bb.w<=telaW):
+      pos = buscarPosicion(variante, maxAltura, colocadas, telaW)
+      score = pos.ty*100000+pos.tx
+      guardar mejor variante/pos
+    colocar pieza final: poly = translate(var.poly, pos.tx+MARGEN, pos.ty+MARGEN)
+    colocadas.push({id,poly,bbF=bbox(poly),tx,ty,bb:var.bb,rotada})
+    maxAltura = max(maxAltura, pos.ty+var.bb.h)
+
+  // SHAKE: subir cada pieza mientras no colisione
+  para cada colocada i:
+    others = resto
+    while true:
+      tp = translate(cur.poly,0,-STEP)
+      si bbox(tp).minY<0: break
+      si tp colisiona con algun other: break
+      cur.poly=tp; cur.ty-=STEP
+
+  finalH = max(col.ty+col.bb.h+MARGEN) sobre todas las colocadas
+  return { layout:[{id,tx,ty,rotada}], altura: finalH }
+
+MUTACIONES (elegir 1 de 5, pesos adaptativos segun exito reciente)
+tipo0 swap: elegir i,j random (o adyacentes si ultima mutacion tuvo exito) y swap
+tipo1 move: sacar pieza i, insertar en j (cercano a i si ultima tuvo exito, si no random)
+tipo2 smallFront: tomar pieza de menor area (de un percentil aleatorio 30-70%) y moverla al frente
+tipo3 bigMid: buscar pieza de mayor area entre las primeras 5, moverla a posicion entre 1/3 y 85% del arreglo
+tipo4 shuffleSeg: tomar segmento random de tamaño 2-5 (menor si hubo exito reciente) y mezclarlo (Fisher-Yates parcial)
+
+pesos iniciales = [0.22,0.22,0.15,0.18,0.23]
+si ultimos 20 intentos con exito: aumentar peso del tipo que mas exito tuvo (recalcular con successCounts)
+si ultima mutacion tuvo exito, 40% de probabilidad de repetir el mismo tipo
+
+CRUCE(o1,o2)
+  result[n] = null
+  para i: si o1[i].id==o2[i].id y no usado: result[i]=o1[i]
+  llenar huecos alternando o1/o2: buscar primer id no usado en la fuente actual, si no hay, buscar en la otra
+  return result
+
+BUCLE PRINCIPAL (algoritmo genetico + simulated annealing)
+  ordenInicial = ordenar piezas desc por area (o semilla dada)
+  mejorResultado = calcularLayout(ordenInicial)
+  elite = [{orden, altura}]  // max ELITE_SIZE, ordenado asc por altura
+  ordenActual = ordenInicial; resultadoActual = mejorResultado
+  sinMejora = 0
+
+  para i in [0, iteraciones):
+    N_MUT = 5 candidatos por iteracion:
+      candidato0: si elite.length>1 -> cruzar dos elites random
+      candidato1: si elite.length>0 y prob 30% -> mutar un elite random
+      resto: mutar(ordenActual)
+      evaluar cada candidato con calcularLayout, quedarse con el de menor altura
+
+    diff = candidato.altura - resultadoActual.altura
+    temp = 1 - i/iteraciones
+    aceptar si diff<0 OR random() < exp(-diff/(temp*2+0.05))
+    si acepta: ordenActual=candidato; resultadoActual=res; marcar exito=(diff<0)
+    si no acepta: exito=false
+
+    si resultadoActual.altura < mejorResultado.altura - 0.05:
+      mejorResultado=resultadoActual; mejorOrden=ordenActual; sinMejora=0
+      elite.push({orden,altura}); ordenar asc; truncar a ELITE_SIZE
+    si no: sinMejora++
+
+    si sinMejora>=RESTART:
+      sinMejora=0
+      60% prob: reiniciar ordenActual = copia de un elite random entre los 3 mejores
+      40% prob: tomar mejorOrden, aplicarle 2-3 mutaciones seguidas, usar eso
+      recalcular resultadoActual; si mejora, actualizar mejorResultado/elite igual que arriba
+
+  return mejorResultado (layout final + altura)
