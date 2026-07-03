@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-    <title>CADCloth</title>
+    <title>PocketCad</title>
     <style>
         * { box-sizing: border-box; }
         html, body {
@@ -58,35 +58,31 @@
 </head>
 <body>   
     <div class="toolbar">
-        <span style="font-weight:bold; margin-right:8px;">CadCloth</span>
+        <span style="font-weight:bold; margin-right:8px;">PocketCad</span>
         <button id="createBtn"     onclick="toggleCreate()"     title="Crear polígono">◻️</button>
-        
+
         <input  type="number" id="sidesInput" min="3" max="10" value="4" title="Lados" style="width:32px; background:#bebcbc; border:1px solid #888; border-radius:1px; padding:2px 2px; font-size:14px;">
         <button id="lineBtn"       onclick="toggleLine()"       title="Crear línea">🖊️</button>
-        <button id="curveBtn"      onclick="toggleCurve()"      title="Curvar arista">〜</button>                  
+        <button id="curveBtn"      onclick="toggleCurve()"      title="Curvar arista">〜</button>
+        <button id="moveBtn"       onclick="toggleMove()"       title="Mover figura">✋</button>                
         <button id="vertexBtn"     onclick="toggleVertex()"     title="Editar vértice">📌</button>
         <button id="snapBtn"       onclick="toggleSnap()"       title="Snap">🧲</button>
-        <button id="snapEdgeBtn" onclick="toggleSnapEdge()" title="Snap a arista" style="display:none">🧲📏</button>        
-        <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vértice">⚫</button>
-        <button id="deleteVertexBtn" onclick="toggleDeleteVertex()" title="Eliminar vértice">➖</button>
+        <button id="snapEdgeBtn" onclick="toggleSnapEdge()" title="Snap a arista" style="display:none">🧲📐</button>        
         <button id="resizeBtn"     onclick="toggleResize()"     title="Cambiar longitud">📏</button>
         <button id="straightenBtn" onclick="toggleStraighten()" title="Curva→Recta">📐</button>
-
-        <button id="mirrorBtn"     onclick="toggleMirror()"     title="Desdoblar">📖</button>
-        <button id="moveBtn"       onclick="toggleMove()"       title="Mover figura">✋</button>
-        <button id="lockBtn"       onclick="toggleLock()"       title="Bloquear/desbloquear">🔐</button>
-        <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">⇄</button>  
+        <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vértice">⚫</button>
+        <button id="deleteVertexBtn" onclick="toggleDeleteVertex()" title="Eliminar vértice">➖</button>
         <button id="closeShapeBtn" onclick="toggleCloseShape()" title="Cerrar figura">🔒</button>
+        <button id="edgeMoveBtn"   onclick="toggleEdgeMove()"   title="Mover arista/lado">🖋️</button>  
+        <button id="mirrorBtn"     onclick="toggleMirror()"     title="Desdoblar">📖</button>
+        <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">⇄</button>        
         <button id="closeApplyBtn" onclick="applyCloseShape()"  title="Aplicar cierre">✔</button>
-             
-        
+        <button id="lockBtn"       onclick="toggleLock()"       title="Bloquear/desbloquear">🔐</button>
         <button id="duplicateBtn"  onclick="toggleDuplicate()"  title="Duplicar">⧉</button>
         <button id="reflectBtn"    onclick="toggleReflect()"    title="Reflejar">🪞</button>
         <button onclick="undoAction()" title="Deshacer" >↩</button>       
-        
         <button id="cutBtn"        onclick="toggleCut()"        title="Cortar figura con línea(s)">✂</button>
         <button id="cutApplyBtn"   onclick="applyCut()"         title="Aplicar corte">✔</button>
-
         <button id="grainBtn"      onclick="toggleGrainMode()"  title="Asignar hilo a figura">🧵</button>
         <button id="grainDirBtn"   onclick="toggleGrainDir()"   title="Dirección del hilo" style="display:none">→</button>
         <button id="rotateBtn"     onclick="toggleRotate()"     title="Rotar">🔄</button>      
@@ -94,14 +90,13 @@
         <button id="joinCurvesBtn" onclick="toggleJoinCurves()" title="Unir curvas">⛓</button>
         <button id="joinApplyBtn"  onclick="applyJoinCurves()"  title="Aplicar unión" style="display:none">✔</button>  
         <button id="deleteBtn"     onclick="toggleDelete()"     title="Eliminar figura">🗑️</button>
-              
         <button onclick="clearAll()"   title="Eliminar todo">💥</button>
         <button onclick="exportJSON()" title="Exportar JSON">💾</button>
         <button onclick="exportSVG()" title="Exportar SVG">🖼️</button>
         <button onclick="importJSON()" title="Importar JSON">📂</button>
         <span id="zoomIndicator">100%</span>
         <button onclick="resetView()" title="Restablecer vista">⊙</button>
-        <button onclick="location.href='Nesting.html'">NestingPro</button>
+        <button onclick="location.href='nesting.html'">nestingPro</button>//
         <span style="font-weight:bold; color:#eff4fd; margin:0 6px; font-size:15px; align-self:center;">R∆yøTęmper∆</span>
         <span style="font-weight:bold; color:#585858; margin:0 6px; font-size:15px; align-self:center;">latercera21@hotmail.com</span>
     </div>
@@ -149,6 +144,7 @@
     let dragData       = null;
     let selectedVertex = null;
     let selectedEdge   = null;
+    let resizeEdges    = [];
     let snapEnabled    = false;
     let snapEdgeEnabled = false;    
     let joinSelection  = [];
@@ -198,12 +194,14 @@
         if (id === 'vertexInputs') { selectedVertex = null; }
         if (id === 'resizeInputs') {
             selectedEdge = null;
+            resizeEdges = [];
+            document.getElementById('resizeValue').disabled = false;
             document.getElementById('resizeIndicator').textContent = '';
         }
         if (id === 'offsetInputs') { selectedEdge = null; }
         redrawAll();
     }
-    
+
     function toggleVertexInputs(){
         const checked = document.getElementById('vertexFijar').checked;
         document.getElementById('vertexCoordInputs').style.display = checked ? 'flex' : 'none';
@@ -292,10 +290,11 @@
     function toggleAddVertex()  { setMode('addVertex'); }
     function toggleDeleteVertex() { setMode('deleteVertex'); }
     function toggleResize()     { setMode('resize'); }
+    function toggleEdgeMove()   { setMode('edgeMove'); }
     function toggleRotate()     { setMode('rotate'); }
     function toggleDuplicate()  { setMode('duplicate'); }
     function toggleReflect()    { setMode('reflect'); }
-   
+
     function toggleOffset() {
     if (mode==='offset') {
         setMode('none');
@@ -311,7 +310,7 @@
         if (mode==='vertex') { setMode('none'); hidePanel('vertexInputs'); }
         else { setMode('vertex'); }
     }
-    
+
     function toggleSnap() {
     snapEnabled = !snapEnabled;
     document.getElementById('snapBtn').classList.toggle('on', snapEnabled);
@@ -324,8 +323,8 @@ function toggleSnapEdge() {
     snapEdgeEnabled = !snapEdgeEnabled;
     document.getElementById('snapEdgeBtn').classList.toggle('on', snapEdgeEnabled);
 }
-    
-    
+
+
     function toggleJoinCurves() {
         if (mode==='joinCurves') {
             setMode('none');
@@ -367,7 +366,7 @@ function toggleSnapEdge() {
     }
 
     const ALL_MODES = ['create','line','move','vertex','addVertex','deleteVertex','curve','straighten',
-        'delete','mirror','resize','rotate','duplicate','reflect',
+        'delete','mirror','resize','edgeMove','rotate','duplicate','reflect',
         'joinCurves','grain','offset','cut','closeShape','lock'];
 
     function setMode(newMode) {
@@ -409,7 +408,7 @@ function toggleSnapEdge() {
         }
     return {x:sx,y:sy};
 }
-    
+
     function drawSnapGuides(x, y, exFi, exVi) {
         ctx.save();
         ctx.strokeStyle='rgba(0,120,255,0.5)';
@@ -634,7 +633,7 @@ function toggleSnapEdge() {
         return {vertices: verts, edges};
     }
 
-    
+
 
      function findExactCrossings(figure, cutData) {
     // Muestreamos la figura y la línea de corte como polilíneas
@@ -713,7 +712,7 @@ function toggleSnapEdge() {
 }
 //findExactCrossing fin
 
-    
+
 
     function edgeToSegment(figure, edge) {
     const a = figure.vertices[edge.start];
@@ -989,140 +988,6 @@ function segmentToEdge(seg, startIdx, endIdx) {
         };
     }
 
-
-    function splitPartial(figure, stroke, crossings) {
-        const c0 = crossings[0];
-        const strokeEnd = stroke[stroke.length - 1];
-        const polyPts = sampleFigureEdges(figure, 80);
-        if (!pointInPolyPts(strokeEnd, polyPts)) return null;
-
-        const cutData = buildCutEdges(cutLineIndices);
-        if (cutData.vertices.length < 2) return null;
-
-        // Encontrar el edge original donde cae c0
-        // Recorrer edges acumulando puntos muestreados para mapear c0.edgeIdx
-        let origEdgeIdx = 0;
-        let accumulated = 0;
-        for (let ei = 0; ei < figure.edges.length; ei++) {
-            const e = figure.edges[ei];
-            const isCurved = (e.cubic && e.control2X != null) || (e.curved && e.controlX != null);
-            const pts = isCurved ? 80 : 1;
-            if (c0.edgeIdx < accumulated + pts) { origEdgeIdx = ei; break; }
-            accumulated += pts;
-            origEdgeIdx = ei;
-        }
-
-        const newVerts = figure.vertices.map(v => ({x: v.x, y: v.y}));
-        const newEdges = figure.edges.map(e => Object.assign({}, e));
-
-        const insertAt = newEdges[origEdgeIdx].end;
-        newVerts.splice(insertAt, 0, {x: c0.x, y: c0.y});
-        newEdges.forEach(e => {
-            if (e.start >= insertAt) e.start++;
-            if (e.end   >= insertAt) e.end++;
-        });
-
-        const oldEnd = newEdges[origEdgeIdx].end;
-        const origEdge = figure.edges[origEdgeIdx];
-        if (origEdge.curved && origEdge.controlX != null) {
-            const pa = figure.vertices[origEdge.start];
-            const pb = figure.vertices[origEdge.end];
-            const pc = {x: origEdge.controlX, y: origEdge.controlY};
-            let t = 0;
-            let best = Infinity;
-            for (let k = 0; k <= 200; k++) {
-                const tt = k/200;
-                const x = (1-tt)*(1-tt)*pa.x + 2*(1-tt)*tt*pc.x + tt*tt*pb.x;
-                const y = (1-tt)*(1-tt)*pa.y + 2*(1-tt)*tt*pc.y + tt*tt*pb.y;
-                const d = Math.hypot(x - c0.x, y - c0.y);
-                if (d < best) { best = d; t = tt; }
-            }
-            const split = splitQuadraticBezier(pa, pc, pb, t);
-            newEdges[origEdgeIdx].end = insertAt;
-            newEdges[origEdgeIdx].curved = true;
-            newEdges[origEdgeIdx].controlX = split.left.control.x;
-            newEdges[origEdgeIdx].controlY = split.left.control.y;
-            newEdges[origEdgeIdx].control2X = null;
-            newEdges[origEdgeIdx].control2Y = null;
-            newEdges.splice(origEdgeIdx + 1, 0, {
-                start: insertAt, end: oldEnd,
-                curved: true, cubic: false,
-                controlX: split.right.control.x, controlY: split.right.control.y,
-                control2X: null, control2Y: null
-            });
-        } else {
-            newEdges[origEdgeIdx].end = insertAt;
-            newEdges[origEdgeIdx].curved = false;
-            newEdges[origEdgeIdx].cubic = false;
-            newEdges[origEdgeIdx].controlX = null;
-            newEdges[origEdgeIdx].controlY = null;
-            newEdges[origEdgeIdx].control2X = null;
-            newEdges[origEdgeIdx].control2Y = null;
-            newEdges.splice(origEdgeIdx + 1, 0, {
-                start: insertAt, end: oldEnd,
-                curved: false, cubic: false,
-                controlX: null, controlY: null, control2X: null, control2Y: null
-            });
-        }
-
-        const cIdx = insertAt;
-        const tipIdx = newVerts.length;
-        newVerts.push({x: strokeEnd.x, y: strokeEnd.y});
-
-        const cv = cutData.vertices;
-        const interiorVerts = cv.slice(1, cv.length - 1);
-        const interiorStart = newVerts.length;
-        interiorVerts.forEach(v => newVerts.push({x: v.x, y: v.y}));
-
-        const goEdges = cutData.edges;
-        const n = goEdges.length;
-
-        for (let i = 0; i < n; i++) {
-            const e = Object.assign({}, goEdges[i]);
-            e.start = (i === 0) ? cIdx : (interiorStart + i - 1);
-            e.end   = (i === n - 1) ? tipIdx : (interiorStart + i);
-            if (interiorVerts.length === 0 && n === 1) { e.start = cIdx; e.end = tipIdx; }
-            newEdges.push(e);
-        }
-
-        for (let i = n - 1; i >= 0; i--) {
-            const e = Object.assign({}, goEdges[i]);
-            e.start = (i === n - 1) ? tipIdx : (interiorStart + i);
-            e.end   = (i === 0) ? cIdx : (interiorStart + i - 1);
-            if (interiorVerts.length === 0 && n === 1) { e.start = tipIdx; e.end = cIdx; }
-            newEdges.push(e);
-        }
-
-        return {vertices: newVerts, edges: newEdges, closed: true, grain: figure.grain || null};
-    }
-
-
-    function pointInPolyPts(p, pts) {
-        let inside=false;
-        for(let i=0,j=pts.length-1;i<pts.length;j=i++) {
-            const xi=pts[i].x,yi=pts[i].y,xj=pts[j].x,yj=pts[j].y;
-            if(((yi>p.y)!==(yj>p.y))&&(p.x<(xj-xi)*(p.y-yi)/(yj-yi)+xi)) inside=!inside;
-        }
-        return inside;
-    }
-
-    
-
-    
-
-    // Convierte array de puntos en figura CAD Cloth
-    function ptsToFigure(pts, closed=true) {
-        const vertices = pts.map(p => ({x:p.x, y:p.y}));
-        const edges = [];
-        const n = vertices.length;
-        if (closed) {
-            for(let i=0;i<n;i++) edges.push(makeEdge(i,(i+1)%n));
-        } else {
-            for(let i=0;i<n-1;i++) edges.push(makeEdge(i,i+1));
-        }
-        return {vertices, edges, closed, grain:null};
-    }
-
     // ========== INTERSECCIONES EXACTAS (del código pequeño) ==========
 
 function lineLineIntersect(p0, p1, q0, q1) {
@@ -1137,10 +1002,6 @@ function lineLineIntersect(p0, p1, q0, q1) {
   return { t_fig: Math.max(0, Math.min(1, t)), t_cut: Math.max(0, Math.min(1, s)) };
 }
 
-function sideOfLine(pt, a, b) {
-  return (b.x - a.x) * (pt.y - a.y) - (b.y - a.y) * (pt.x - a.x);
-}
-
 function closestTOnQuad(pt, p0, cp, p1, steps = 100) {
   let best = 0, bestDist = Infinity;
   for (let i = 0; i <= steps; i++) {
@@ -1151,18 +1012,6 @@ function closestTOnQuad(pt, p0, cp, p1, steps = 100) {
     if (d < bestDist) { bestDist = d; best = t; }
   }
   return best;
-}
-
-
-// Agregar después de projectOntoLine o antes de lineQuadIntersect
-function ptOnQuad(p0, cp, p1, t) {
-  const a = lerp(p0, cp, t);
-  const b = lerp(cp, p1, t);
-  return lerp(a, b, t);
-}
-
-function lerp(a, b, t) {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
 
@@ -1467,7 +1316,7 @@ function projectOntoLine(pt, a, b) {
             });
         }
     }
-    
+
     function edgeLength(fig, edge) {
     const a = fig.vertices[edge.start], b = fig.vertices[edge.end];
     const STEPS = 200;
@@ -1491,7 +1340,91 @@ function projectOntoLine(pt, a, b) {
     }
     return len;
 }
-    
+
+    function edgeMidAndNormal(fig, edge) {
+        const a = fig.vertices[edge.start], b = fig.vertices[edge.end];
+        let mx, my, tx, ty;
+        if (edge.cubic && edge.control2X != null) {
+            const t = 0.5, mt = 1 - t;
+            mx = mt*mt*mt*a.x + 3*mt*mt*t*edge.controlX + 3*mt*t*t*edge.control2X + t*t*t*b.x;
+            my = mt*mt*mt*a.y + 3*mt*mt*t*edge.controlY + 3*mt*t*t*edge.control2Y + t*t*t*b.y;
+            tx = 3*mt*mt*(edge.controlX-a.x) + 6*mt*t*(edge.control2X-edge.controlX) + 3*t*t*(b.x-edge.control2X);
+            ty = 3*mt*mt*(edge.controlY-a.y) + 6*mt*t*(edge.control2Y-edge.controlY) + 3*t*t*(b.y-edge.control2Y);
+        } else if (edge.curved && edge.controlX != null) {
+            const t = 0.5;
+            mx = (1-t)*(1-t)*a.x + 2*(1-t)*t*edge.controlX + t*t*b.x;
+            my = (1-t)*(1-t)*a.y + 2*(1-t)*t*edge.controlY + t*t*b.y;
+            tx = 2*(1-t)*(edge.controlX-a.x) + 2*t*(b.x-edge.controlX);
+            ty = 2*(1-t)*(edge.controlY-a.y) + 2*t*(b.y-edge.controlY);
+        } else {
+            mx = (a.x+b.x)/2; my = (a.y+b.y)/2;
+            tx = b.x-a.x; ty = b.y-a.y;
+        }
+        const tlen = Math.hypot(tx,ty) || 1;
+        return { mx, my, nx: -ty/tlen, ny: tx/tlen };
+    }
+
+    // Tamaño base de la fuente de medidas: un poco más grande solo en celular (touch),
+    // igual que antes en PC.
+    function getMeasureFontSize() {
+        return (isTouchDevice ? 12 : 10.5) / viewScale;
+    }
+
+    // Etiqueta fina de medida (cm) junto a una arista, sea recta o curva, abierta o cerrada.
+    function drawEdgeLengthLabel(fig, edge) {
+        if (!fig || !edge) return;
+        const { mx, my, nx, ny } = edgeMidAndNormal(fig, edge);
+        const off = 13 / viewScale;
+        const lx = mx + nx * off, ly = my + ny * off;
+        const lenCm = pxToCm(edgeLength(fig, edge));
+        const text = lenCm.toFixed(1) + ' cm';
+        ctx.save();
+        ctx.font = getMeasureFontSize() + 'px sans-serif';
+        ctx.fillStyle = '#444';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = 0.9;
+        ctx.fillText(text, lx, ly);
+        ctx.restore();
+    }
+
+    // Etiqueta de medida (cm) para un segmento genérico definido por dos puntos sueltos
+    // (usada mientras se dibuja una línea nueva, antes de que exista una figura/arista real).
+    function drawLengthLabelForPoints(p0, p1) {
+        if (!p0 || !p1) return;
+        const mx = (p0.x + p1.x) / 2, my = (p0.y + p1.y) / 2;
+        const dx = p1.x - p0.x, dy = p1.y - p0.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len, ny = dx / len;
+        const off = 13 / viewScale;
+        const lx = mx + nx * off, ly = my + ny * off;
+        const lenCm = pxToCm(len);
+        const text = lenCm.toFixed(1) + ' cm';
+        ctx.save();
+        ctx.font = getMeasureFontSize() + 'px sans-serif';
+        ctx.fillStyle = '#444';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = 0.9;
+        ctx.fillText(text, lx, ly);
+        ctx.restore();
+    }
+
+    // Puntos (vértices visuales) del inicio y del extremo actual mientras se dibuja una línea nueva.
+    function drawLineDrawingVertices() {
+        const r = 4 / viewScale;
+        function dot(p) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(52,152,219,0.5)';
+            ctx.fill();
+            ctx.strokeStyle = '#2980b9';
+            ctx.lineWidth = 1.5/viewScale;
+            ctx.stroke();
+        }
+        if (lineStartPoint) dot(lineStartPoint);
+        if (dragData && dragData.type==='line' && dragData.currentPoint) dot(dragData.currentPoint);
+    }
 
     function resizeEdge(fi,ei,newPx,clickX,clickY){
         const figure=figures[fi],edge=figure.edges[ei];
@@ -1632,7 +1565,7 @@ function projectOntoLine(pt, a, b) {
     // a) Lado original (B … A)
     // B ya está en origVertices[0], A en la última posición
     newVertices.push({ x: B.x, y: B.y });        // idx 0
-    mapOrig.set(hinge.start, 0);                 // B es hinge.start?  hinge.start es A o B? hinge.start es A, hinge.end es B. Revisar: hinge.start=A? En large code, hinge = figure.edges[hei]; A = hinge.start; B = hinge.end. Entonces B = V[hinge.end]. Entonces origVertices[0] es B, que corresponde al índice hinge.end.
+    mapOrig.set(hinge.start, 0);                 
     // Corregir el mapeo: B es V[hinge.end]
     mapOrig.clear();
     mapOrig.set(hinge.end, 0);                   // B
@@ -1650,9 +1583,6 @@ function projectOntoLine(pt, a, b) {
     // El último vértice insertado es A, que corresponde a hinge.start
     mapOrig.set(hinge.start, newVertices.length - 1); // A
 
-    // b) Vértices reflejados (sin duplicar A ni B)
-    // reflectedEdges va de A hacia B. Su primer rStart es A (reflejo de B), último rEnd es B (reflejo de A)
-    // Los vértices intermedios reflejados son los rEnd de cada arista (excepto la última que es B)
     for (let i = 0; i < reflectedEdges.length - 1; i++) {
         const pt = reflectedEdges[i].rEnd;
         newVertices.push({ x: pt.x, y: pt.y });
@@ -1678,12 +1608,10 @@ function projectOntoLine(pt, a, b) {
         });
     }
 
-    // b) Aristas reflejadas (los índices se calculan contra newVertices)
     // El inicio de la primera arista reflejada es A (índice mapOrig.get(hinge.start))
     const idxA = mapOrig.get(hinge.start);
     let prevIdx = idxA; // comienza en A
 
-    // Los vértices reflejados intermedios se añadieron después de los originales
     // su índice base = newVertices.length - (reflectedEdges.length - 1)  (porque el último es B no añadido)
     const baseRefl = newVertices.length - (reflectedEdges.length - 1);
 
@@ -1774,22 +1702,6 @@ function projectOntoLine(pt, a, b) {
         joinSelection=[]; redrawAll();
     }
 
-    // ===================== DESFASE =====================
-    function computeOutwardNormal(figure, ei) {
-        const edge = figure.edges[ei];
-        const a = figure.vertices[edge.start], b = figure.vertices[edge.end];
-        const dx = b.x - a.x, dy = b.y - a.y;
-        const len = Math.hypot(dx, dy) || 1;
-        const perp = {x: -dy/len, y: dx/len};
-        const cx = (a.x+b.x)/2, cy = (a.y+b.y)/2;
-        const centroid = getCentroid(figure);
-        const toC = {x: centroid.x - cx, y: centroid.y - cy};
-        if (perp.x*toC.x + perp.y*toC.y > 0) { perp.x *= -1; perp.y *= -1; }
-        return perp;
-    }
-
-    
-
     function applyOffset() {
     if (offsetEdges.length===0) { showModal({title:'Error',body:'Selecciona al menos una arista.',buttons:[{label:'OK'}]}); return; }
     const distCm = parseFloat(document.getElementById('offsetValue').value.replace(',','.'));
@@ -1846,7 +1758,6 @@ const offsets = sortedIndices.map(ei => {
         }
     }
 
-    // Construir índices de vértices nuevos
     // Para adyacentes: el vértice compartido del medio se MUEVE, no se duplica
     const newVI = []; // {startIdx, endIdx} para cada arista
 
@@ -1869,7 +1780,6 @@ const offsets = sortedIndices.map(ei => {
         }
     }
 
-    // Ahora agregar vértices nuevos solo en extremos no adyacentes
     // y construir tabla de índices
     for (let i=0; i<sortedIndices.length; i++) {
         const edge = offsets[i].edge;
@@ -1933,6 +1843,28 @@ const offsets = sortedIndices.map(ei => {
         };
     }
 
+    // ===================== MOVER ARISTA / LADO =====================
+    // Ajusta el punto de control de una curva vecina cuando uno de sus extremos
+    // (compartido con la arista que se está moviendo) cambia de posición,
+    // preservando su forma relativa. Misma lógica usada en el arrastre de vértices.
+    function edgeMoveAdjustNeighbor(fig, vi, oldPos, excludeEdge) {
+        fig.edges.forEach(e => {
+            if (e === excludeEdge) return;
+            if (e.controlX != null && (e.start === vi || e.end === vi)) {
+                const a = fig.vertices[e.start], b = fig.vertices[e.end];
+                const oldA = e.start === vi ? oldPos : a;
+                const oldB = e.end === vi ? oldPos : b;
+                const denom = Math.hypot(oldB.x - oldA.x, oldB.y - oldA.y);
+                if (denom > 0.01) {
+                    const tx = ((e.controlX - oldA.x) * (oldB.x - oldA.x) + (e.controlY - oldA.y) * (oldB.y - oldA.y)) / (denom * denom);
+                    const ty = ((e.controlY - oldA.y) * (oldB.x - oldA.x) - (e.controlX - oldA.x) * (oldB.y - oldA.y)) / (denom * denom);
+                    e.controlX = a.x + tx * (b.x - a.x) - ty * (b.y - a.y);
+                    e.controlY = a.y + tx * (b.y - a.y) + ty * (b.x - a.x);
+                }
+            }
+        });
+    }
+
     // ===================== DIBUJO =====================
     function redrawAll(){
         const dpr = window.devicePixelRatio || 1;
@@ -1945,7 +1877,7 @@ const offsets = sortedIndices.map(ei => {
         });
         if(mode==='resize'&&selectedEdge) drawResizeIndicator();
         if(mode==='vertex' || mode==='addVertex' || mode==='deleteVertex') drawAllVertices();
-        
+
         // Resaltar lÃ¯Â¿Â½neas de corte seleccionadas
         if(mode==='cut') {
             cutLineIndices.forEach(li => {
@@ -2002,6 +1934,97 @@ const offsets = sortedIndices.map(ei => {
         ctx.restore();
     });
 }
+        // Resaltar aristas seleccionadas en modo cambiar longitud (multi-selección)
+        if(mode==='resize') {
+            resizeEdges.forEach(re => {
+                const fig=figures[re.figureIndex];
+                if(!fig) return;
+                const e=fig.edges[re.edgeIndex];
+                const a=fig.vertices[e.start], b=fig.vertices[e.end];
+                ctx.save();
+                ctx.strokeStyle='#e67e22'; ctx.lineWidth=3/viewScale;
+                ctx.setLineDash([6/viewScale,4/viewScale]);
+                ctx.beginPath(); ctx.moveTo(a.x,a.y);
+                if(e.cubic&&e.control2X!=null) ctx.bezierCurveTo(e.controlX,e.controlY,e.control2X,e.control2Y,b.x,b.y);
+                else if(e.curved&&e.controlX!=null) ctx.quadraticCurveTo(e.controlX,e.controlY,b.x,b.y);
+                else ctx.lineTo(b.x,b.y);
+                ctx.stroke();
+                ctx.restore();
+            });
+        }
+
+        // ===== Medidas finas de arista(s) tocada(s) / afectada(s) =====
+        // 1) Modo vértice: medir solo las aristas que llegan al vértice activo (seleccionado o en arrastre)
+        if (mode==='vertex') {
+            const activeVert = (dragData && dragData.type==='vertex')
+                ? {figureIndex: dragData.figureIndex, vertexIndex: dragData.vertexIndex}
+                : selectedVertex;
+            if (activeVert && figures[activeVert.figureIndex]) {
+                const vfig = figures[activeVert.figureIndex];
+                vfig.edges.forEach(e => {
+                    if (e.start===activeVert.vertexIndex || e.end===activeVert.vertexIndex) {
+                        drawEdgeLengthLabel(vfig, e);
+                    }
+                });
+            }
+        }
+        // 2) Modo resize: las aristas seleccionadas (una o varias) + suma total si hay más de una
+        if (mode==='resize' && resizeEdges.length>0) {
+            let totalPx = 0;
+            resizeEdges.forEach(re => {
+                const rfig = figures[re.figureIndex];
+                if (rfig) {
+                    const edge = rfig.edges[re.edgeIndex];
+                    drawEdgeLengthLabel(rfig, edge);
+                    totalPx += edgeLength(rfig, edge);
+                }
+            });
+            if (resizeEdges.length > 1) drawResizeSumLabel(totalPx);
+        }
+        // 3) Modo curva: la arista que se está curvando
+        if (mode==='curve' && curveActiveDrag && figures[curveActiveDrag.figureIndex]) {
+            drawEdgeLengthLabel(figures[curveActiveDrag.figureIndex], figures[curveActiveDrag.figureIndex].edges[curveActiveDrag.edgeIndex]);
+        }
+        // 4) Modo offset: las aristas seleccionadas
+        if (mode==='offset') {
+            offsetEdges.forEach(oe => {
+                const ofig = figures[oe.figureIndex];
+                if (ofig) drawEdgeLengthLabel(ofig, ofig.edges[oe.edgeIndex]);
+            });
+        }
+        // 5) Modo cortar: las líneas de corte seleccionadas (todas sus aristas)
+        if (mode==='cut') {
+            cutLineIndices.forEach(li => {
+                const lfig = figures[li];
+                if (lfig) lfig.edges.forEach(e => drawEdgeLengthLabel(lfig, e));
+            });
+        }
+        // 6) Modo cerrar figura: las líneas seleccionadas
+        if (mode==='closeShape') {
+            closeLineIndices.forEach(li => {
+                const lfig = figures[li];
+                if (lfig) lfig.edges.forEach(e => drawEdgeLengthLabel(lfig, e));
+            });
+        }
+        // 7) Modo unir curvas: las curvas seleccionadas
+        if (mode==='joinCurves') {
+            joinSelection.forEach(s => {
+                const jfig = figures[s.figureIndex];
+                if (jfig) drawEdgeLengthLabel(jfig, jfig.edges[s.edgeIndex]);
+            });
+        }
+        // 8) Modo línea: puntos de inicio/actual + medida mientras se arrastra para crear una línea nueva
+        if (mode==='line' && lineStartPoint) {
+            drawLineDrawingVertices();
+            if (dragData && dragData.type==='line' && dragData.currentPoint) {
+                drawLengthLabelForPoints(lineStartPoint, dragData.currentPoint);
+            }
+        }
+        // 9) Modo mover arista: medida de la arista que se está moviendo
+        if (mode==='edgeMove' && dragData && dragData.type==='edgeMove' && figures[dragData.figureIndex]) {
+            const efig = figures[dragData.figureIndex];
+            drawEdgeLengthLabel(efig, efig.edges[dragData.edgeIndex]);
+        }
     }
 
     function drawFigure(figure,fi){
@@ -2059,6 +2082,29 @@ const offsets = sortedIndices.map(ei => {
         document.getElementById('resizeIndicator').textContent='? extremo '+(moveB?'B':'A')+' (rojo)';
     }
 
+    // Etiqueta de la suma total de las aristas seleccionadas en modo cambiar longitud (multi-selección)
+    function drawResizeSumLabel(totalPx){
+        let sx=0, sy=0, n=0;
+        resizeEdges.forEach(re=>{
+            const fig=figures[re.figureIndex];
+            if(!fig) return;
+            const edge=fig.edges[re.edgeIndex];
+            const {mx,my}=edgeMidAndNormal(fig, edge);
+            sx+=mx; sy+=my; n++;
+        });
+        if(n===0) return;
+        const cx=sx/n, cy=sy/n;
+        const text='Total: '+pxToCm(totalPx).toFixed(1)+' cm';
+        ctx.save();
+        ctx.font=getMeasureFontSize()+'px sans-serif';
+        ctx.fillStyle='#444';
+        ctx.textAlign='center';
+        ctx.textBaseline='middle';
+        ctx.globalAlpha=0.9;
+        ctx.fillText(text, cx, cy - 20/viewScale);
+        ctx.restore();
+    }
+
     // ===================== EVENTOS =====================
     canvas.addEventListener('touchstart',e=>{isTouchDevice=true;handleTouchStart(e);},{passive:false});
     canvas.addEventListener('touchmove', handleTouchMove,{passive:false});
@@ -2111,6 +2157,7 @@ const offsets = sortedIndices.map(ei => {
         e.preventDefault();
         if(mode==='line' && dragData && dragData.type==='line'){
             const pos=getPos(e);
+            dragData.currentPoint = {x: pos.x, y: pos.y};
             redrawAll();
             const dpr=window.devicePixelRatio||1;
             ctx.save();
@@ -2168,7 +2215,7 @@ const offsets = sortedIndices.map(ei => {
         }
         handlePointerMove(getPos(e));
     }
-    
+
     function handleMouseUp(e){
     e.preventDefault();
     isPanning=false;
@@ -2188,7 +2235,7 @@ const offsets = sortedIndices.map(ei => {
     dragData=null;
     curveActiveDrag=null;
 }
-    
+
     function handleMouseLeave(e){
         isPanning=false;
         dragData=null;
@@ -2212,7 +2259,7 @@ const offsets = sortedIndices.map(ei => {
     let start = {x: wx, y: wy};
     if (snapEnabled) start = applySnap(wx, wy, -1, -1);
     lineStartPoint = start;
-    dragData = {type: 'line'};
+    dragData = {type: 'line', currentPoint: {x: start.x, y: start.y}};
     redrawAll();
 }
         else if(mode==='grain'){
@@ -2288,11 +2335,22 @@ const offsets = sortedIndices.map(ei => {
         else if(mode==='resize'){
             const ne=findNearestEdge(wx,wy);
             if(ne){
-                const fig=figures[ne.figureIndex],edge=fig.edges[ne.edgeIndex];
-                const a=fig.vertices[edge.start],b=fig.vertices[edge.end];
-                selectedEdge={figureIndex:ne.figureIndex,edgeIndex:ne.edgeIndex,clickX:wx,clickY:wy};
-                document.getElementById('resizeValue').value=pxToCm(edgeLength(fig, edge));                
-                showPanel('resizeInputs');redrawAll();
+                const idx=resizeEdges.findIndex(o=>o.figureIndex===ne.figureIndex&&o.edgeIndex===ne.edgeIndex);
+                if(idx>=0){
+                    resizeEdges.splice(idx,1);
+                } else {
+                    resizeEdges.push({figureIndex:ne.figureIndex, edgeIndex:ne.edgeIndex, clickX:wx, clickY:wy});
+                }
+                updateResizePanel();
+                redrawAll();
+            }
+        }
+        else if(mode==='edgeMove'){
+            const ne=findNearestEdge(wx,wy);
+            if(ne && !figures[ne.figureIndex].locked){
+                saveState();
+                dragData={type:'edgeMove', figureIndex:ne.figureIndex, edgeIndex:ne.edgeIndex, startX:wx, startY:wy};
+                redrawAll();
             }
         }
         else if(mode==='offset'){
@@ -2386,6 +2444,7 @@ const offsets = sortedIndices.map(ei => {
         }
 
         if(mode==='line' && lineStartPoint) {
+            if (dragData && dragData.type==='line') dragData.currentPoint = {x: wx, y: wy};
             redrawAll();
             const dpr=window.devicePixelRatio||1;
             ctx.save();
@@ -2397,7 +2456,23 @@ const offsets = sortedIndices.map(ei => {
         }
         if(!dragData) return;
 
-        if(dragData.type==='figure'){
+        if(dragData.type==='edgeMove'){
+            const dx=wx-dragData.startX, dy=wy-dragData.startY;
+            const fig=figures[dragData.figureIndex];
+            const edge=fig.edges[dragData.edgeIndex];
+            const v1=fig.vertices[edge.start], v2=fig.vertices[edge.end];
+            const oldV1={x:v1.x,y:v1.y}, oldV2={x:v2.x,y:v2.y};
+            v1.x+=dx; v1.y+=dy;
+            v2.x+=dx; v2.y+=dy;
+            if(edge.controlX!=null){edge.controlX+=dx; edge.controlY+=dy;}
+            if(edge.control2X!=null){edge.control2X+=dx; edge.control2Y+=dy;}
+            edgeMoveAdjustNeighbor(fig, edge.start, oldV1, edge);
+            edgeMoveAdjustNeighbor(fig, edge.end, oldV2, edge);
+            dragData.startX=wx; dragData.startY=wy;
+            redrawAll();
+        }
+
+        else if(dragData.type==='figure'){
             const dx=wx-dragData.startX,dy=wy-dragData.startY;
             const f=figures[dragData.figureIndex];
             f.vertices.forEach(v=>{v.x+=dx;v.y+=dy;});
@@ -2488,7 +2563,7 @@ const offsets = sortedIndices.map(ei => {
             }
             dragData.startX=wx;dragData.startY=wy;redrawAll();
         }
-        
+
         else if(dragData.type==='vertex'){
             let nx=wx,ny=wy;
             if(snapEnabled){const s=applySnap(wx,wy,dragData.figureIndex,dragData.vertexIndex);nx=s.x;ny=s.y;}
@@ -2514,11 +2589,34 @@ const offsets = sortedIndices.map(ei => {
         }
 }
 
+    function updateResizePanel(){
+        const input=document.getElementById('resizeValue');
+        if(resizeEdges.length===1){
+            selectedEdge=resizeEdges[0];
+            const fig=figures[selectedEdge.figureIndex], edge=fig.edges[selectedEdge.edgeIndex];
+            input.value=pxToCm(edgeLength(fig, edge));
+            input.disabled=false;
+            showPanel('resizeInputs');
+        } else if(resizeEdges.length>1){
+            selectedEdge=null;
+            input.value='';
+            input.disabled=true;
+            document.getElementById('resizeIndicator').textContent='';
+            showPanel('resizeInputs');
+        } else {
+            selectedEdge=null;
+            input.disabled=false;
+            hidePanel('resizeInputs');
+        }
+    }
+
     function applyResize(){
-        if(!selectedEdge){showModal({title:'Error',body:'Primero selecciona una arista.',buttons:[{label:'OK'}]});return;}
+        if(resizeEdges.length!==1){showModal({title:'Error',body:'Selecciona solo una arista para aplicar un valor.',buttons:[{label:'OK'}]});return;}
+        const se=resizeEdges[0];
         const newPx=cmToPx(document.getElementById('resizeValue').value);
         if(isNaN(newPx)||newPx<=0){showModal({title:'Valor invAlido',body:'Ej: 25.5 o 25,5',buttons:[{label:'OK'}]});return;}
-        saveState();resizeEdge(selectedEdge.figureIndex,selectedEdge.edgeIndex,newPx,selectedEdge.clickX,selectedEdge.clickY);
+        saveState();resizeEdge(se.figureIndex,se.edgeIndex,newPx,se.clickX,se.clickY);
+        resizeEdges=[];
         hidePanel('resizeInputs');redrawAll();
     }
 
@@ -2567,7 +2665,7 @@ const offsets = sortedIndices.map(ei => {
             }
         });
     }
-    
+
     function exportSVG(){
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     figures.forEach(fig=>{fig.vertices.forEach(v=>{minX=Math.min(minX,v.x);minY=Math.min(minY,v.y);maxX=Math.max(maxX,v.x);maxY=Math.max(maxY,v.y);});});
