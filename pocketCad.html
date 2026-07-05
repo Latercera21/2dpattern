@@ -73,10 +73,10 @@
         <button id="addVertexBtn"  onclick="toggleAddVertex()"  title="Agregar vértice">⚫</button>
         <button id="deleteVertexBtn" onclick="toggleDeleteVertex()" title="Eliminar vértice">➖</button>
         <button id="closeShapeBtn" onclick="toggleCloseShape()" title="Cerrar figura">🔒</button>
+        <button id="closeApplyBtn" onclick="applyCloseShape()"  title="Aplicar cierre">✔</button>
         <button id="edgeMoveBtn"   onclick="toggleEdgeMove()"   title="Mover arista/lado">🖋️</button>  
         <button id="mirrorBtn"     onclick="toggleMirror()"     title="Desdoblar">📖</button>
-        <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">⇄</button>        
-        <button id="closeApplyBtn" onclick="applyCloseShape()"  title="Aplicar cierre">✔</button>
+        <button id="offsetBtn"     onclick="toggleOffset()"     title="Desfase (modifica arista)">⇄</button>              
         <button id="lockBtn"       onclick="toggleLock()"       title="Bloquear/desbloquear">🔐</button>
         <button id="duplicateBtn"  onclick="toggleDuplicate()"  title="Duplicar">⧉</button>
         <button id="reflectBtn"    onclick="toggleReflect()"    title="Reflejar">🪞</button>
@@ -104,8 +104,8 @@
 <div id="vertexInputs" class="float-inputs">
     <label><input type="checkbox" id="vertexFijar" onchange="toggleVertexInputs()">🔒</label>
     <span id="vertexCoordInputs" style="display:none; align-items:center; gap:3px;">
-        <span class="lbl">X=>:</span><input type="number" inputmode="decimal" id="vertexDX" placeholder="X=>" value="1" style="width:45px; background:#aaaaaa; border:1px solid #888; border-radius:3px; padding:1px 1px; font-size:14px;">
-        <span class="lbl">Y⬇︎:</span><input type="number" inputmode="decimal" id="vertexDY" placeholder="Y⬇︎" value="1" style="width:45px; background:#aaaaaa; border:1px solid #888; border-radius:3px; padding:1px 1px; font-size:14px;">
+        <span class="lbl">X=>:</span><input type="number" inputmode="decimal" id="vertexDX" placeholder="X=>" value="0" style="width:45px; background:#aaaaaa; border:1px solid #888; border-radius:3px; padding:1px 1px; font-size:14px;">
+        <span class="lbl">Y⬇︎:</span><input type="number" inputmode="decimal" id="vertexDY" placeholder="Y⬇︎" value="0" style="width:45px; background:#aaaaaa; border:1px solid #888; border-radius:3px; padding:1px 1px; font-size:14px;">
         <button onclick="applyVertexDelta()">✓</button>
     </span>
     <button onclick="hidePanel('vertexInputs')">✕</button>
@@ -560,7 +560,7 @@ function toggleSnapEdge() {
     return pts;
     }
 
-    // Convierte lÃ¯Â¿Â½neas de corte seleccionadas en stroke muestreada
+    // Convierte lineas de corte seleccionadas en stroke muestreada
     function buildCutEdges(lineIndices) {
         if (lineIndices.length === 0) return {vertices: [], edges: []};
 
