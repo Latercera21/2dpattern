@@ -2637,34 +2637,61 @@ const offsets = sortedIndices.map(ei => {
 
     // ===================== EXPORT / IMPORT =====================
     function exportJSON(){
-        const data={
-            unit:'cm',pxPerCm:PX_PER_CM,grainDirection:grainDir,
-            figures:figures.map(fig=>({
-                grain:fig.grain||null, closed:fig.closed,
-                vertices:fig.vertices.map(v=>({x:v.x,y:v.y,xCm:pxToCm(v.x),yCm:pxToCm(v.y)})),
-                edges:fig.edges
-            }))
-        };
-        const json=JSON.stringify(data,null,2);
-        showModal({title:'Exportar patron.json',textarea:json,
-            buttons:[{label:'?? Copiar',value:'copy'},{label:'?? Descargar',value:'dl'},{label:'? Cerrar',value:'close'}]
-        }).then(a=>{
-            if(a==='copy'){
-                (navigator.clipboard?navigator.clipboard.writeText(json):Promise.reject())
-                    .catch(()=>{const ta=document.querySelector('.modal-box textarea');if(ta){ta.select();document.execCommand('copy');}});
-            } else if(a==='dl'){
-                try{
-                    const blob=new Blob([json],{type:'application/json'}),url=URL.createObjectURL(blob),el=document.createElement('a');
-                    el.href=url;el.download='patron.json';document.body.appendChild(el);el.click();
-                    setTimeout(()=>{document.body.removeChild(el);URL.revokeObjectURL(url);},300);
-                }catch{
-                    const el=document.createElement('a');
-                    el.href='data:application/json;charset=utf-8,'+encodeURIComponent(json);
-                    el.download='patron.json';document.body.appendChild(el);el.click();document.body.removeChild(el);
+    const data={
+        unit:'cm',pxPerCm:PX_PER_CM,grainDirection:grainDir,
+        figures:figures.map(fig=>({
+            grain:fig.grain||null, closed:fig.closed,
+            vertices:fig.vertices.map(v=>({x:v.x,y:v.y,xCm:pxToCm(v.x),yCm:pxToCm(v.y)})),
+            edges:fig.edges
+        }))
+    };
+    const json=JSON.stringify(data,null,2);
+    
+    showModal({title:'Exportar patron.json',textarea:json,
+        buttons:[
+            {label:'📋 Copiar',value:'copy'},
+            {label:'💾 Descargar (Android)',value:'dl'},
+            {label:'✕ Cerrar',value:'close'}
+        ]
+    }).then(a=>{
+        if(a==='copy'){
+            (navigator.clipboard?navigator.clipboard.writeText(json):Promise.reject())
+                .catch(()=>{
+                    const ta=document.querySelector('.modal-box textarea');
+                    if(ta){ta.select();document.execCommand('copy');}
+                });
+        } else if(a==='dl'){
+            // Método robusto para Android
+            const blob = new Blob([json], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+
+            // Creamos un enlace y simulamos click
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'patron.json';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+
+            // En Android a veces no se abre el diálogo; abrimos en nueva pestaña para forzar descarga
+            setTimeout(() => {
+                document.body.removeChild(a);
+                // Fallback: abrir en nueva pestaña (el navegador lo descargará automáticamente al ser blob)
+                const newWindow = window.open(url, '_blank');
+                if (!newWindow) {
+                    // Si el popup está bloqueado, mostramos instrucciones claras
+                    showModal({
+                        title:'Archivo generado',
+                        body:'Si no se descargó automáticamente, revisa la carpeta "Descargas" o usa "Copiar" y pégalo en un editor de texto para guardarlo manualmente.',
+                        buttons:[{label:'Entendido'}]
+                    });
                 }
-            }
-        });
-    }
+                // Limpiamos la URL después de un rato
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }, 200);
+        }
+    });
+}
 
     function exportSVG(){
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
