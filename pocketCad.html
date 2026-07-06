@@ -8,7 +8,7 @@
         * { box-sizing: border-box; }
         html, body {
             margin: 0; padding: 0; overflow: hidden; height: 100%; font-size: 14px;
-            background-color: #afafaf;
+            background-color: #c0c0c0; //#afafaf;
         }
         #canvas { display: block; touch-action: none; }
         button {
@@ -22,7 +22,7 @@
         .toolbar {
             position: fixed; top: 0; left: 0; right: 0;
             display: flex; flex-wrap: wrap; gap: 2px;
-            padding: 3px 4px; background: #b6b6b6;
+            padding: 3px 4px; background: #bdbdbd;
             border-bottom: 1px solid #ccc; z-index: 100;
             align-items: center;
         }
@@ -1898,7 +1898,7 @@ const offsets = sortedIndices.map(ei => {
                 }
             });
         }
-        // Resaltar lÃ¯Â¿Â½neas para cerrar figura
+        // Resaltar lineas para cerrar figura
         if(mode==='closeShape') {
             closeLineIndices.forEach(li => {
                 const line = figures[li];
@@ -1942,10 +1942,12 @@ const offsets = sortedIndices.map(ei => {
                 const e=fig.edges[re.edgeIndex];
                 const a=fig.vertices[e.start], b=fig.vertices[e.end];
                 ctx.save();
-                ctx.strokeStyle='#e67e22'; ctx.lineWidth=3/viewScale;
-                ctx.setLineDash([6/viewScale,4/viewScale]);
-                ctx.beginPath(); ctx.moveTo(a.x,a.y);
-                if(e.cubic&&e.control2X!=null) ctx.bezierCurveTo(e.controlX,e.controlY,e.control2X,e.control2Y,b.x,b.y);
+                ctx.strokeStyle= '#7e582a'; //'#e1c24b'; 
+                ctx.lineWidth=3/viewScale;             
+                ctx.beginPath(); 
+                ctx.moveTo(a.x,a.y);
+                if(e.cubic&&e.control2X!=null) 
+                ctx.bezierCurveTo(e.controlX,e.controlY,e.control2X,e.control2Y,b.x,b.y);
                 else if(e.curved&&e.controlX!=null) ctx.quadraticCurveTo(e.controlX,e.controlY,b.x,b.y);
                 else ctx.lineTo(b.x,b.y);
                 ctx.stroke();
