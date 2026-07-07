@@ -1,60 +1,60 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-    <title>PocketCad</title>
-    <style>
-        * { box-sizing: border-box; }
-        html, body {
-            margin: 0; padding: 0; overflow: hidden; height: 100%; font-size: 14px;
-            background-color: #c0c0c0; //#afafaf;
-        }
-        #canvas { display: block; touch-action: none; }
-        button {
-            padding: 3px 5px; margin: 1px;
-            font-size: 15px; cursor: pointer;
-            border: 1px solid #999; background: #b6b6b6;
-            border-radius: 3px; line-height: 1;
-        }
-        button.on { background: #848484; color: white; border-color: #81b984; }
-        #closeApplyBtn, #cutApplyBtn { display: none; }
-        .toolbar {
-            position: fixed; top: 0; left: 0; right: 0;
-            display: flex; flex-wrap: wrap; gap: 2px;
-            padding: 3px 4px; background: #bdbdbd;
-            border-bottom: 1px solid #ccc; z-index: 100;
-            align-items: center;
-        }
-        input[type=number], input[type=text] { width: 52px; padding: 2px; font-size: 13px; }
-        .float-inputs {
-            position: fixed; z-index: 200;
-            background: #b4b4b4; border: 1px solid #aaa;
-            border-radius: 4px; padding: 4px 6px;
-            display: none; align-items: center; gap: 3px; flex-wrap: wrap;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-        #resizeIndicator { font-style: italic; color: #c0392b; font-size: 12px; }
-        span.lbl { font-size: 12px; }
-        #zoomIndicator { font-size: 11px; color: #555; margin-left: 4px; min-width: 44px; }
-        .modal-overlay {
-            position: fixed; top:0; left:0; width:100%; height:100%;
-            background: #cccccc; z-index: 9999;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .modal-box {
-            background: #b8b8b8; padding: 18px; border-radius: 8px;
-            width: 88%; max-width: 420px;
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        .modal-title { font-weight: bold; font-size: 15px; }
-        .modal-box textarea {
-            width: 100%; min-height: 130px; font-family: monospace;
-            font-size: 11px; border: 1px solid #ccc; padding: 6px; resize: vertical;
-        }
-        .modal-row { display: flex; gap: 8px; flex-wrap: wrap; }
-        .modal-row button { flex: 1; padding: 8px; font-size: 14px; }
-    </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>PocketCad</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0; padding: 0; overflow: hidden; height: 100%; font-size: 14px;
+        background-color: #c0c0c0; //#afafaf;
+    }
+    #canvas { display: block; touch-action: none; }
+    button {
+        padding: 3px 5px; margin: 1px;
+        font-size: 15px; cursor: pointer;
+        border: 1px solid #999; background: #b6b6b6;
+        border-radius: 3px; line-height: 1;
+    }
+    button.on { background: #848484; color: white; border-color: #81b984; }
+    #closeApplyBtn, #cutApplyBtn { display: none; }
+    .toolbar {
+        position: fixed; top: 0; left: 0; right: 0;
+        display: flex; flex-wrap: wrap; gap: 2px;
+        padding: 3px 4px; background: #bdbdbd;
+        border-bottom: 1px solid #ccc; z-index: 100;
+        align-items: center;
+    }
+    input[type=number], input[type=text] { width: 52px; padding: 2px; font-size: 13px; }
+    .float-inputs {
+        position: fixed; z-index: 200;
+        background: #b4b4b4; border: 1px solid #aaa;
+        border-radius: 4px; padding: 4px 6px;
+        display: none; align-items: center; gap: 3px; flex-wrap: wrap;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    #resizeIndicator { font-style: italic; color: #c0392b; font-size: 12px; }
+    span.lbl { font-size: 12px; }
+    #zoomIndicator { font-size: 11px; color: #555; margin-left: 4px; min-width: 44px; }
+    .modal-overlay {
+        position: fixed; top:0; left:0; width:100%; height:100%;
+        background: #cccccc; z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .modal-box {
+        background: #b8b8b8; padding: 18px; border-radius: 8px;
+        width: 88%; max-width: 420px;
+        display: flex; flex-direction: column; gap: 10px;
+    }
+    .modal-title { font-weight: bold; font-size: 15px; }
+    .modal-box textarea {
+        width: 100%; min-height: 130px; font-family: monospace;
+        font-size: 11px; border: 1px solid #ccc; padding: 6px; resize: vertical;
+    }
+    .modal-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .modal-row button { flex: 1; padding: 8px; font-size: 14px; }
+</style>
 </head>
 <body>   
     <div class="toolbar">
@@ -153,10 +153,10 @@
     let offsetEdges = []; // reemplaza selectedEdge para offset
 
     // --- Estado de corte ---
-    let cutLineIndices = [];   // Ã¯Â¿Â½ndices de lÃ¯Â¿Â½neas seleccionadas para cortar
+    let cutLineIndices = [];   // indices de lineas seleccionadas para cortar
 
     // --- Estado de cerrar figura ---
-    let closeLineIndices = []; // Ã¯Â¿Â½ndices de lÃ¯Â¿Â½neas a unir en figura cerrada
+    let closeLineIndices = []; // indices de lineas a unir en figura cerrada
 
     // --- Estado de curva midpoint drag ---
     let curveActiveDrag = null; // {figureIndex, edgeIndex, dragging}
@@ -245,8 +245,8 @@
     }
     function clearAll() {
         showModal({
-            title: 'Ã¯Â¿Â½Eliminar todo?',
-            body: 'Se eliminarÃ¯Â¿Â½n todas las figuras.',
+            title: '¿Eliminar todo?',
+            body: 'Se eliminarán todas las figuras.',
             buttons: [{label:'Eliminar todo',value:'yes'},{label:'Cancelar',value:'no'}]
         }).then(r => { if (r==='yes') { saveState(); figures=[]; redrawAll(); } });
     }
@@ -424,7 +424,7 @@ function toggleSnapEdge() {
         ctx.restore();
     }
 
-    // ===================== GEOMETRÃ¯Â¿Â½A BÃ¯Â¿Â½SICA =====================
+    // ===================== GEOMETRIA BASICA =====================
     function q2c(p0,c,p1) {
         return {
             cp1:{x:p0.x+2/3*(c.x-p0.x),y:p0.y+2/3*(c.y-p0.y)},
@@ -456,9 +456,42 @@ function toggleSnapEdge() {
         };
     }
 
+    // Muestrea la figura (respetando curvas) como una polilinea densa, para usarla
+    // en la prueba punto-en-poligono. Antes se usaba el arreglo de vertices "crudo",
+    // que en figuras de pocos vertices con lados curvos (ej. 2 vertices: una recta
+    // y una curva) degenera en una linea ida-y-vuelta sin area real, y el test
+    // punto-en-poligono casi nunca detectaba clics dentro de la figura.
+    function figureAPolilineaGrande(figure, samplesPerCurve = 15) {
+        const pts = [];
+        figure.edges.forEach(e => {
+            const a = figure.vertices[e.start], b = figure.vertices[e.end];
+            pts.push({x:a.x, y:a.y});
+            if (e.cubic && e.control2X != null) {
+                for (let i = 1; i < samplesPerCurve; i++) {
+                    const t = i / samplesPerCurve, mt = 1 - t;
+                    pts.push({
+                        x: mt*mt*mt*a.x + 3*mt*mt*t*e.controlX + 3*mt*t*t*e.control2X + t*t*t*b.x,
+                        y: mt*mt*mt*a.y + 3*mt*mt*t*e.controlY + 3*mt*t*t*e.control2Y + t*t*t*b.y
+                    });
+                }
+            } else if (e.curved && e.controlX != null) {
+                for (let i = 1; i < samplesPerCurve; i++) {
+                    const t = i / samplesPerCurve;
+                    pts.push({
+                        x: (1-t)*(1-t)*a.x + 2*(1-t)*t*e.controlX + t*t*b.x,
+                        y: (1-t)*(1-t)*a.y + 2*(1-t)*t*e.controlY + t*t*b.y
+                    });
+                }
+            }
+        });
+        return pts;
+    }
+
     function isPointInPolygon(x,y,figure) {
         if (!figure.closed) return false;
-        const v=figure.vertices; let inside=false;
+        const v = figureAPolilineaGrande(figure, 15);
+        if (v.length < 3) return false;
+        let inside=false;
         for (let i=0,j=v.length-1;i<v.length;j=i++)
             if (((v[i].y>y)!==(v[j].y>y))&&(x<(v[j].x-v[i].x)*(y-v[i].y)/(v[j].y-v[i].y)+v[i].x))
                 inside=!inside;
@@ -533,7 +566,7 @@ function toggleSnapEdge() {
 
     // ===================== MUESTREAR FIGURA COMO STROKE =====================
     // Convierte todos los edges de una figura en una secuencia densa de puntos
-    // Esto permite que findCrossings del cÃ¯Â¿Â½digo pequeÃ¯Â¿Â½o funcione con cualquier tipo de arista
+    // Esto permite que findCrossings del codigo pequeno funcione con cualquier tipo de arista
     function sampleFigureEdges(figure, steps=80) {
         const pts = [];
         for (let ei = 0; ei < figure.edges.length; ei++) {
@@ -600,7 +633,7 @@ function toggleSnapEdge() {
             }
         }
 
-        // Aplanar en un solo array de vertices + edges con Ã¯Â¿Â½ndices corregidos
+        // Aplanar en un solo array de vertices + edges con indices corregidos
         const verts = [];
         const edges = [];
 
@@ -611,17 +644,17 @@ function toggleSnapEdge() {
             const offset = verts.length === 0 ? 0 : verts.length - 1;
 
             for (let vi = 0; vi < vs.length; vi++) {
-                if (vi === 0 && verts.length > 0) continue; // no duplicar punto de uniÃ¯Â¿Â½n
+                if (vi === 0 && verts.length > 0) continue; // no duplicar punto de union
                 verts.push({x: vs[vi].x, y: vs[vi].y});
             }
 
             for (let ei = 0; ei < es.length; ei++) {
                 const e = Object.assign({}, es[ei]);
                 if (seg.reversed) {
-                    // invertir direcciÃ¯Â¿Â½n del edge
+                    // invertir direccion del edge
                     const tmp = e.start; e.start = e.end; e.end = tmp;
-                    // invertir puntos de control cuadrÃ¯Â¿Â½ticos (quedan igual geomÃ¯Â¿Â½tricamente,
-                    // solo cambia start/end, el control no cambia para cuadrÃ¯Â¿Â½ticas)
+                    // invertir puntos de control cuadraticos (quedan igual geometricamente,
+                    // solo cambia start/end, el control no cambia para cuadraticas)
                 }
                 // remap al espacio global de verts
                 e.start = offset + ei;
@@ -978,6 +1011,115 @@ function segmentToEdge(seg, startIdx, endIdx) {
         return [fig1, fig2];
     }
 
+    // ===================== CORTE PARCIAL (muesca de ancho cero, 1 sola pieza) =====================
+    // Dado hitE (el unico cruce real con el borde de la figura) y el extremo interior
+    // de la linea de corte (que no vuelve a tocar el borde), inserta una muesca de ancho
+    // cero en el segmento donde ocurre el cruce, y devuelve UNA sola figura (no divide en 2).
+    function splitWithStrokePartial(figure, cutData, hitE, innerEnd) {
+        const figSegs = figure.edges.map(e => edgeToSegment(figure, e));
+        const cutSegs = cutData.edges.map(e => edgeToSegment(cutData, e));
+
+        // Camino de corte completo, desde el punto de entrada (hitE) hasta la punta libre,
+        // en ese orden (entrada -> punta).
+        let cutPath;
+        if (hitE.cutEdgeIdx === innerEnd.cutEdgeIdx) {
+            const seg = cutSegs[hitE.cutEdgeIdx];
+            const tA = Math.min(hitE.t_cut, innerEnd.t_cut);
+            const tB = Math.max(hitE.t_cut, innerEnd.t_cut);
+            const spA = subdivideSegment(seg, tA);
+            const tRelB = (tB - tA) / (1 - tA);
+            const spB = subdivideSegment(spA.right, tRelB);
+            cutPath = [spB.left];
+            if (innerEnd.t_cut < hitE.t_cut) {
+                cutPath = cutPath.map(invertirSegmento).reverse();
+            }
+        } else {
+            const path = [];
+            const inc = (innerEnd.cutEdgeIdx > hitE.cutEdgeIdx) ? 1 : -1;
+            const firstSeg = cutSegs[hitE.cutEdgeIdx];
+            const spFirst = subdivideSegment(firstSeg, hitE.t_cut);
+            path.push(inc === 1 ? spFirst.right : spFirst.left);
+            for (let ci = hitE.cutEdgeIdx + inc; ci !== innerEnd.cutEdgeIdx; ci += inc) {
+                path.push(cutSegs[ci]);
+            }
+            const lastSeg = cutSegs[innerEnd.cutEdgeIdx];
+            const spLast = subdivideSegment(lastSeg, innerEnd.t_cut);
+            path.push(inc === 1 ? spLast.left : spLast.right);
+            if (inc === -1) {
+                path.reverse();
+                for (let i = 0; i < path.length; i++) path[i] = invertirSegmento(path[i]);
+            }
+            cutPath = path;
+        }
+
+        if (cutPath.length === 0) return null;
+        cutPath[0] = fijarStartpoint(cutPath[0], hitE.pt);
+        cutPath[cutPath.length - 1] = fijarEndpoint(cutPath[cutPath.length - 1], innerEnd.pt);
+
+        // Ida y vuelta: entra por cutPath, y vuelve por el mismo camino invertido (ancho cero)
+        const vuelta = cutPath.map(invertirSegmento).reverse();
+        const muesca = [...cutPath, ...vuelta];
+
+        // Subdividir el segmento de la figura donde esta hitE, e insertar la muesca ahi
+        const piezaSegs = [];
+        for (let i = 0; i < figSegs.length; i++) {
+            if (i === hitE.edgeIdx) {
+                const sp = subdivideSegment(figSegs[i], hitE.t_fig);
+                const left = fijarEndpoint(sp.left, hitE.pt);
+                const right = fijarStartpoint(sp.right, hitE.pt);
+                piezaSegs.push(left, ...muesca, right);
+            } else {
+                piezaSegs.push(figSegs[i]);
+            }
+        }
+
+        return segmentsToFigureGrande(piezaSegs);
+    }
+
+    // Ensamblador segmentos -> figura {vertices, edges} (fusiona vertices cercanos y cierra la figura)
+    function segmentsToFigureGrande(segs) {
+        const rawVertices = [];
+        const edges = [];
+        for (const seg of segs) {
+            const startPt = seg.pts[0];
+            const endPt = seg.type === 'line' ? seg.pts[1] : seg.pts[2];
+            rawVertices.push({x: startPt.x, y: startPt.y});
+            rawVertices.push({x: endPt.x, y: endPt.y});
+        }
+        const TOL = 1.0;
+        const merged = [];
+        const mapIdx = new Array(rawVertices.length);
+        for (let i = 0; i < rawVertices.length; i++) {
+            const pt = rawVertices[i];
+            let found = -1;
+            for (let j = 0; j < merged.length; j++) {
+                if (Math.hypot(merged[j].x - pt.x, merged[j].y - pt.y) < TOL) { found = j; break; }
+            }
+            if (found === -1) { mapIdx[i] = merged.length; merged.push({x: pt.x, y: pt.y}); }
+            else mapIdx[i] = found;
+        }
+        for (let k = 0; k < segs.length; k++) {
+            const seg = segs[k];
+            const startIdx = mapIdx[k * 2], endIdx = mapIdx[k * 2 + 1];
+            if (startIdx === endIdx) continue;
+            edges.push(segmentToEdge(seg, startIdx, endIdx));
+        }
+        if (merged.length > 1 && Math.hypot(merged[0].x - merged[merged.length - 1].x, merged[0].y - merged[merged.length - 1].y) < TOL) {
+            const lastIdx = merged.length - 1;
+            for (let i = 0; i < edges.length; i++) {
+                if (edges[i].start === lastIdx) edges[i].start = 0;
+                if (edges[i].end === lastIdx) edges[i].end = 0;
+            }
+            merged.pop();
+            for (let i = 0; i < edges.length; i++) {
+                if (edges[i].start > lastIdx) edges[i].start--;
+                if (edges[i].end > lastIdx) edges[i].end--;
+            }
+        }
+        return { vertices: merged, edges, closed: true, grain: null };
+    }
+    // ===================== FIN CORTE PARCIAL =====================
+
     function splitQuadraticBezier(a, c, b, t){
         const p0 = { x: a.x + (c.x - a.x) * t, y: a.y + (c.y - a.y) * t };
         const p1 = { x: c.x + (b.x - c.x) * t, y: c.y + (b.y - c.y) * t };
@@ -1088,34 +1230,19 @@ function projectOntoLine(pt, a, b) {
         }
         figures.splice(targetFi, 1, ...result);
     } else {
-        // Corte parcial: un cruce real + el extremo interior
+        // Corte parcial real: 1 cruce con el borde + la punta libre queda DENTRO de la figura.
+        // Se inserta una muesca de ancho cero y la figura permanece como UNA sola pieza.
         if (!partialInner) {
             showModal({title:'Error',body:'No se pudo realizar el corte parcial.',buttons:[{label:'OK'}]});
             return;
         }
-        const hitCross = bestCrossings[0];
-        let hitE, hitS;
-        if (partialInner.t_cut === 0) {
-            // El interior es el inicio de la línea de corte
-            hitE = { edgeIdx: hitCross.edgeIdx, t_fig: hitCross.t_fig, pt: partialInner.pt, cutEdgeIdx: partialInner.cutEdgeIdx, t_cut: partialInner.t_cut };
-            hitS = hitCross;
-        } else {
-            // El interior es el final de la línea de corte
-            hitE = hitCross;
-            hitS = { edgeIdx: hitCross.edgeIdx, t_fig: hitCross.t_fig, pt: partialInner.pt, cutEdgeIdx: partialInner.cutEdgeIdx, t_cut: partialInner.t_cut };
-        }
-        const partialCrossings = [hitE, hitS];
-        const result = splitWithStroke(figures[targetFi], cutData, partialCrossings);
-        if (!result) {
+        const hitE = bestCrossings[0];
+        const resultado = splitWithStrokePartial(figures[targetFi], cutData, hitE, partialInner);
+        if (!resultado || resultado.vertices.length < 3) {
             showModal({title:'Error',body:'No se pudo realizar el corte parcial.',buttons:[{label:'OK'}]});
             return;
         }
-        // splitWithStroke puede devolver array o figura única
-        if (Array.isArray(result)) {
-            figures.splice(targetFi, 1, ...result);
-        } else {
-            figures[targetFi] = result;
-        }
+        figures[targetFi] = resultado;
     }
 
     cutLineIndices = [];
@@ -1669,7 +1796,7 @@ function projectOntoLine(pt, a, b) {
         saveState();
         for (const fiStr in byFigure) {
             const fi = parseInt(fiStr), figure = figures[fi], edgeIndices = byFigure[fi].sort((a,b)=>a-b), n = figure.edges.length;
-            if (!isContiguousCyclic(edgeIndices, n)) { showModal({title:'Error',body:'Las curvas deben ser consecutivas (incluso cÃ¯Â¿Â½clicamente).',buttons:[{label:'OK'}]}); return; }
+            if (!isContiguousCyclic(edgeIndices, n)) { showModal({title:'Error',body:'Las curvas deben ser consecutivas (incluso cíclicamente).',buttons:[{label:'OK'}]}); return; }
             let orderedIndices = [...edgeIndices];
             const minIdx = orderedIndices[0];
             orderedIndices = [];
@@ -1835,7 +1962,7 @@ const offsets = sortedIndices.map(ei => {
 }
 
     // ===================== CURVA MIDPOINT DRAG =====================
-    // Calcula el punto de control cuadrÃ¯Â¿Â½tico a partir del punto medio donde arrastra el usuario
+    // Calcula el punto de control cuadrático a partir del punto medio donde arrastra el usuario
     function controlFromMidpoint(p0, pm, p2) {
         return {
             x: (pm.x - 0.25*p0.x - 0.25*p2.x) / 0.5,
@@ -1878,7 +2005,7 @@ const offsets = sortedIndices.map(ei => {
         if(mode==='resize'&&selectedEdge) drawResizeIndicator();
         if(mode==='vertex' || mode==='addVertex' || mode==='deleteVertex') drawAllVertices();
 
-        // Resaltar lÃ¯Â¿Â½neas de corte seleccionadas
+        // Resaltar líneas de corte seleccionadas
         if(mode==='cut') {
             cutLineIndices.forEach(li => {
                 const line = figures[li];
@@ -2311,7 +2438,7 @@ const offsets = sortedIndices.map(ei => {
             if(ne){
                 saveState();
                 const edge=figures[ne.figureIndex].edges[ne.edgeIndex];
-                // Inicializar controlX/Y en el punto donde se hizo clic (serÃ¯Â¿Â½ el midpoint inicial)
+                // Inicializar controlX/Y en el punto donde se hizo clic (será el midpoint inicial)
                 if(!edge.curved){
                     edge.curved=true; edge.cubic=false;
                     edge.controlX=wx; edge.controlY=wy;
@@ -2373,10 +2500,10 @@ const offsets = sortedIndices.map(ei => {
     }
 }
         else if(mode==='cut'){
-            // Seleccionar/deseleccionar solo lÃ¯Â¿Â½neas (no cerradas) como lÃ¯Â¿Â½neas de corte
+            // Seleccionar/deseleccionar solo líneas (no cerradas) como líneas de corte
             for(let fi=figures.length-1;fi>=0;fi--){
                 const fig=figures[fi];
-                if(fig.closed) continue; // solo lÃ¯Â¿Â½neas abiertas
+                if(fig.closed) continue; // solo líneas abiertas
                 let near=false;
                 for(const e of fig.edges){
                     if(edgeDist(wx,wy,fig,e)<15/viewScale){near=true;break;}
@@ -2391,7 +2518,7 @@ const offsets = sortedIndices.map(ei => {
             }
         }
         else if(mode==='closeShape'){
-            // Seleccionar/deseleccionar lIneas abiertas para cerrar figura
+            // Seleccionar/deseleccionar líneas abiertas para cerrar figura
             for(let fi=figures.length-1;fi>=0;fi--){
                 const fig=figures[fi];
                 if(fig.closed) continue;
@@ -2648,7 +2775,7 @@ const offsets = sortedIndices.map(ei => {
         }))
     };
     const json=JSON.stringify(data,null,2);
-    
+
     showModal({title:'Exportar patron.json',textarea:json,
         buttons:[
             {label:'📋 Copiar',value:'copy'},
