@@ -8,21 +8,21 @@
     * { box-sizing: border-box; }
     html, body {
         margin: 0; padding: 0; overflow: hidden; height: 100%; font-size: 14px;
-        background-color: #c0c0c0; //#afafaf;
+        background-color: #afb1ae; //#afafaf;
     }
     #canvas { display: block; touch-action: none; }
     button {
         padding: 3px 5px; margin: 1px;
         font-size: 15px; cursor: pointer;
-        border: 1px solid #999; background: #b6b6b6;
+        border: 1px solid #979797; background: #9ba19bf1;
         border-radius: 3px; line-height: 1;
     }
-    button.on { background: #848484; color: white; border-color: #81b984; }
+    button.on { background: #756262; color: white; border-color: #81b984; }
     #closeApplyBtn, #cutApplyBtn { display: none; }
     .toolbar {
         position: fixed; top: 0; left: 0; right: 0;
         display: flex; flex-wrap: wrap; gap: 2px;
-        padding: 3px 4px; background: #bdbdbd;
+        padding: 3px 4px; background: #afc0b1;
         border-bottom: 1px solid #ccc; z-index: 100;
         align-items: center;
     }
@@ -96,9 +96,9 @@
         <button onclick="importJSON()" title="Importar JSON">📂</button>
         <span id="zoomIndicator">100%</span>
         <button onclick="resetView()" title="Restablecer vista">⊙</button>
-        <button onclick="location.href='nesting.html'">nestingPro</button>//
+        <button onclick="location.href='nesting.html'">nestingPro</button>
         <span style="font-weight:bold; color:#eff4fd; margin:0 6px; font-size:15px; align-self:center;">R∆yøTęmper∆</span>
-        <span style="font-weight:bold; color:#585858; margin:0 6px; font-size:15px; align-self:center;">latercera21@hotmail.com</span>
+        <span style="font-weight:bold; color:#868686; margin:0 6px; font-size:15px; align-self:center;">latercera21@hotmail.com</span>
     </div>
 
 <div id="vertexInputs" class="float-inputs">
@@ -150,16 +150,16 @@
     let joinSelection  = [];
     let grainDir       = 'horizontal';
     let lineStartPoint = null;
-    let offsetEdges = []; // reemplaza selectedEdge para offset
+    let offsetEdges = [];
 
     // --- Estado de corte ---
-    let cutLineIndices = [];   // indices de lineas seleccionadas para cortar
+    let cutLineIndices = []; 
 
     // --- Estado de cerrar figura ---
-    let closeLineIndices = []; // indices de lineas a unir en figura cerrada
+    let closeLineIndices = []; 
 
     // --- Estado de curva midpoint drag ---
-    let curveActiveDrag = null; // {figureIndex, edgeIndex, dragging}
+    let curveActiveDrag = null; 
 
     let viewScale = 0.2, viewOffX = 0, viewOffY = 0;
     let isPanning = false, panStart = {x:0,y:0};
@@ -411,9 +411,9 @@ function toggleSnapEdge() {
 
     function drawSnapGuides(x, y, exFi, exVi) {
         ctx.save();
-        ctx.strokeStyle='rgba(0,120,255,0.5)';
+        ctx.strokeStyle='#000369';
         ctx.lineWidth=1/viewScale;
-        ctx.setLineDash([4/viewScale,4/viewScale]);
+        ctx.setLineDash([2/viewScale,2/viewScale]);
         for (let fi=0; fi<figures.length; fi++)
             for (let vi=0; vi<figures[fi].vertices.length; vi++) {
                 if (fi===exFi && vi===exVi) continue;
@@ -456,10 +456,6 @@ function toggleSnapEdge() {
         };
     }
 
-    // Muestrea la figura (respetando curvas) como una polilinea densa, para usarla
-    // en la prueba punto-en-poligono. Antes se usaba el arreglo de vertices "crudo",
-    // que en figuras de pocos vertices con lados curvos (ej. 2 vertices: una recta
-    // y una curva) degenera en una linea ida-y-vuelta sin area real, y el test
     // punto-en-poligono casi nunca detectaba clics dentro de la figura.
     function figureAPolilineaGrande(figure, samplesPerCurve = 15) {
         const pts = [];
@@ -564,9 +560,6 @@ function toggleSnapEdge() {
         return{x:cx/figure.vertices.length,y:cy/figure.vertices.length};
     }
 
-    // ===================== MUESTREAR FIGURA COMO STROKE =====================
-    // Convierte todos los edges de una figura en una secuencia densa de puntos
-    // Esto permite que findCrossings del codigo pequeno funcione con cualquier tipo de arista
     function sampleFigureEdges(figure, steps=80) {
         const pts = [];
         for (let ei = 0; ei < figure.edges.length; ei++) {
@@ -633,7 +626,6 @@ function toggleSnapEdge() {
             }
         }
 
-        // Aplanar en un solo array de vertices + edges con indices corregidos
         const verts = [];
         const edges = [];
 
@@ -644,19 +636,15 @@ function toggleSnapEdge() {
             const offset = verts.length === 0 ? 0 : verts.length - 1;
 
             for (let vi = 0; vi < vs.length; vi++) {
-                if (vi === 0 && verts.length > 0) continue; // no duplicar punto de union
+                if (vi === 0 && verts.length > 0) continue; 
                 verts.push({x: vs[vi].x, y: vs[vi].y});
             }
 
             for (let ei = 0; ei < es.length; ei++) {
                 const e = Object.assign({}, es[ei]);
-                if (seg.reversed) {
-                    // invertir direccion del edge
-                    const tmp = e.start; e.start = e.end; e.end = tmp;
-                    // invertir puntos de control cuadraticos (quedan igual geometricamente,
-                    // solo cambia start/end, el control no cambia para cuadraticas)
+                if (seg.reversed) {                
+                    const tmp = e.start; e.start = e.end; e.end = tmp;                
                 }
-                // remap al espacio global de verts
                 e.start = offset + ei;
                 e.end   = offset + ei + 1;
                 edges.push(e);
@@ -666,37 +654,33 @@ function toggleSnapEdge() {
         return {vertices: verts, edges};
     }
 
-
-
-     function findExactCrossings(figure, cutData) {
-    // Muestreamos la figura y la línea de corte como polilíneas
-    const figPts = sampleFigureEdges(figure, 60);
-    const cutPts = sampleFigureEdges({vertices: cutData.vertices, edges: cutData.edges}, 60);
-    if (figPts.length < 2 || cutPts.length < 2) return [];
-
-    const crossings = [];
-    // Buscar intersecciones entre cada par de segmentos
-    for (let ci = 0; ci < cutPts.length - 1; ci++) {
-        const cA = cutPts[ci], cB = cutPts[ci + 1];
-        for (let fi = 0; fi < figPts.length - 1; fi++) {
-            const fA = figPts[fi], fB = figPts[fi + 1];
-            const inter = lineLineIntersect(fA, fB, cA, cB);
-            if (inter) {
-                // punto de intersección
-                const pt = {
-                    x: fA.x + (fB.x - fA.x) * inter.t_fig,
-                    y: fA.y + (fB.y - fA.y) * inter.t_fig
-                };
-                // Determinar a qué edge original pertenece el punto (por cercanía al punto medio)
-                let bestFigEdge = -1, bestFigT = 0, bestFigDist = Infinity;
-                for (let ei = 0; ei < figure.edges.length; ei++) {
-                    const edge = figure.edges[ei];
-                    const d = edgeDist(pt.x, pt.y, figure, edge);
-                    if (d < bestFigDist) {
-                        bestFigDist = d;
-                        bestFigEdge = ei;
-                        // calcular t aproximado en el edge original
-                        const a = figure.vertices[edge.start], b = figure.vertices[edge.end];
+    function findExactCrossings(figure, cutData) {
+        const figPts = sampleFigureEdges(figure, 60);
+        const cutPts = sampleFigureEdges({vertices: cutData.vertices, edges: cutData.edges}, 60);
+        if (figPts.length < 2 || cutPts.length < 2) return [];
+    
+        const crossings = [];
+        for (let ci = 0; ci < cutPts.length - 1; ci++) {
+            const cA = cutPts[ci], cB = cutPts[ci + 1];
+            for (let fi = 0; fi < figPts.length - 1; fi++) {
+                const fA = figPts[fi], fB = figPts[fi + 1];
+                const inter = lineLineIntersect(fA, fB, cA, cB);
+                if (inter) {
+                    // punto de intersección
+                    const pt = {
+                        x: fA.x + (fB.x - fA.x) * inter.t_fig,
+                        y: fA.y + (fB.y - fA.y) * inter.t_fig
+                    };
+                    // Determinar a qué edge original pertenece el punto (por cercanía al punto medio)
+                    let bestFigEdge = -1, bestFigT = 0, bestFigDist = Infinity;
+                    for (let ei = 0; ei < figure.edges.length; ei++) {
+                        const edge = figure.edges[ei];
+                        const d = edgeDist(pt.x, pt.y, figure, edge);
+                        if (d < bestFigDist) {
+                            bestFigDist = d;
+                            bestFigEdge = ei;
+                            // calcular t aproximado en el edge original
+                            const a = figure.vertices[edge.start], b = figure.vertices[edge.end];
                         if (edge.curved && edge.controlX != null) {
                             bestFigT = closestTOnQuad(pt, a, {x: edge.controlX, y: edge.controlY}, b, 80);
                         } else {
@@ -745,9 +729,7 @@ function toggleSnapEdge() {
 }
 //findExactCrossing fin
 
-
-
-    function edgeToSegment(figure, edge) {
+function edgeToSegment(figure, edge) {
     const a = figure.vertices[edge.start];
     const b = figure.vertices[edge.end];
     if (edge.curved && edge.controlX != null) {
@@ -857,17 +839,13 @@ function segmentToEdge(seg, startIdx, endIdx) {
             }
         }
 
-         const cutInterior = buildCutInterior();  
-        // Forzar que los extremos del camino de corte coincidan exactamente
+        const cutInterior = buildCutInterior();  
         // con los puntos de intersección, evitando huecos en los vértices.
         if (cutInterior.length > 0) {
             cutInterior[0] = fijarStartpoint(cutInterior[0], hitE.pt);
             cutInterior[cutInterior.length - 1] = fijarEndpoint(cutInterior[cutInterior.length - 1], hitS.pt);
         }
 
-
-
-        // --- Subdividir los segmentos de la figura en los puntos E y S ---
         const nodos = [];
         for (let i = 0; i < figSegs.length; i++) {
             if (i === hitE.edgeIdx && i === hitS.edgeIdx) {
@@ -959,7 +937,6 @@ function segmentToEdge(seg, startIdx, endIdx) {
                 }
             }
 
-            // --- 3. Construir aristas usando los índices fusionados ---
             // Cada segmento original aporta una arista entre los índices fusionados de sus dos extremos.
             for (let k = 0; k < segs.length; k++) {
                 const seg = segs[k];
@@ -972,13 +949,12 @@ function segmentToEdge(seg, startIdx, endIdx) {
             // --- 4. Cerrar la figura si el primer y último vértice están muy cerca ---
             if (merged.length > 1 && Math.hypot(merged[0].x - merged[merged.length - 1].x, merged[0].y - merged[merged.length - 1].y) < TOL) {
                 // Fusionar el último con el primero
-                const lastIdx = merged.length - 1;
-                // Reasignar índices que apuntaban al último al primero
+                const lastIdx = merged.length - 1;            
                 for (let i = 0; i < edges.length; i++) {
                     if (edges[i].start === lastIdx) edges[i].start = 0;
                     if (edges[i].end === lastIdx) edges[i].end = 0;
                 }
-                // Eliminar el último vértice
+            
                 merged.pop();
                 // Corregir índices mayores
                 for (let i = 0; i < edges.length; i++) {
@@ -991,7 +967,7 @@ function segmentToEdge(seg, startIdx, endIdx) {
             vertices: merged,
             edges,
             closed: true,
-            grain: null   // después se asigna el grain de la figura original si es necesario
+            grain: null   
             };
         }
         //segtofigure fin
@@ -1011,15 +987,11 @@ function segmentToEdge(seg, startIdx, endIdx) {
         return [fig1, fig2];
     }
 
-    // ===================== CORTE PARCIAL (muesca de ancho cero, 1 sola pieza) =====================
-    // Dado hitE (el unico cruce real con el borde de la figura) y el extremo interior
-    // de la linea de corte (que no vuelve a tocar el borde), inserta una muesca de ancho
     // cero en el segmento donde ocurre el cruce, y devuelve UNA sola figura (no divide en 2).
     function splitWithStrokePartial(figure, cutData, hitE, innerEnd) {
         const figSegs = figure.edges.map(e => edgeToSegment(figure, e));
         const cutSegs = cutData.edges.map(e => edgeToSegment(cutData, e));
 
-        // Camino de corte completo, desde el punto de entrada (hitE) hasta la punta libre,
         // en ese orden (entrada -> punta).
         let cutPath;
         if (hitE.cutEdgeIdx === innerEnd.cutEdgeIdx) {
@@ -1133,35 +1105,35 @@ function segmentToEdge(seg, startIdx, endIdx) {
     // ========== INTERSECCIONES EXACTAS (del código pequeño) ==========
 
 function lineLineIntersect(p0, p1, q0, q1) {
-  const dx1 = p1.x - p0.x, dy1 = p1.y - p0.y;
-  const dx2 = q1.x - q0.x, dy2 = q1.y - q0.y;
-  const denom = dx1 * dy2 - dy1 * dx2;
-  if (Math.abs(denom) < 1e-10) return null;
-  const dx = q0.x - p0.x, dy = q0.y - p0.y;
-  const t = (dx * dy2 - dy * dx2) / denom;
-  const s = (dx * dy1 - dy * dx1) / denom;
-  if (t < -1e-9 || t > 1 + 1e-9 || s < -1e-9 || s > 1 + 1e-9) return null;
-  return { t_fig: Math.max(0, Math.min(1, t)), t_cut: Math.max(0, Math.min(1, s)) };
+    const dx1 = p1.x - p0.x, dy1 = p1.y - p0.y;
+    const dx2 = q1.x - q0.x, dy2 = q1.y - q0.y;
+    const denom = dx1 * dy2 - dy1 * dx2;
+    if (Math.abs(denom) < 1e-10) return null;
+    const dx = q0.x - p0.x, dy = q0.y - p0.y;
+    const t = (dx * dy2 - dy * dx2) / denom;
+    const s = (dx * dy1 - dy * dx1) / denom;
+    if (t < -1e-9 || t > 1 + 1e-9 || s < -1e-9 || s > 1 + 1e-9) return null;
+    return { t_fig: Math.max(0, Math.min(1, t)), t_cut: Math.max(0, Math.min(1, s)) };
 }
 
 function closestTOnQuad(pt, p0, cp, p1, steps = 100) {
-  let best = 0, bestDist = Infinity;
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const x = (1-t)*(1-t)*p0.x + 2*(1-t)*t*cp.x + t*t*p1.x;
-    const y = (1-t)*(1-t)*p0.y + 2*(1-t)*t*cp.y + t*t*p1.y;
-    const d = Math.hypot(pt.x - x, pt.y - y);
-    if (d < bestDist) { bestDist = d; best = t; }
-  }
-  return best;
+    let best = 0, bestDist = Infinity;
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const x = (1-t)*(1-t)*p0.x + 2*(1-t)*t*cp.x + t*t*p1.x;
+        const y = (1-t)*(1-t)*p0.y + 2*(1-t)*t*cp.y + t*t*p1.y;
+        const d = Math.hypot(pt.x - x, pt.y - y);
+        if (d < bestDist) { bestDist = d; best = t; }
+    }
+    return best;
 }
 
 
 function projectOntoLine(pt, a, b) {
-  const dx = b.x - a.x, dy = b.y - a.y;
-  const len2 = dx * dx + dy * dy;
-  if (len2 < 1e-10) return 0;
-  return ((pt.x - a.x) * dx + (pt.y - a.y) * dy) / len2;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 < 1e-10) return 0;
+    return ((pt.x - a.x) * dx + (pt.y - a.y) * dy) / len2;
 }
 
     function applyCut() {
@@ -1230,7 +1202,6 @@ function projectOntoLine(pt, a, b) {
         }
         figures.splice(targetFi, 1, ...result);
     } else {
-        // Corte parcial real: 1 cruce con el borde + la punta libre queda DENTRO de la figura.
         // Se inserta una muesca de ancho cero y la figura permanece como UNA sola pieza.
         if (!partialInner) {
             showModal({title:'Error',body:'No se pudo realizar el corte parcial.',buttons:[{label:'OK'}]});
@@ -1336,7 +1307,6 @@ function projectOntoLine(pt, a, b) {
     // Cerrar: conectar último vértice con el primero
     if (verts.length > 1 && Math.hypot(verts[0].x - verts[verts.length-1].x, verts[0].y - verts[verts.length-1].y) < THR) {
         verts.pop();
-        // el último edge ya apunta a verts.length que ahora es 0
         edges[edges.length - 1].end = 0;
     } else {
         // agregar edge de cierre recto
@@ -1444,7 +1414,7 @@ function projectOntoLine(pt, a, b) {
         }
     }
 
-    function edgeLength(fig, edge) {
+function edgeLength(fig, edge) {
     const a = fig.vertices[edge.start], b = fig.vertices[edge.end];
     const STEPS = 200;
     let len = 0, px = a.x, py = a.y;
@@ -1492,7 +1462,6 @@ function projectOntoLine(pt, a, b) {
     }
 
     // Tamaño base de la fuente de medidas: un poco más grande solo en celular (touch),
-    // igual que antes en PC.
     function getMeasureFontSize() {
         return (isTouchDevice ? 12 : 10.5) / viewScale;
     }
@@ -1539,13 +1508,13 @@ function projectOntoLine(pt, a, b) {
 
     // Puntos (vértices visuales) del inicio y del extremo actual mientras se dibuja una línea nueva.
     function drawLineDrawingVertices() {
-        const r = 4 / viewScale;
+        const r = 2.5 / viewScale;
         function dot(p) {
             ctx.beginPath();
             ctx.arc(p.x, p.y, r, 0, Math.PI*2);
-            ctx.fillStyle = 'rgba(52,152,219,0.5)';
+            ctx.fillStyle = '#0005a1';
             ctx.fill();
-            ctx.strokeStyle = '#2980b9';
+            ctx.strokeStyle = '#0005a1';
             ctx.lineWidth = 1.5/viewScale;
             ctx.stroke();
         }
@@ -1619,16 +1588,13 @@ function projectOntoLine(pt, a, b) {
     for (let i = 1; i < n; i++) {
         otherEdges.push(E[(hei + i) % n]);
     }
-    // otherEdges[0] empieza en B, otherEdges[last] termina en A
 
     // ── 2. Construir la secuencia de vértices del lado original (B … A) ──
-    const origVertices = [B];                  // índice 0 nuevo
+    const origVertices = [B];                  
     for (const e of otherEdges) {
         const endV = V[e.end];
-        // evita duplicar A (se añade al final exactamente una vez)
         origVertices.push(endV);
     }
-    // origVertices[0]=B, origVertices[last]=A
 
     // ── 3. Reflejo de un punto respecto al eje AB ──
     function reflect(pt) {
@@ -1643,18 +1609,16 @@ function projectOntoLine(pt, a, b) {
 
     // ── 4. Crear aristas reflejadas (invertidas) en orden inverso ──
     const reflectedEdges = [];
-    // Recorremos otherEdges al revés para que el camino reflejado vaya de A a B
     for (let i = otherEdges.length - 1; i >= 0; i--) {
         const orig = otherEdges[i];
         const startOrig = V[orig.start];
         const endOrig   = V[orig.end];
 
-        // Reflejar extremos y puntos de control
-        const rStart = reflect(endOrig);   // se invierte: el nuevo start será el reflejo del end original
-        const rEnd   = reflect(startOrig); // el nuevo end será el reflejo del start original
+        const rStart = reflect(endOrig);   
+        const rEnd   = reflect(startOrig); 
 
         let newEdge = {
-            start: -1, end: -1,          // índices se asignarán después
+            start: -1, end: -1,          
             curved: orig.curved,
             cubic: orig.cubic,
             controlX: null,
@@ -1666,7 +1630,6 @@ function projectOntoLine(pt, a, b) {
         if (orig.cubic && orig.control2X != null) {
             const cp1 = reflect({ x: orig.controlX,  y: orig.controlY });
             const cp2 = reflect({ x: orig.control2X, y: orig.control2Y });
-            // Al invertir la curva cúbica se intercambian cp1 y cp2
             newEdge.controlX  = cp2.x;
             newEdge.controlY  = cp2.y;
             newEdge.control2X = cp1.x;
@@ -1680,17 +1643,15 @@ function projectOntoLine(pt, a, b) {
         // Guardamos las coordenadas reales de los extremos para luego casarlos con vértices
         reflectedEdges.push({
             edge: newEdge,
-            rStart: rStart,   // punto reflejado del extremo final original
-            rEnd: rEnd        // punto reflejado del extremo inicial original
+            rStart: rStart,   
+            rEnd: rEnd     
         });
     }
 
     // ── 5. Construir la nueva lista de vértices ──
     const newVertices = [];
-    const mapOrig = new Map();   // viejo índice de vértice → nuevo índice (solo lado original)
+    const mapOrig = new Map();   
 
-    // a) Lado original (B … A)
-    // B ya está en origVertices[0], A en la última posición
     newVertices.push({ x: B.x, y: B.y });        // idx 0
     mapOrig.set(hinge.start, 0);                 
     // Corregir el mapeo: B es V[hinge.end]
@@ -1701,8 +1662,6 @@ function projectOntoLine(pt, a, b) {
     for (let i = 1; i < origVertices.length; i++) {
         const v = origVertices[i];
         newVertices.push({ x: v.x, y: v.y });
-        // Buscar el índice original de este vértice para el mapeo
-        // Como otherEdges[i-1].end apunta a este vértice (excepto quizás el último que es A)
         const edge = otherEdges[i - 1];
         const origIdx = edge.end;
         if (!mapOrig.has(origIdx)) mapOrig.set(origIdx, newVertices.length - 1);
@@ -1714,7 +1673,6 @@ function projectOntoLine(pt, a, b) {
         const pt = reflectedEdges[i].rEnd;
         newVertices.push({ x: pt.x, y: pt.y });
     }
-    // La última arista reflejada termina en B, que ya existe en índice 0
 
     // ── 6. Construir las nuevas aristas ──
     const newEdges = [];
@@ -1737,7 +1695,7 @@ function projectOntoLine(pt, a, b) {
 
     // El inicio de la primera arista reflejada es A (índice mapOrig.get(hinge.start))
     const idxA = mapOrig.get(hinge.start);
-    let prevIdx = idxA; // comienza en A
+    let prevIdx = idxA; 
 
     // su índice base = newVertices.length - (reflectedEdges.length - 1)  (porque el último es B no añadido)
     const baseRefl = newVertices.length - (reflectedEdges.length - 1);
@@ -1830,136 +1788,134 @@ function projectOntoLine(pt, a, b) {
     }
 
     function applyOffset() {
-    if (offsetEdges.length===0) { showModal({title:'Error',body:'Selecciona al menos una arista.',buttons:[{label:'OK'}]}); return; }
-    const distCm = parseFloat(document.getElementById('offsetValue').value.replace(',','.'));
-    if (isNaN(distCm)||distCm<=0) { showModal({title:'Valor inválido',body:'Introduce una distancia positiva en cm.',buttons:[{label:'OK'}]}); return; }
-    saveState();
-    const distPx = distCm * PX_PER_CM;
-
-    const fi = offsetEdges[0].figureIndex;
-    const fig = figures[fi];
-
-    const sortedIndices = [...offsetEdges].sort((a,b)=>a.edgeIndex-b.edgeIndex).map(o=>o.edgeIndex);
-
-    function isAdjPrev(i) {
-        if (i===0) return false;
-        return fig.edges[sortedIndices[i-1]].end === fig.edges[sortedIndices[i]].start;
-    }
-    function isAdjNext(i) {
-        if (i===sortedIndices.length-1) return false;
-        return fig.edges[sortedIndices[i]].end === fig.edges[sortedIndices[i+1]].start;
-    }
-
-    let area=0;
-for(let k=0;k<fig.vertices.length;k++){const v1=fig.vertices[k],v2=fig.vertices[(k+1)%fig.vertices.length];area+=(v1.x*v2.y-v2.x*v1.y);}
-const cw = area > 0;
-
-const offsets = sortedIndices.map(ei => {
-    const edge = fig.edges[ei];
-    const a = fig.vertices[edge.start];
-    const b = fig.vertices[edge.end];
-    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
-    const n = cw ? {x: dy/len, y: -dx/len} : {x: -dy/len, y: dx/len};
-    return {
-        a2: {x: a.x+n.x*distPx, y: a.y+n.y*distPx},
-        b2: {x: b.x+n.x*distPx, y: b.y+n.y*distPx},
-        normal: n, edge
-    };
-});
-
-
-
-    // Resolver vértices compartidos: intersección de líneas desplazadas
-    function lineIntersect(p1,p2,p3,p4){
-        const d1x=p2.x-p1.x,d1y=p2.y-p1.y,d2x=p4.x-p3.x,d2y=p4.y-p3.y;
-        const denom=d1x*d2y-d1y*d2x;
-        if(Math.abs(denom)<1e-10) return null;
-        const t=((p3.x-p1.x)*d2y-(p3.y-p1.y)*d2x)/denom;
-        return {x:p1.x+t*d1x, y:p1.y+t*d1y};
-    }
-
-    for (let i=0; i<sortedIndices.length-1; i++) {
-        if (isAdjNext(i)) {
-            const inter = lineIntersect(offsets[i].a2, offsets[i].b2, offsets[i+1].a2, offsets[i+1].b2);
-            if (inter) { offsets[i].b2=inter; offsets[i+1].a2=inter; }
+        if (offsetEdges.length===0) { showModal({title:'Error',body:'Selecciona al menos una arista.',buttons:[{label:'OK'}]}); return; }
+        const distCm = parseFloat(document.getElementById('offsetValue').value.replace(',','.'));
+        if (isNaN(distCm)||distCm<=0) { showModal({title:'Valor inválido',body:'Introduce una distancia positiva en cm.',buttons:[{label:'OK'}]}); return; }
+        saveState();
+        const distPx = distCm * PX_PER_CM;
+    
+        const fi = offsetEdges[0].figureIndex;
+        const fig = figures[fi];
+    
+        const sortedIndices = [...offsetEdges].sort((a,b)=>a.edgeIndex-b.edgeIndex).map(o=>o.edgeIndex);
+    
+        function isAdjPrev(i) {
+            if (i===0) return false;
+            return fig.edges[sortedIndices[i-1]].end === fig.edges[sortedIndices[i]].start;
         }
-    }
-
-    // Para adyacentes: el vértice compartido del medio se MUEVE, no se duplica
-    const newVI = []; // {startIdx, endIdx} para cada arista
-
-    // Primero recolectar qué vértices mover y cuáles crear
-    const movedVertices = new Set(); // índices de vértices originales que se mueven
-
-    for (let i=0; i<sortedIndices.length; i++) {
-        const edge = offsets[i].edge;
-        if (isAdjPrev(i)) movedVertices.add(edge.start);
-        if (isAdjNext(i)) movedVertices.add(edge.end);
-    }
-
-    // Mover vértices compartidos a su nueva posición
-    for (let i=0; i<sortedIndices.length; i++) {
-        const edge = offsets[i].edge;
-        if (isAdjNext(i)) {
-            // El vértice edge.end es compartido, moverlo
-            fig.vertices[edge.end].x = offsets[i].b2.x;
-            fig.vertices[edge.end].y = offsets[i].b2.y;
+        function isAdjNext(i) {
+            if (i===sortedIndices.length-1) return false;
+            return fig.edges[sortedIndices[i]].end === fig.edges[sortedIndices[i+1]].start;
         }
-    }
+    
+        let area=0;
+        for(let k=0;k<fig.vertices.length;k++){const v1=fig.vertices[k],v2=fig.vertices[(k+1)%fig.vertices.length];area+=(v1.x*v2.y-v2.x*v1.y);}
+        const cw = area > 0;
 
-    // y construir tabla de índices
-    for (let i=0; i<sortedIndices.length; i++) {
-        const edge = offsets[i].edge;
-        let startIdx, endIdx;
+        const offsets = sortedIndices.map(ei => {
+            const edge = fig.edges[ei];
+            const a = fig.vertices[edge.start];
+            const b = fig.vertices[edge.end];
+            const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+            const n = cw ? {x: dy/len, y: -dx/len} : {x: -dy/len, y: dx/len};
+            return {
+                a2: {x: a.x+n.x*distPx, y: a.y+n.y*distPx},
+                b2: {x: b.x+n.x*distPx, y: b.y+n.y*distPx},
+                normal: n, edge
+            };
+        });
 
-        if (isAdjPrev(i)) {
-            // startIdx es el vértice compartido ya movido
-            startIdx = edge.start;
-        } else {
-            startIdx = fig.vertices.length;
-            fig.vertices.push({x: offsets[i].a2.x, y: offsets[i].a2.y});
+        // Resolver vértices compartidos: intersección de líneas desplazadas
+        function lineIntersect(p1,p2,p3,p4){
+            const d1x=p2.x-p1.x,d1y=p2.y-p1.y,d2x=p4.x-p3.x,d2y=p4.y-p3.y;
+            const denom=d1x*d2y-d1y*d2x;
+            if(Math.abs(denom)<1e-10) return null;
+            const t=((p3.x-p1.x)*d2y-(p3.y-p1.y)*d2x)/denom;
+            return {x:p1.x+t*d1x, y:p1.y+t*d1y};
+        }
+    
+        for (let i=0; i<sortedIndices.length-1; i++) {
+            if (isAdjNext(i)) {
+                const inter = lineIntersect(offsets[i].a2, offsets[i].b2, offsets[i+1].a2, offsets[i+1].b2);
+                if (inter) { offsets[i].b2=inter; offsets[i+1].a2=inter; }
+            }
+        }
+    
+        // Para adyacentes: el vértice compartido del medio se MUEVE, no se duplica
+        const newVI = []; 
+    
+        // Primero recolectar qué vértices mover y cuáles crear
+        const movedVertices = new Set();
+    
+        for (let i=0; i<sortedIndices.length; i++) {
+            const edge = offsets[i].edge;
+            if (isAdjPrev(i)) movedVertices.add(edge.start);
+            if (isAdjNext(i)) movedVertices.add(edge.end);
+        }
+    
+        // Mover vértices compartidos a su nueva posición
+        for (let i=0; i<sortedIndices.length; i++) {
+            const edge = offsets[i].edge;
+            if (isAdjNext(i)) {
+                // El vértice edge.end es compartido, moverlo
+                fig.vertices[edge.end].x = offsets[i].b2.x;
+                fig.vertices[edge.end].y = offsets[i].b2.y;
+            }
+        }
+    
+        // y construir tabla de índices
+        for (let i=0; i<sortedIndices.length; i++) {
+            const edge = offsets[i].edge;
+            let startIdx, endIdx;
+    
+            if (isAdjPrev(i)) {
+                // startIdx es el vértice compartido ya movido
+                startIdx = edge.start;
+            } else {
+                startIdx = fig.vertices.length;
+                fig.vertices.push({x: offsets[i].a2.x, y: offsets[i].a2.y});
+            }
+    
+            if (isAdjNext(i)) {
+                // endIdx es el vértice compartido ya movido
+                endIdx = edge.end;
+            } else {
+                endIdx = fig.vertices.length;
+                fig.vertices.push({x: offsets[i].b2.x, y: offsets[i].b2.y});
+            }
+    
+            newVI.push({startIdx, endIdx});
         }
 
-        if (isAdjNext(i)) {
-            // endIdx es el vértice compartido ya movido
-            endIdx = edge.end;
-        } else {
-            endIdx = fig.vertices.length;
-            fig.vertices.push({x: offsets[i].b2.x, y: offsets[i].b2.y});
+        // Insertar aristas en orden descendente
+        for (let i=sortedIndices.length-1; i>=0; i--) {
+            const ei = sortedIndices[i];
+            const edge = offsets[i].edge;
+            const {startIdx, endIdx} = newVI[i];
+            const normal = offsets[i].normal;
+    
+            const newParallel = {
+                start: startIdx, end: endIdx,
+                curved: edge.curved, cubic: edge.cubic,
+                controlX: edge.curved&&edge.controlX!=null ? edge.controlX+normal.x*distPx : null,
+                controlY: edge.curved&&edge.controlY!=null ? edge.controlY+normal.y*distPx : null,
+                control2X: edge.cubic&&edge.control2X!=null ? edge.control2X+normal.x*distPx : null,
+                control2Y: edge.cubic&&edge.control2Y!=null ? edge.control2Y+normal.y*distPx : null
+            };
+    
+            const replacement = [];
+            if (!isAdjPrev(i)) replacement.push(makeEdge(edge.start, startIdx));
+            replacement.push(newParallel);
+            if (!isAdjNext(i)) replacement.push(makeEdge(endIdx, edge.end));
+    
+            fig.edges.splice(ei, 1, ...replacement);
         }
-
-        newVI.push({startIdx, endIdx});
+    
+        offsetEdges=[];
+        hidePanel('offsetInputs');
+        selectedEdge=null;
+        redrawAll();
     }
-
-    // Insertar aristas en orden descendente
-    for (let i=sortedIndices.length-1; i>=0; i--) {
-        const ei = sortedIndices[i];
-        const edge = offsets[i].edge;
-        const {startIdx, endIdx} = newVI[i];
-        const normal = offsets[i].normal;
-
-        const newParallel = {
-            start: startIdx, end: endIdx,
-            curved: edge.curved, cubic: edge.cubic,
-            controlX: edge.curved&&edge.controlX!=null ? edge.controlX+normal.x*distPx : null,
-            controlY: edge.curved&&edge.controlY!=null ? edge.controlY+normal.y*distPx : null,
-            control2X: edge.cubic&&edge.control2X!=null ? edge.control2X+normal.x*distPx : null,
-            control2Y: edge.cubic&&edge.control2Y!=null ? edge.control2Y+normal.y*distPx : null
-        };
-
-        const replacement = [];
-        if (!isAdjPrev(i)) replacement.push(makeEdge(edge.start, startIdx));
-        replacement.push(newParallel);
-        if (!isAdjNext(i)) replacement.push(makeEdge(endIdx, edge.end));
-
-        fig.edges.splice(ei, 1, ...replacement);
-    }
-
-    offsetEdges=[];
-    hidePanel('offsetInputs');
-    selectedEdge=null;
-    redrawAll();
-}
 
     // ===================== CURVA MIDPOINT DRAG =====================
     // Calcula el punto de control cuadrático a partir del punto medio donde arrastra el usuario
@@ -1971,8 +1927,6 @@ const offsets = sortedIndices.map(ei => {
     }
 
     // ===================== MOVER ARISTA / LADO =====================
-    // Ajusta el punto de control de una curva vecina cuando uno de sus extremos
-    // (compartido con la arista que se está moviendo) cambia de posición,
     // preservando su forma relativa. Misma lógica usada en el arrastre de vértices.
     function edgeMoveAdjustNeighbor(fig, vi, oldPos, excludeEdge) {
         fig.edges.forEach(e => {
@@ -2011,8 +1965,8 @@ const offsets = sortedIndices.map(ei => {
                 const line = figures[li];
                 if (line) {
                     ctx.save();
-                    ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3/viewScale;
-                    ctx.setLineDash([6/viewScale, 4/viewScale]);
+                    ctx.strokeStyle = '#b30000'; ctx.lineWidth = 2/viewScale;
+                    ctx.setLineDash([2/viewScale, 2/viewScale]);
                     line.edges.forEach(e => {
                         const a = line.vertices[e.start], b = line.vertices[e.end];
                         ctx.beginPath(); ctx.moveTo(a.x,a.y);
@@ -2031,8 +1985,8 @@ const offsets = sortedIndices.map(ei => {
                 const line = figures[li];
                 if (line) {
                     ctx.save();
-                    ctx.strokeStyle = '#8e44ad'; ctx.lineWidth = 3/viewScale;
-                    ctx.setLineDash([6/viewScale, 4/viewScale]);
+                    ctx.strokeStyle = '#8e44ad'; ctx.lineWidth = 2/viewScale;
+                    ctx.setLineDash([2/viewScale, 2/viewScale]);
                     line.edges.forEach(e => {
                         const a = line.vertices[e.start], b = line.vertices[e.end];
                         ctx.beginPath(); ctx.moveTo(a.x,a.y);
@@ -2051,8 +2005,8 @@ const offsets = sortedIndices.map(ei => {
         const e=fig.edges[oe.edgeIndex];
         const a=fig.vertices[e.start], b=fig.vertices[e.end];
         ctx.save();
-        ctx.strokeStyle='#27ae60'; ctx.lineWidth=3/viewScale;
-        ctx.setLineDash([6/viewScale,4/viewScale]);
+        ctx.strokeStyle='#00b006'; ctx.lineWidth=2/viewScale;
+        ctx.setLineDash([2/viewScale,2/viewScale]);
         ctx.beginPath(); ctx.moveTo(a.x,a.y);
         if(e.cubic&&e.control2X!=null) ctx.bezierCurveTo(e.controlX,e.controlY,e.control2X,e.control2Y,b.x,b.y);
         else if(e.curved&&e.controlX!=null) ctx.quadraticCurveTo(e.controlX,e.controlY,b.x,b.y);
@@ -2160,7 +2114,7 @@ const offsets = sortedIndices.map(ei => {
         ctx.save();
         // Todas las figuras (abiertas o cerradas) con el mismo estilo negro
         ctx.strokeStyle = figure.locked ? '#8e0000' : '#000';
-        ctx.lineWidth = figure.locked ? 3/viewScale : 2/viewScale;
+        ctx.lineWidth = figure.locked ? 1.5/viewScale : 1.5/viewScale;
         ctx.setLineDash([]);
 
         figure.edges.forEach((e,ei)=>{
@@ -2170,7 +2124,7 @@ const offsets = sortedIndices.map(ei => {
             if(e.cubic&&e.control2X!=null) ctx.bezierCurveTo(e.controlX,e.controlY,e.control2X,e.control2Y,b.x,b.y);
             else if(e.curved&&e.controlX!=null) ctx.quadraticCurveTo(e.controlX,e.controlY,b.x,b.y);
             else ctx.lineTo(b.x,b.y);
-            if(selJoin){ ctx.strokeStyle='#e74c3c'; ctx.lineWidth=3/viewScale; ctx.stroke(); ctx.strokeStyle='#000'; ctx.lineWidth=2/viewScale; }
+            if(selJoin){ ctx.strokeStyle='#d10000'; ctx.lineWidth=2/viewScale; ctx.stroke(); ctx.strokeStyle='#000'; ctx.lineWidth=2/viewScale; }
             else ctx.stroke();
         });
         ctx.restore();
@@ -2189,13 +2143,13 @@ const offsets = sortedIndices.map(ei => {
     }
 
     function drawAllVertices(){
-        const r=4/viewScale;
+        const r=2.5/viewScale;
         figures.forEach((fig,fi)=>{fig.vertices.forEach((v,vi)=>{
             const isSel = selectedVertex && selectedVertex.figureIndex===fi && selectedVertex.vertexIndex===vi;
             ctx.beginPath();ctx.arc(v.x,v.y,r,0,Math.PI*2);
-            ctx.fillStyle = isSel ? 'rgba(46,204,113,0.5)' : 'rgba(52,152,219,0.5)';
+            ctx.fillStyle = isSel ? '#00c918' : '#0019d9';
             ctx.fill();
-            ctx.strokeStyle = isSel ? '#27ae60' : '#2980b9';
+            ctx.strokeStyle = isSel ? '#00c918' : '#0019d9';
             ctx.lineWidth=1.5/viewScale;ctx.stroke();
         });});
     }
@@ -2203,7 +2157,7 @@ const offsets = sortedIndices.map(ei => {
     function drawResizeIndicator(){
         if(!selectedEdge)return;
         const fig=figures[selectedEdge.figureIndex],edge=fig.edges[selectedEdge.edgeIndex];
-        const a=fig.vertices[edge.start],b=fig.vertices[edge.end],r=6/viewScale;
+        const a=fig.vertices[edge.start],b=fig.vertices[edge.end],r=3/viewScale;
         const moveB=Math.hypot(selectedEdge.clickX-b.x,selectedEdge.clickY-b.y)<Math.hypot(selectedEdge.clickX-a.x,selectedEdge.clickY-a.y);
         const mv=moveB?b:a,fx=moveB?a:b;
         ctx.beginPath();ctx.arc(fx.x,fx.y,r,0,Math.PI*2);ctx.fillStyle='#27ae60';ctx.fill();
@@ -2292,7 +2246,7 @@ const offsets = sortedIndices.map(ei => {
             ctx.save();
             ctx.setTransform(dpr*viewScale,0,0,dpr*viewScale,dpr*viewOffX,dpr*viewOffY);
             ctx.beginPath(); ctx.moveTo(lineStartPoint.x, lineStartPoint.y); ctx.lineTo(pos.x, pos.y);
-            ctx.strokeStyle='#000'; ctx.setLineDash([]); ctx.lineWidth=2/viewScale; ctx.stroke();
+            ctx.strokeStyle='#000'; ctx.setLineDash([]); ctx.lineWidth=1.5/viewScale; ctx.stroke();
             ctx.restore();
         } else if(dragData||curveActiveDrag){
             handlePointerMove(getPos(e));
@@ -2310,7 +2264,7 @@ const offsets = sortedIndices.map(ei => {
             const wp = screenToWorld(sx, sy);
             let end = {x: wp.x, y: wp.y};
             if(snapEnabled) end = applySnap(end.x, end.y, -1, -1);
-            if(lineStartPoint && Math.hypot(end.x-lineStartPoint.x, end.y-lineStartPoint.y) > 2/viewScale){
+            if(lineStartPoint && Math.hypot(end.x-lineStartPoint.x, end.y-lineStartPoint.y) > 1.5/viewScale){
                 saveState();
                 figures.push(createLine(lineStartPoint, end));
             }
@@ -2346,24 +2300,24 @@ const offsets = sortedIndices.map(ei => {
     }
 
     function handleMouseUp(e){
-    e.preventDefault();
-    isPanning=false;
-    if(mode==='line' && dragData && dragData.type==='line'){
-        const pos=getPos(e);
-        let end = {x: pos.x, y: pos.y};
-        if(snapEnabled) end = applySnap(end.x, end.y, -1, -1);
-        if(lineStartPoint && Math.hypot(end.x-lineStartPoint.x, end.y-lineStartPoint.y) > 2/viewScale){
-            saveState();
-            figures.push(createLine(lineStartPoint, end));
+        e.preventDefault();
+        isPanning=false;
+        if(mode==='line' && dragData && dragData.type==='line'){
+            const pos=getPos(e);
+            let end = {x: pos.x, y: pos.y};
+            if(snapEnabled) end = applySnap(end.x, end.y, -1, -1);
+            if(lineStartPoint && Math.hypot(end.x-lineStartPoint.x, end.y-lineStartPoint.y) > 1.5/viewScale){
+                saveState();
+                figures.push(createLine(lineStartPoint, end));
+            }
+            lineStartPoint = null;
+            dragData = null;
+            redrawAll();
+            return;
         }
-        lineStartPoint = null;
-        dragData = null;
-        redrawAll();
-        return;
+        dragData=null;
+        curveActiveDrag=null;
     }
-    dragData=null;
-    curveActiveDrag=null;
-}
 
     function handleMouseLeave(e){
         isPanning=false;
@@ -2579,7 +2533,7 @@ const offsets = sortedIndices.map(ei => {
             ctx.save();
             ctx.setTransform(dpr*viewScale,0,0,dpr*viewScale,dpr*viewOffX,dpr*viewOffY);
             ctx.beginPath(); ctx.moveTo(lineStartPoint.x, lineStartPoint.y); ctx.lineTo(wx, wy);
-            ctx.strokeStyle='#000'; ctx.setLineDash([]); ctx.lineWidth=2/viewScale; ctx.stroke();
+            ctx.strokeStyle='#000'; ctx.setLineDash([]); ctx.lineWidth=1.5/viewScale; ctx.stroke();
             ctx.restore();
             return;
         }
@@ -2759,8 +2713,8 @@ const offsets = sortedIndices.map(ei => {
         if(!isNaN(dx)) v.x+=dx*PX_PER_CM;
         if(!isNaN(dy)) v.y+=dy*PX_PER_CM;
 
-        document.getElementById('vertexDX').value='1';
-        document.getElementById('vertexDY').value='1';
+        document.getElementById('vertexDX').value='0';
+        document.getElementById('vertexDY').value='0';
         redrawAll();
     }
 
@@ -2823,45 +2777,45 @@ const offsets = sortedIndices.map(ei => {
 }
 
     function exportSVG(){
-    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-    figures.forEach(fig=>{fig.vertices.forEach(v=>{minX=Math.min(minX,v.x);minY=Math.min(minY,v.y);maxX=Math.max(maxX,v.x);maxY=Math.max(maxY,v.y);});});
-    const pad=20;
-    const W=maxX-minX+pad*2, H=maxY-minY+pad*2;
-    const ox=minX-pad, oy=minY-pad;
-
-    function pathD(fig){
-        let d='';
-        fig.edges.forEach(e=>{
-            const a=fig.vertices[e.start], b=fig.vertices[e.end];
-            if(!d) d+=`M ${a.x-ox} ${a.y-oy} `;
-            if(e.cubic&&e.control2X!=null) d+=`C ${e.controlX-ox} ${e.controlY-oy} ${e.control2X-ox} ${e.control2Y-oy} ${b.x-ox} ${b.y-oy} `;
-            else if(e.curved&&e.controlX!=null) d+=`Q ${e.controlX-ox} ${e.controlY-oy} ${b.x-ox} ${b.y-oy} `;
-            else d+=`L ${b.x-ox} ${b.y-oy} `;
-        });
-        if(fig.closed) d+='Z';
-        return d.trim();
-    }
-
-    let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">\n`;
-    figures.forEach((fig,i)=>{
-        svg+=`  <path id="fig${i}" d="${pathD(fig)}" fill="none" stroke="black" stroke-width="2"/>\n`;
-    });
-    svg+=`</svg>`;
-
-    showModal({title:'Exportar SVG',textarea:svg,
-        buttons:[{label:'📋 Copiar',value:'copy'},{label:'💾 Descargar',value:'dl'},{label:'✕ Cerrar',value:'close'}]
-    }).then(a=>{
-        if(a==='copy'){
-            (navigator.clipboard?navigator.clipboard.writeText(svg):Promise.reject())
-                .catch(()=>{const ta=document.querySelector('.modal-box textarea');if(ta){ta.select();document.execCommand('copy');}});
-        } else if(a==='dl'){
-            const blob=new Blob([svg],{type:'image/svg+xml'});
-            const url=URL.createObjectURL(blob),el=document.createElement('a');
-            el.href=url;el.download='patron.svg';document.body.appendChild(el);el.click();
-            setTimeout(()=>{document.body.removeChild(el);URL.revokeObjectURL(url);},300);
+        let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+        figures.forEach(fig=>{fig.vertices.forEach(v=>{minX=Math.min(minX,v.x);minY=Math.min(minY,v.y);maxX=Math.max(maxX,v.x);maxY=Math.max(maxY,v.y);});});
+        const pad=20;
+        const W=maxX-minX+pad*2, H=maxY-minY+pad*2;
+        const ox=minX-pad, oy=minY-pad;
+    
+        function pathD(fig){
+            let d='';
+            fig.edges.forEach(e=>{
+                const a=fig.vertices[e.start], b=fig.vertices[e.end];
+                if(!d) d+=`M ${a.x-ox} ${a.y-oy} `;
+                if(e.cubic&&e.control2X!=null) d+=`C ${e.controlX-ox} ${e.controlY-oy} ${e.control2X-ox} ${e.control2Y-oy} ${b.x-ox} ${b.y-oy} `;
+                else if(e.curved&&e.controlX!=null) d+=`Q ${e.controlX-ox} ${e.controlY-oy} ${b.x-ox} ${b.y-oy} `;
+                else d+=`L ${b.x-ox} ${b.y-oy} `;
+            });
+            if(fig.closed) d+='Z';
+            return d.trim();
         }
-    });
-}
+    
+        let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">\n`;
+        figures.forEach((fig,i)=>{
+            svg+=`  <path id="fig${i}" d="${pathD(fig)}" fill="none" stroke="black" stroke-width="2"/>\n`;
+        });
+        svg+=`</svg>`;
+    
+        showModal({title:'Exportar SVG',textarea:svg,
+            buttons:[{label:'📋 Copiar',value:'copy'},{label:'💾 Descargar',value:'dl'},{label:'✕ Cerrar',value:'close'}]
+        }).then(a=>{
+            if(a==='copy'){
+                (navigator.clipboard?navigator.clipboard.writeText(svg):Promise.reject())
+                    .catch(()=>{const ta=document.querySelector('.modal-box textarea');if(ta){ta.select();document.execCommand('copy');}});
+            } else if(a==='dl'){
+                const blob=new Blob([svg],{type:'image/svg+xml'});
+                const url=URL.createObjectURL(blob),el=document.createElement('a');
+                el.href=url;el.download='patron.svg';document.body.appendChild(el);el.click();
+                setTimeout(()=>{document.body.removeChild(el);URL.revokeObjectURL(url);},300);
+            }
+        });
+    }
 
     function importJSON(){
     showModal({
