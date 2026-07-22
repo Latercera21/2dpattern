@@ -19,3 +19,7 @@ Ejecuta: termux-setup-storage (acepta el permiso que pide Android).
 Copia tus archivos .hpp/.cpp a ~/storage/downloads/ o a la carpeta de Termux.
 Compila: clang++ -std=c++17 -O2 -pthread main.cpp -o nesting
 Ejecuta: ./nesting
+
+cd C:\nesting
+
+g++ -std=c++17 -O2 -pthread main.cpp -o nesting.exe
