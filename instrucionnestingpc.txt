@@ -1,0 +1,21 @@
+PC (Windows 10) paso a paso:
+
+Descarga MSYS2: https://www.msys2.org → instala.
+Abre "MSYS2 MINGW64" desde el menú inicio.
+Ejecuta: pacman -Syu (reinicia la terminal si lo pide).
+Ejecuta: pacman -S mingw-w64-x86_64-gcc
+Agrega C:\msys64\mingw64\bin al PATH de Windows (Panel de control → Variables de entorno).
+Verifica: abre CMD nuevo y escribe g++ --version
+Compila: g++ -std=c++17 -O2 -pthread main.cpp -o nesting.exe
+Ejecuta: nesting.exe
+
+Celular (Android) paso a paso:
+
+Instala F-Droid: https://f-droid.org
+Desde F-Droid instala Termux (no uses la versión de Play Store, está desactualizada).
+Abre Termux, ejecuta: pkg update && pkg upgrade
+Ejecuta: pkg install clang
+Ejecuta: termux-setup-storage (acepta el permiso que pide Android).
+Copia tus archivos .hpp/.cpp a ~/storage/downloads/ o a la carpeta de Termux.
+Compila: clang++ -std=c++17 -O2 -pthread main.cpp -o nesting
+Ejecuta: ./nesting
