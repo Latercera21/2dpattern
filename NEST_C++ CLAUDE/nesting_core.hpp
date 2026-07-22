@@ -26,6 +26,7 @@ struct Placed {
     double tx, ty;
     BBox bb;
     bool rotada;
+    std::vector<Point> hull; // envolvente convexa del poly YA colocado (en coords finales)
 };
 
 struct LayoutItem {
@@ -113,12 +114,88 @@ inline bool collide(const std::vector<Point>& A, const std::vector<Point>& B) {
     return false;
 }
 
+// ===================== NFP (No-Fit Polygon) para poligonos convexos =====================
+
+// Envolvente convexa (Andrew's monotone chain). Devuelve puntos en orden CCW.
+inline std::vector<Point> convexHull(std::vector<Point> pts) {
+    std::sort(pts.begin(), pts.end(), [](const Point& a, const Point& b) {
+        return a.x < b.x - 1e-12 || (std::fabs(a.x - b.x) < 1e-9 && a.y < b.y);
+    });
+    pts.erase(std::unique(pts.begin(), pts.end(), [](const Point& a, const Point& b) {
+        return std::fabs(a.x - b.x) < 1e-9 && std::fabs(a.y - b.y) < 1e-9;
+    }), pts.end());
+    int n = (int)pts.size();
+    if (n < 3) return pts;
+    auto cross = [](const Point& O, const Point& A, const Point& B) {
+        return (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
+    };
+    std::vector<Point> hull(2 * n);
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+        while (k >= 2 && cross(hull[k - 2], hull[k - 1], pts[i]) <= 0) k--;
+        hull[k++] = pts[i];
+    }
+    int lower = k + 1;
+    for (int i = n - 2; i >= 0; i--) {
+        while (k >= lower && cross(hull[k - 2], hull[k - 1], pts[i]) <= 0) k--;
+        hull[k++] = pts[i];
+    }
+    hull.resize(k - 1);
+    return hull; // CCW
+}
+
+// Refleja un poligono convexo CCW (para restarlo en la suma de Minkowski) y
+// mantiene el orden CCW (al negar los puntos, el orden se invierte, por eso recorremos al reves).
+inline std::vector<Point> reflectConvexCCW(const std::vector<Point>& B) {
+    std::vector<Point> r;
+    r.reserve(B.size());
+    for (const auto& p : B) r.push_back({ -p.x, -p.y });
+    return r;
+}
+
+// Suma de Minkowski de dos poligonos convexos CCW (algoritmo de fusion por angulo de arista).
+inline std::vector<Point> minkowskiSumConvex(const std::vector<Point>& A, const std::vector<Point>& B) {
+    int na = (int)A.size(), nb = (int)B.size();
+    if (na == 0) return B;
+    if (nb == 0) return A;
+    if (na == 1) return translate(B, A[0].x, A[0].y);
+    if (nb == 1) return translate(A, B[0].x, B[0].y);
+
+    auto startIdx = [](const std::vector<Point>& P) {
+        int idx = 0;
+        for (int i = 1; i < (int)P.size(); i++)
+            if (P[i].y < P[idx].y - 1e-12 || (std::fabs(P[i].y - P[idx].y) < 1e-9 && P[i].x < P[idx].x))
+                idx = i;
+        return idx;
+    };
+    int ia = startIdx(A), ib = startIdx(B);
+    std::vector<Point> Ar(na), Br(nb);
+    for (int k = 0; k < na; k++) Ar[k] = A[(ia + k) % na];
+    for (int k = 0; k < nb; k++) Br[k] = B[(ib + k) % nb];
+    Ar.push_back(Ar[0]); Ar.push_back(Ar[1]);
+    Br.push_back(Br[0]); Br.push_back(Br[1]);
+
+    std::vector<Point> result;
+    result.reserve(na + nb);
+    int i = 0, j = 0;
+    while (i < na || j < nb) {
+        result.push_back({ Ar[i].x + Br[j].x, Ar[i].y + Br[j].y });
+        double cr = (Ar[i + 1].x - Ar[i].x) * (Br[j + 1].y - Br[j].y) -
+                    (Ar[i + 1].y - Ar[i].y) * (Br[j + 1].x - Br[j].x);
+        bool avanzaA = (cr >= -1e-12), avanzaB = (cr <= 1e-12);
+        if (avanzaA && i < na) i++;
+        if (avanzaB && j < nb) j++;
+        if (!avanzaA && !avanzaB) { i++; j++; } // salvaguarda anti bucle infinito
+    }
+    return result;
+}
+
 } // namespace Geo
 
 class NestingEngine {
 public:
-    double MARGEN = 0.3;  // Reduced from 0.5 for tighter packing
-    double STEP = 0.25;   // Finer step for better precision
+    double MARGEN = 0.3;
+    double STEP = 0.25;
     mutable std::mt19937 rng{ std::random_device{}() };
 
     bool canPlace(const std::vector<Point>& poly, double x, double y,
@@ -136,54 +213,66 @@ public:
 
     struct Pos { double tx, ty; };
 
+    // Genera candidatos de posicion usando NFP real (via envolvente convexa) contra
+    // cada pieza ya colocada, mas candidatos de los bordes de la tela. La aceptacion
+    // final SIEMPRE se valida contra la geometria real completa (no la envolvente),
+    // asi que nunca hay riesgo de overlap aunque la pieza sea concava.
     Pos buscarPos(const std::vector<Point>& vpoly, const BBox& vbb,
                   double maxAltura, const std::vector<Placed>& colocadas,
                   double telaW) const {
-        std::set<double> xSet;
-        xSet.insert(0.0);
         double maxX = telaW - vbb.w;
-        if (maxX >= 0) xSet.insert(maxX);
+
+        std::vector<Point> candidatos;
+        candidatos.push_back({ 0, 0 });
+        if (maxX >= 0) candidatos.push_back({ maxX, 0 });
+
+        std::vector<Point> hullPieza = Geo::convexHull(vpoly);
+        std::vector<Point> hullPiezaReflejado = Geo::reflectConvexCCW(hullPieza);
+
         for (const auto& col : colocadas) {
-            double cands[6] = {
-                col.tx, col.tx + col.bb.w,
-                col.tx - vbb.w, col.tx + col.bb.w - vbb.w,
-                col.tx + 0.5, col.tx + col.bb.w - 0.5
-            };
-            for (double cx : cands)
-                if (cx >= 0 && cx <= maxX) xSet.insert(cx);
+            if (col.hull.empty()) continue;
+            std::vector<Point> nfp = Geo::minkowskiSumConvex(col.hull, hullPiezaReflejado);
+            for (const auto& v : nfp) {
+                double tx = v.x - MARGEN, ty = v.y - MARGEN;
+                if (tx >= -1e-6 && ty >= -1e-6 && tx <= maxX + 1e-6)
+                    candidatos.push_back({ std::max(0.0, tx), std::max(0.0, ty) });
+            }
         }
+
+        // Muestreo ligero adicional en X para no depender 100% del NFP (respaldo/robustez)
         if (maxX > 0) {
-            static thread_local std::mt19937 rngPos{ std::random_device{}() };
-            std::uniform_real_distribution<double> distX(0, maxX);
-            for (int k = 0; k < 20; k++) xSet.insert(distX(rngPos));
-            for (int k = 0; k <= 20; k++) {
-                double gx = maxX * k / 20.0;
-                xSet.insert(gx);
-            }
-        }
-        if (maxX >= 0) {
-            int nMuestras = 40;
-            double paso = maxX / nMuestras;
-            if (paso > 0) {
-                for (int k = 0; k <= nMuestras; k++) xSet.insert(k * paso);
-            }
+            for (int k = 0; k <= 10; k++) candidatos.push_back({ maxX * k / 10.0, 0 });
         }
 
         double mejorX = 0, mejorY = maxAltura, mejorScore = std::numeric_limits<double>::infinity();
 
-        for (double sx : xSet) {
-            if (sx < 0 || sx > maxX) continue;
-            double tx = sx, ty = maxAltura + STEP;
+        for (const auto& c : candidatos) {
+            double tx = c.x;
+            if (tx < 0 || tx > maxX) continue;
+            double ty = std::max(c.y, 0.0);
+            // Asegura que arranque encima de lo ya colocado si el candidato cae mas alto que maxAltura
+            if (ty > maxAltura + STEP) ty = maxAltura + STEP;
 
-            double drop = 5;
-            while (ty - drop >= 0 && canPlace(vpoly, tx, ty - drop, colocadas, telaW)) ty -= drop;
+            if (!canPlace(vpoly, tx, ty, colocadas, telaW)) {
+                // Intenta subir hasta encontrar un punto valido (por si el candidato NFP quedo invadiendo)
+                bool ok = false;
+                for (double tyy = ty; tyy <= maxAltura + 5.0; tyy += STEP) {
+                    if (canPlace(vpoly, tx, tyy, colocadas, telaW)) { ty = tyy; ok = true; break; }
+                }
+                if (!ok) continue;
+            }
+
+            // Asentar: bajar todo lo posible desde el candidato (settle fino)
             while (ty - STEP >= 0 && canPlace(vpoly, tx, ty - STEP, colocadas, telaW)) ty -= STEP;
 
+            // Pequeño ajuste lateral tambien, por si se puede deslizar y bajar mas
             bool moved = true;
-            while (moved) {
+            int iterSeguridad = 0;
+            while (moved && iterSeguridad < 200) {
                 moved = false;
+                iterSeguridad++;
                 for (double dx : { -STEP, STEP }) {
-                    if (canPlace(vpoly, tx + dx, ty, colocadas, telaW)) {
+                    if (tx + dx >= 0 && tx + dx <= maxX && canPlace(vpoly, tx + dx, ty, colocadas, telaW)) {
                         double nx = tx + dx, ny = ty;
                         while (ny - STEP >= 0 && canPlace(vpoly, nx, ny - STEP, colocadas, telaW)) ny -= STEP;
                         if (ny < ty) { tx = nx; ty = ny; moved = true; }
@@ -232,14 +321,15 @@ public:
 
             std::vector<Point> polyF = Geo::translate(vpoly, mejorPos.tx + MARGEN, mejorPos.ty + MARGEN);
             BBox bbF = Geo::bbox(polyF);
+            std::vector<Point> hullF = Geo::convexHull(polyF);
 
-            colocadas.push_back({ p.id, polyF, bbF, mejorPos.tx, mejorPos.ty, vbb, mejorRot });
+            colocadas.push_back({ p.id, polyF, bbF, mejorPos.tx, mejorPos.ty, vbb, mejorRot, hullF });
 
             double h = mejorPos.ty + vbb.h;
             if (h > maxAltura) maxAltura = h;
         }
 
-        // SHAKE: move each piece in all directions while no collision
+        // SHAKE: mover cada pieza en todas direcciones mientras no haya colision
         bool improved = true;
         int shakeRounds = 0;
         while (improved && shakeRounds < 5) {
@@ -247,7 +337,6 @@ public:
             shakeRounds++;
             for (size_t i = 0; i < colocadas.size(); i++) {
                 Placed& cur = colocadas[i];
-                // Try moving up
                 while (true) {
                     std::vector<Point> tp = Geo::translate(cur.poly, 0, -STEP);
                     BBox bbT = Geo::bbox(tp);
@@ -261,9 +350,10 @@ public:
                         if (Geo::collide(tp, o.poly)) { col = true; break; }
                     }
                     if (col) break;
-                    cur.poly = tp; cur.bbF = bbT; cur.ty -= STEP; improved = true;
+                    cur.poly = tp; cur.bbF = bbT; cur.ty -= STEP;
+                    cur.hull = Geo::translate(cur.hull, 0, -STEP);
+                    improved = true;
                 }
-                // Try moving left
                 while (true) {
                     std::vector<Point> tp = Geo::translate(cur.poly, -STEP, 0);
                     BBox bbT = Geo::bbox(tp);
@@ -277,9 +367,10 @@ public:
                         if (Geo::collide(tp, o.poly)) { col = true; break; }
                     }
                     if (col) break;
-                    cur.poly = tp; cur.bbF = bbT; cur.tx -= STEP; improved = true;
+                    cur.poly = tp; cur.bbF = bbT; cur.tx -= STEP;
+                    cur.hull = Geo::translate(cur.hull, -STEP, 0);
+                    improved = true;
                 }
-                // Try moving right
                 while (true) {
                     std::vector<Point> tp = Geo::translate(cur.poly, STEP, 0);
                     BBox bbT = Geo::bbox(tp);
@@ -293,12 +384,14 @@ public:
                         if (Geo::collide(tp, o.poly)) { col = true; break; }
                     }
                     if (col) break;
-                    cur.poly = tp; cur.bbF = bbT; cur.tx += STEP; improved = true;
+                    cur.poly = tp; cur.bbF = bbT; cur.tx += STEP;
+                    cur.hull = Geo::translate(cur.hull, STEP, 0);
+                    improved = true;
                 }
             }
         }
 
-        // COMPACTION: intenta bajar cada pieza lo mas posible (una vez por pieza, no repetido)
+        // COMPACTACION: baja cada pieza lo mas posible (una vez por pieza)
         for (size_t iter = 0; iter < 3; iter++) {
             for (size_t i = 0; i < colocadas.size(); i++) {
                 Placed& cur = colocadas[i];
@@ -319,8 +412,10 @@ public:
                     else break;
                 }
                 if (bestTy < cur.ty) {
-                    cur.poly = Geo::translate(cur.poly, 0, bestTy - cur.ty);
+                    double dy = bestTy - cur.ty;
+                    cur.poly = Geo::translate(cur.poly, 0, dy);
                     cur.bbF = Geo::bbox(cur.poly);
+                    cur.hull = Geo::translate(cur.hull, 0, dy);
                     cur.ty = bestTy;
                 }
             }
