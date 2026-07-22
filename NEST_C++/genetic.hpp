@@ -310,15 +310,11 @@ public:
                     pool->chequeosSinMejora = 0;
                 } else {
                     pool->chequeosSinMejora++;
-                    // Si el pool global tiene algo mejor que lo que este hilo logro, lo adopta
-                    if (!pool->eliteGlobal.empty() && pool->eliteGlobal[0].altura < resultadoActual.altura - 0.01) {
-                        ordenActual = pool->eliteGlobal[0].orden;
-                        resultadoActual = engine.calcularLayout(ordenActual, telaW);
-                        insertarElite(elite, ordenActual, resultadoActual.altura);
-                        if (resultadoActual.altura < mejorResultado.altura - 0.05) {
-                            mejorResultado = resultadoActual;
-                            mejorOrden = ordenActual;
-                        }
+                    // Solo enriquece el material genetico local (para cruces/mutaciones);
+                    // NO fuerza al hilo a abandonar su propio camino de busqueda,
+                    // para no perder la diversidad entre hilos.
+                    if (!pool->eliteGlobal.empty() && pool->eliteGlobal[0].altura < mejorResultado.altura - 0.01) {
+                        insertarElite(elite, pool->eliteGlobal[0].orden, pool->eliteGlobal[0].altura);
                     }
                 }
                 if (pool->chequeosSinMejora >= pool->UMBRAL_PARADA) debeParar = true;
