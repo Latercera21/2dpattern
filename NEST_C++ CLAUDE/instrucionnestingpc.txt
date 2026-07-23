@@ -9,7 +9,7 @@ Verifica: abre CMD nuevo y escribe g++ --version
 Compila: g++ -std=c++17 -O2 -pthread main.cpp -o nesting.exe
 Ejecuta: nesting.exe
 
-Celular (Android) paso a paso:
+Celular (Android) paso a paso::
 
 Instala F-Droid: https://f-droid.org
 Desde F-Droid instala Termux (no uses la versión de Play Store, está desactualizada).
