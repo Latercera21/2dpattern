@@ -26,3 +26,6 @@ g++ -std=c++17 -O2 -pthread main.cpp -o nesting.exe
 
 cd D:\CLO\nesting
 cd /d D:\CLO\nesting
+
+D:
+cd \CLO\nesting
