@@ -4,6 +4,7 @@ import json, ezdxf
 # Guarda tu JSON como input.json en una carpeta, por ejemplo C:\patrones\input.json
 # 3. Guardar el script
 # Guarda este archivo como convertir.py en la misma carpeta:
+# pip install ezdxf --user
 
 # cd /d C:\patrones
 # python convertir.py
