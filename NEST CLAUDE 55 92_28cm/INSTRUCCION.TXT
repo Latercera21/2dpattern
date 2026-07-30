@@ -29,3 +29,37 @@ cd /d D:\CLO\nesting
 
 D:
 cd \CLO\nesting
+
+NFP:
+
+LINK CLIPPER:
+
+https://github.com/AngusJohnson/Clipper2?spm=a2ty_o01.29997173.0.0.14f055fbUdf0dd
+
+nuevo comando: 
+
+g++ -O2 -pthread -std=c++17 -I. main.cpp clipper.engine.cpp clipper.offset.cpp clipper.rectclip.cpp clipper.triangulation.cpp -o nesting.exe
+
+ruta:
+
+C:\nesting\
+  main.cpp
+  nesting_core.hpp
+  curve_parser.hpp
+  genetic.hpp
+  json_io.hpp
+  svg_export.hpp
+  clipper.engine.cpp
+  clipper.offset.cpp
+  clipper.rectclip.cpp
+  clipper.triangulation.cpp
+  clipper2\
+    clipper.core.h
+    clipper.engine.h
+    clipper.export.h
+    clipper.h
+    clipper.minkowski.h
+    clipper.offset.h
+    clipper.rectclip.h
+    clipper.triangulation.h
+    clipper.version.h
