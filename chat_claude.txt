@@ -1,0 +1,69 @@
+Microsoft Windows [Versión 10.0.17763.1] (c) 2018 Microsoft Corporation. Todos los derechos reservados. C:\Users\Administrador>cd C:\nesting C:\nesting>g++ -std=c++17 -O2 -pthread main.cpp -o nesting.exe In file included from curve_parser.hpp:2,                  from json_io.hpp:2,                  from main.cpp:1: nesting_core.hpp:484:10: fatal error: clipper2/clipper.h: No such file or directory   484 | #include "clipper2/clipper.h"       |          ^~~~~~~~~~~~~~~~~~~~ compilation terminated. C:\nesting>
+
+por si acaso descargue esto  https://github.com/AngusJohnson/Clipper2?spm=a2ty_o01.29997173.0.0.14f055fbUdf0dd  los comandos que usaba eran estos cd C:\nesting  g++ -std=c++17 -O2 -pthread main.cpp -o nesting.exe
+
+
+
+asi lo dejé los archivos
+
+C:\nesting\
+
+  main.cpp
+
+  nesting_core.hpp
+
+  curve_parser.hpp
+
+  genetic.hpp
+
+  json_io.hpp
+
+  svg_export.hpp
+
+  clipper.engine.cpp
+
+  clipper.offset.cpp
+
+  clipper.rectclip.cpp
+
+  clipper.triangulation.cpp
+
+  clipper2\
+
+    clipper.core.h
+
+    clipper.engine.h
+
+    clipper.export.h
+
+    clipper.h
+
+    clipper.minkowski.h
+
+    clipper.offset.h
+
+    clipper.rectclip.h
+
+    clipper.triangulation.h
+
+    clipper.version.h
+
+
+
+y usea esto g++ -O2 -pthread -std=c++17 -I. main.cpp clipper.engine.cpp clipper.offset.cpp clipper.rectclip.cpp clipper.triangulation.cpp -o nesting.exe
+
+
+
+eso fue lo que me recomendó otra ia
+
+
+
+bueno , lo que pasa es esto. ahora es mas rápido, si,  
+pero los resultados son como el hibrido de antes 92.50 , 92.40, 93.30, o 95.40 etc generalmente 93 94 o 95. 
+las primeras veces que lo instalo o lo pruebo en otra pc siempre sale 92. 80 o 92.40, o sea las primeras veces que 
+lo instalo siempre la primera vez sale 92 y algo, después intento replicar pero generalmente sale 93 o 94 o 95, . 
+si sale otra vez 92 pero no casi, pero lo raro es que la primera vez si sale 92. ojo que los resultados no cambian con mas iteraciones , 
+solo es redundante aunque ponga 3000 o 300 iteraciones. o sea obviamente es mucho mejor porque los resultados son mas rapido ya no 
+perdemos tiempo y energía pero los resultados al final son lo mismo que el hibrido o fuerza bruta, eso me sorprende. crees que se pueda mejorar? 
+o será el techo? sera el techo con clipper? o crees que podemos hacer nuestro propio nfp? es que me sorprende que a fuerza bruta con el hibrido 
+logremos lo mismo aunque obviamente es una perdida de tiempo porque demora mucho el hibrido en cambio clipper es rapido
