@@ -214,7 +214,7 @@ public:
                             std::vector<Piece>* mejorOrdenOut = nullptr, int threadId = -1,
                             SharedPool* pool = nullptr) {
         NestingEngine engine;
-        int RESTART = std::max(15, (int)(iteraciones * 0.12));
+        int RESTART = std::max(15, std::min(50, (int)(iteraciones * 0.12)));
 
         auto t0 = std::chrono::steady_clock::now();
 
