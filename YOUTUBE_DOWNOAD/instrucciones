@@ -1,0 +1,23 @@
+INSTALACIÓN — una sola vez:
+
+1. Python 3.12
+
+https://www.python.org/downloads/windows/ → Windows installer 64-bit
+⚠️ marca "Add Python to PATH"
+Verifica: python --version
+
+2. ffmpeg
+
+https://github.com/BtbN/FFmpeg-Builds/releases → ffmpeg-master-latest-win64-gpl.zip
+Extrae en C:\ffmpeg
+C:\ffmpeg\bin         or
+C:\ffmpeg\ffmpeg-master-latest-win64-gpl\bin
+PATH: Win+R → sysdm.cpl → Opciones avanzadas → Variables de entorno → Variables del sistema → Path → Editar → Nuevo → C:\ffmpeg\bin → Aceptar x3
+Cierra CMD y abre nuevo
+Verifica: ffmpeg -version
+
+3. Node.js
+
+https://nodejs.org → Windows Installer LTS
+Instala con opciones por defecto
+Verifica: node --version
