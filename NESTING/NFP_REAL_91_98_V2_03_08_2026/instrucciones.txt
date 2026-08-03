@@ -1,0 +1,66 @@
+PC (Windows 10) paso a paso:
+
+Descarga MSYS2: https://www.msys2.org → instala.
+Abre "MSYS2 MINGW64" desde el menú inicio.
+Ejecuta: pacman -Syu (reinicia la terminal si lo pide).
+Ejecuta: pacman -S mingw-w64-x86_64-gcc
+Agrega C:\msys64\mingw64\bin al PATH de Windows (Panel de control → Variables de entorno).
+Verifica: abre CMD nuevo y escribe g++ --version
+Compila: g++ -std=c++17 -O2 -pthread main.cpp -o nesting.exe
+Ejecuta: nesting.exe
+
+Celular (Android) paso a paso::
+
+Instala F-Droid: https://f-droid.org
+Desde F-Droid instala Termux (no uses la versión de Play Store, está desactualizada).
+Abre Termux, ejecuta: pkg update && pkg upgrade
+Ejecuta: pkg install clang
+Ejecuta: termux-setup-storage (acepta el permiso que pide Android).
+Copia tus archivos .hpp/.cpp a ~/storage/downloads/ o a la carpeta de Termux.
+Compila: clang++ -std=c++17 -O2 -pthread main.cpp -o nesting
+Ejecuta: ./nesting
+
+cd C:\nesting
+
+g++ -std=c++17 -O2 -pthread main.cpp -o nesting.exe
+
+cd D:\CLO\nesting
+cd /d D:\CLO\nesting
+
+D:
+cd \CLO\nesting
+
+NFP:
+
+LINK CLIPPER:
+
+https://github.com/AngusJohnson/Clipper2?spm=a2ty_o01.29997173.0.0.14f055fbUdf0dd
+
+nuevo comando: 
+
+cd C:\nesting
+g++ -O2 -pthread -std=c++17 -I. main.cpp clipper.engine.cpp clipper.offset.cpp clipper.rectclip.cpp clipper.triangulation.cpp -o nesting.exe
+
+ruta:
+
+C:\nesting\
+  main.cpp
+  nesting_core.hpp
+  curve_parser.hpp
+  genetic.hpp
+  json_io.hpp
+  svg_export.hpp
+  clipper.engine.cpp
+  clipper.offset.cpp
+  clipper.rectclip.cpp
+  clipper.triangulation.cpp
+  clipper2\
+    clipper.core.h
+    clipper.engine.h
+    clipper.export.h
+    clipper.h
+    clipper.minkowski.h
+    clipper.offset.h
+    clipper.rectclip.h
+    clipper.triangulation.h
+    clipper.version.h
