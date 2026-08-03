@@ -21,3 +21,7 @@ Verifica: ffmpeg -version
 https://nodejs.org → Windows Installer LTS
 Instala con opciones por defecto
 Verifica: node --version
+
+pip install yt-dlp yt-dlp-ejs
+
+C:\ytdl\
