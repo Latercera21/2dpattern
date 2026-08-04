@@ -12,9 +12,9 @@ https://github.com/BtbN/FFmpeg-Builds/releases → ffmpeg-master-latest-win64-gp
 
 => https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip
 
-Extrae en C:\ffmpeg
-C:\ffmpeg\bin         or
-C:\ffmpeg\ffmpeg-master-latest-win64-gpl\bin
+C:\ffmpeg\bin         or  => buscar la direccion con la carpeta bin
+C:\ffmpeg\ffmpeg-master-latest-win64-gpl\bin  
+
 PATH: Win+R → sysdm.cpl → Opciones avanzadas → Variables de entorno → Variables del sistema → Path → Editar → Nuevo → C:\ffmpeg\bin → Aceptar x3
 Cierra CMD y abre nuevo
 Verifica: ffmpeg -version
