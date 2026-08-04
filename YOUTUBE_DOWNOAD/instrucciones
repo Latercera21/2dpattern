@@ -3,7 +3,7 @@ INSTALACIÓN — una sola vez:
 1. Python 3.12
 
 https://www.python.org/downloads/windows/ → Windows installer 64-bit
-⚠️ marca "Add Python to PATH"
+ marca "Add Python to PATH"
 Verifica: python --version
 
 2. ffmpeg
