@@ -1,0 +1,1695 @@
+{
+  "unit": "cm",
+  "pxPerCm": 37.79527559055118,
+  "grainDirection": "vertical",
+  "figures": [
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 1485.2652125404593,
+          "y": 497.3648235023293,
+          "xCm": 39.3,
+          "yCm": 13.16
+        },
+        {
+          "x": 1817.8636377373082,
+          "y": 370.7506502739842,
+          "xCm": 48.1,
+          "yCm": 9.81
+        },
+        {
+          "x": 2222.273086556202,
+          "y": 521.9317526361876,
+          "xCm": 58.8,
+          "yCm": 13.81
+        },
+        {
+          "x": 2159.910881831795,
+          "y": 858.3097053920919,
+          "xCm": 57.15,
+          "yCm": 22.71
+        },
+        {
+          "x": 2501.9581259262773,
+          "y": 1240.0419888566582,
+          "xCm": 66.2,
+          "yCm": 32.81
+        },
+        {
+          "x": 2365.8951338002967,
+          "y": 1738.939626651936,
+          "xCm": 62.6,
+          "yCm": 46.01
+        },
+        {
+          "x": 2441.485684981398,
+          "y": 2543.978996730672,
+          "xCm": 64.6,
+          "yCm": 67.31
+        },
+        {
+          "x": 1485.2652125404593,
+          "y": 2543.978996730672,
+          "xCm": 39.3,
+          "yCm": 67.31
+        },
+        {
+          "x": 529.0447400995159,
+          "y": 2543.978996730672,
+          "xCm": 14,
+          "yCm": 67.31
+        },
+        {
+          "x": 604.6352912806199,
+          "y": 1738.9396266519354,
+          "xCm": 16,
+          "yCm": 46.01
+        },
+        {
+          "x": 468.57229915463324,
+          "y": 1240.0419888566591,
+          "xCm": 12.4,
+          "yCm": 32.81
+        },
+        {
+          "x": 810.6195432491261,
+          "y": 858.3097053920922,
+          "xCm": 21.45,
+          "yCm": 22.71
+        },
+        {
+          "x": 748.2573385247163,
+          "y": 521.9317526361879,
+          "xCm": 19.8,
+          "yCm": 13.81
+        },
+        {
+          "x": 1152.666787343609,
+          "y": 370.7506502739833,
+          "xCm": 30.5,
+          "yCm": 9.81
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": true,
+          "cubic": false,
+          "controlX": 1757.0153611067713,
+          "controlY": 489.46259645295095,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2156.493451493207,
+          "controlY": 1141.4480405600461,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 4,
+          "end": 5,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2372.08736202956,
+          "controlY": 1443.2937331883568,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 5,
+          "end": 6,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2457.2333442173017,
+          "controlY": 2498.7036443358606,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 6,
+          "end": 7,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 7,
+          "end": 8,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 8,
+          "end": 9,
+          "curved": true,
+          "cubic": false,
+          "controlX": 513.2970808636106,
+          "controlY": 2498.7036443358606,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 9,
+          "end": 10,
+          "curved": true,
+          "cubic": false,
+          "controlX": 598.4430630513582,
+          "controlY": 1443.2937331883568,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 10,
+          "end": 11,
+          "curved": true,
+          "cubic": false,
+          "controlX": 814.0369735877123,
+          "controlY": 1141.4480405600464,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 11,
+          "end": 12,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 12,
+          "end": 13,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 13,
+          "end": 0,
+          "curved": true,
+          "cubic": false,
+          "controlX": 1213.5150639741478,
+          "controlY": 489.46259645295186,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 2572.550217472374,
+          "y": 1300.9312286071513,
+          "xCm": 68.07,
+          "yCm": 34.42
+        },
+        {
+          "x": 2421.7536828979582,
+          "y": 1798.8995116998217,
+          "xCm": 64.08,
+          "yCm": 47.6
+        },
+        {
+          "x": 2499.2339978585883,
+          "y": 2690.8680156368323,
+          "xCm": 66.13,
+          "yCm": 71.2
+        },
+        {
+          "x": 2703.3284860475655,
+          "y": 2690.8680156368323,
+          "xCm": 71.53,
+          "yCm": 71.2
+        },
+        {
+          "x": 2627.737934866462,
+          "y": 1885.8286455580942,
+          "xCm": 69.53,
+          "yCm": 49.9
+        },
+        {
+          "x": 2763.8009269924464,
+          "y": 1386.9310077628186,
+          "xCm": 73.13,
+          "yCm": 36.7
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2424.111973834143,
+          "controlY": 1411.810008271142,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2720.607322148139,
+          "controlY": 2675.0878631599394,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 4,
+          "end": 5,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2635.1429251213635,
+          "controlY": 1591.2257516014006,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 5,
+          "end": 0,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2654.6615665280838,
+          "controlY": 1356.5830042175442,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 2195.216490302753,
+          "y": -607.1973523113377,
+          "xCm": 58.08,
+          "yCm": -16.07
+        },
+        {
+          "x": 1564.801429424068,
+          "y": 319.1598503379493,
+          "xCm": 41.4,
+          "yCm": 8.44
+        },
+        {
+          "x": 2273.283367049556,
+          "y": 319.1598503379493,
+          "xCm": 60.15,
+          "yCm": 8.44
+        },
+        {
+          "x": 2195.8030520889256,
+          "y": -572.8086535990528,
+          "xCm": 58.1,
+          "yCm": -15.16
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": true,
+          "cubic": false,
+          "controlX": 1648.7911016681392,
+          "controlY": -452.56143565539736,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 1182.861507179599,
+          "y": 303.5611235407597,
+          "xCm": 31.3,
+          "yCm": 8.03
+        },
+        {
+          "x": 552.4464463009135,
+          "y": -622.7960791085261,
+          "xCm": 14.62,
+          "yCm": -16.48
+        },
+        {
+          "x": 1260.9283839264021,
+          "y": -622.7960791085261,
+          "xCm": 33.36,
+          "yCm": -16.48
+        },
+        {
+          "x": 1183.4480689657717,
+          "y": 269.1724248284746,
+          "xCm": 31.31,
+          "yCm": 7.12
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": true,
+          "cubic": false,
+          "controlX": 636.4361185449843,
+          "controlY": 148.92520688481784,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": -751.4967776171206,
+          "y": 1231.4411779059662,
+          "xCm": -19.88,
+          "yCm": 32.58
+        },
+        {
+          "x": -732.7945402253001,
+          "y": 1446.7449839776411,
+          "xCm": -19.39,
+          "yCm": 38.28
+        },
+        {
+          "x": -1515.1567449497106,
+          "y": 1446.7449839776416,
+          "xCm": -40.09,
+          "yCm": 38.28
+        },
+        {
+          "x": -1515.1567449497106,
+          "y": -393.88493728219544,
+          "xCm": -40.09,
+          "yCm": -10.42
+        },
+        {
+          "x": -1152.3220992804208,
+          "y": -726.4833624790447,
+          "xCm": -30.49,
+          "yCm": -19.22
+        },
+        {
+          "x": -747.9126504615224,
+          "y": -575.3022601168383,
+          "xCm": -19.79,
+          "yCm": -15.22
+        },
+        {
+          "x": -810.2748551859322,
+          "y": -238.92430736093604,
+          "xCm": -21.44,
+          "yCm": -6.32
+        },
+        {
+          "x": -659.0189439591395,
+          "y": 56.63218935802166,
+          "xCm": -17.44,
+          "yCm": 1.5
+        },
+        {
+          "x": -810.2748551859322,
+          "y": 554.7764800406424,
+          "xCm": -21.44,
+          "yCm": 14.68
+        },
+        {
+          "x": -797.4709048322684,
+          "y": 702.1780548437869,
+          "xCm": -21.1,
+          "yCm": 18.58
+        },
+        {
+          "x": -832.7051545916429,
+          "y": 702.1780548437869,
+          "xCm": -22.03,
+          "yCm": 18.58
+        },
+        {
+          "x": -788.0843577221049,
+          "y": 1231.3119131115016,
+          "xCm": -20.85,
+          "yCm": 32.58
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "curved": true,
+          "cubic": false,
+          "controlX": -1217.959490673028,
+          "controlY": -406.21856461862205,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 4,
+          "end": 5,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 5,
+          "end": 6,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 6,
+          "end": 7,
+          "curved": true,
+          "cubic": false,
+          "controlX": -820.492622994524,
+          "controlY": -57.534133791362194,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 7,
+          "end": 8,
+          "curved": true,
+          "cubic": false,
+          "controlX": -821.0938960052672,
+          "controlY": 166.9536681042937,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 8,
+          "end": 9,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 9,
+          "end": 10,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 10,
+          "end": 11,
+          "curved": true,
+          "cubic": false,
+          "controlX": -970.825743260621,
+          "controlY": 1227.0831334550855,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 11,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 3754.456954233182,
+          "y": 1262.9251021438188,
+          "xCm": 99.34,
+          "yCm": 33.41
+        },
+        {
+          "x": 3735.7547168413635,
+          "y": 1478.2289082154964,
+          "xCm": 98.84,
+          "yCm": 39.11
+        },
+        {
+          "x": 4518.11692156577,
+          "y": 1478.228908215496,
+          "xCm": 119.54,
+          "yCm": 39.11
+        },
+        {
+          "x": 4518.11692156577,
+          "y": -362.4010130443405,
+          "xCm": 119.54,
+          "yCm": -9.59
+        },
+        {
+          "x": 4155.282275896481,
+          "y": -694.9994382411946,
+          "xCm": 109.94,
+          "yCm": -18.39
+        },
+        {
+          "x": 3750.8728270775837,
+          "y": -543.8183358789863,
+          "xCm": 99.24,
+          "yCm": -14.39
+        },
+        {
+          "x": 3813.235031801993,
+          "y": -207.44038312308135,
+          "xCm": 100.89,
+          "yCm": -5.49
+        },
+        {
+          "x": 3661.9791205752017,
+          "y": 88.11611359587818,
+          "xCm": 96.89,
+          "yCm": 2.33
+        },
+        {
+          "x": 3813.235031801993,
+          "y": 586.2604042784952,
+          "xCm": 100.89,
+          "yCm": 15.51
+        },
+        {
+          "x": 3800.431081448329,
+          "y": 733.6619790816386,
+          "xCm": 100.55,
+          "yCm": 19.41
+        },
+        {
+          "x": 3835.665331207702,
+          "y": 733.6619790816386,
+          "xCm": 101.49,
+          "yCm": 19.41
+        },
+        {
+          "x": 3791.0445343381657,
+          "y": 1262.795837349354,
+          "xCm": 100.3,
+          "yCm": 33.41
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "curved": true,
+          "cubic": false,
+          "controlX": 4220.9196672890885,
+          "controlY": -374.7346403807667,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 4,
+          "end": 5,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 5,
+          "end": 6,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 6,
+          "end": 7,
+          "curved": true,
+          "cubic": false,
+          "controlX": 3823.452799610585,
+          "controlY": -26.050209553506477,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 7,
+          "end": 8,
+          "curved": true,
+          "cubic": false,
+          "controlX": 3824.054072621328,
+          "controlY": 198.4375923421493,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 8,
+          "end": 9,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 9,
+          "end": 10,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 10,
+          "end": 11,
+          "curved": true,
+          "cubic": false,
+          "controlX": 3973.7859198766805,
+          "controlY": 1258.567057692938,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 11,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": -48.76280903303725,
+          "y": -710.4687910514646,
+          "xCm": -1.29,
+          "yCm": -18.8
+        },
+        {
+          "x": -506.0856436787074,
+          "y": -710.4687910514644,
+          "xCm": -13.39,
+          "yCm": -18.8
+        },
+        {
+          "x": -876.4793444661098,
+          "y": 1003.5469569800332,
+          "xCm": -23.19,
+          "yCm": 26.55
+        },
+        {
+          "x": -462.52270072318976,
+          "y": 1223.756769747386,
+          "xCm": -12.24,
+          "yCm": 32.38
+        },
+        {
+          "x": -48.76280903303699,
+          "y": 1443.8619176099542,
+          "xCm": -1.29,
+          "yCm": 38.2
+        },
+        {
+          "x": 364.9970826571137,
+          "y": 1223.756769747386,
+          "xCm": 9.66,
+          "yCm": 32.38
+        },
+        {
+          "x": 778.9537264000328,
+          "y": 1003.546956980033,
+          "xCm": 20.61,
+          "yCm": 26.55
+        },
+        {
+          "x": 408.56002561263193,
+          "y": -710.4687910514647,
+          "xCm": 10.81,
+          "yCm": -18.8
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": true,
+          "cubic": false,
+          "controlX": -743.7933408244212,
+          "controlY": 591.7291061558725,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": true,
+          "cubic": false,
+          "controlX": -621.2186751111083,
+          "controlY": 1037.212163744558,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "curved": true,
+          "cubic": false,
+          "controlX": -256.69876323578825,
+          "controlY": 1440.6017603901587,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 4,
+          "end": 5,
+          "curved": true,
+          "cubic": false,
+          "controlX": 159.17314516971436,
+          "controlY": 1440.6017603901587,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 5,
+          "end": 6,
+          "curved": true,
+          "cubic": false,
+          "controlX": 523.693057045032,
+          "controlY": 1037.212163744558,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 6,
+          "end": 7,
+          "curved": true,
+          "cubic": false,
+          "controlX": 646.2677227583436,
+          "controlY": 591.7291061558724,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 7,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 3037.7936844485766,
+          "y": -676.1237858808851,
+          "xCm": 80.37,
+          "yCm": -17.89
+        },
+        {
+          "x": 2580.4708498029026,
+          "y": -676.123785880885,
+          "xCm": 68.27,
+          "yCm": -17.89
+        },
+        {
+          "x": 2210.077149015504,
+          "y": 1037.8919621506086,
+          "xCm": 58.47,
+          "yCm": 27.46
+        },
+        {
+          "x": 2624.033792758422,
+          "y": 1258.1017749179618,
+          "xCm": 69.43,
+          "yCm": 33.29
+        },
+        {
+          "x": 3037.7936844485766,
+          "y": 1478.206922780531,
+          "xCm": 80.37,
+          "yCm": 39.11
+        },
+        {
+          "x": 3451.5535761387296,
+          "y": 1258.101774917961,
+          "xCm": 91.32,
+          "yCm": 33.29
+        },
+        {
+          "x": 3865.5102198816503,
+          "y": 1037.8919621506077,
+          "xCm": 102.27,
+          "yCm": 27.46
+        },
+        {
+          "x": 3495.1165190942497,
+          "y": -676.1237858808852,
+          "xCm": 92.47,
+          "yCm": -17.89
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2342.763152657193,
+          "controlY": 626.0741113264479,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2465.3378183705026,
+          "controlY": 1071.5571689151336,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "curved": true,
+          "cubic": false,
+          "controlX": 2829.857730245824,
+          "controlY": 1474.9467655607355,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 4,
+          "end": 5,
+          "curved": true,
+          "cubic": false,
+          "controlX": 3245.729638651328,
+          "controlY": 1474.9467655607355,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 5,
+          "end": 6,
+          "curved": true,
+          "cubic": false,
+          "controlX": 3610.2495505266506,
+          "controlY": 1071.557168915133,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 6,
+          "end": 7,
+          "curved": true,
+          "cubic": false,
+          "controlX": 3732.824216239962,
+          "controlY": 626.0741113264475,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 7,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 150.62899559700134,
+          "y": 2130.3261590038137,
+          "xCm": 3.99,
+          "yCm": 56.36
+        },
+        {
+          "x": 150.62899559700134,
+          "y": 2697.2552928620826,
+          "xCm": 3.99,
+          "yCm": 71.36
+        },
+        {
+          "x": -680.8670673951221,
+          "y": 2697.2552928620826,
+          "xCm": -18.01,
+          "yCm": 71.36
+        },
+        {
+          "x": -680.8670673951221,
+          "y": 2130.3261590038137,
+          "xCm": -18.01,
+          "yCm": 56.36
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": -683.7806195134467,
+          "y": 2130.3053506787396,
+          "xCm": -18.09,
+          "yCm": 56.36
+        },
+        {
+          "x": -683.7806195134467,
+          "y": 2697.234484537009,
+          "xCm": -18.09,
+          "yCm": 71.36
+        },
+        {
+          "x": -1515.2766825055717,
+          "y": 2697.234484537009,
+          "xCm": -40.09,
+          "yCm": 71.36
+        },
+        {
+          "x": -1515.2766825055717,
+          "y": 2130.3053506787396,
+          "xCm": -40.09,
+          "yCm": 56.36
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 2784.791577052879,
+          "y": 2696.6497535497633,
+          "xCm": 73.68,
+          "yCm": 71.35
+        },
+        {
+          "x": 4523.3742542182345,
+          "y": 2696.6497535497633,
+          "xCm": 119.68,
+          "yCm": 71.35
+        },
+        {
+          "x": 4523.3742542182345,
+          "y": 2091.925344100944,
+          "xCm": 119.68,
+          "yCm": 55.35
+        },
+        {
+          "x": 2784.791577052879,
+          "y": 2091.925344100944,
+          "xCm": 73.68,
+          "yCm": 55.35
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 3651.3548809112262,
+          "y": 1484.879605173435,
+          "xCm": 96.61,
+          "yCm": 39.29
+        },
+        {
+          "x": 2794.39336685206,
+          "y": 1484.879605173435,
+          "xCm": 73.93,
+          "yCm": 39.29
+        },
+        {
+          "x": 2794.39336685206,
+          "y": 2089.6040146222495,
+          "xCm": 73.93,
+          "yCm": 55.29
+        },
+        {
+          "x": 3651.3548809112262,
+          "y": 2089.6040146222495,
+          "xCm": 96.61,
+          "yCm": 55.29
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 3653.6700730537405,
+          "y": 2089.52727748499,
+          "xCm": 96.67,
+          "yCm": 55.29
+        },
+        {
+          "x": 4522.961411636423,
+          "y": 2089.52727748499,
+          "xCm": 119.67,
+          "yCm": 55.29
+        },
+        {
+          "x": 4522.961411636423,
+          "y": 1484.8028680361767,
+          "xCm": 119.67,
+          "yCm": 39.29
+        },
+        {
+          "x": 3653.6700730537405,
+          "y": 1484.8028680361767,
+          "xCm": 96.67,
+          "yCm": 39.29
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 221.64477763819525,
+          "y": 1447.7386033773607,
+          "xCm": 5.86,
+          "yCm": 38.3
+        },
+        {
+          "x": -1516.9378995271586,
+          "y": 1447.7386033773607,
+          "xCm": -40.14,
+          "yCm": 38.3
+        },
+        {
+          "x": -1516.9378995271586,
+          "y": 2128.0535640072812,
+          "xCm": -40.14,
+          "yCm": 56.3
+        },
+        {
+          "x": 221.64477763819525,
+          "y": 2128.0535640072812,
+          "xCm": 5.86,
+          "yCm": 56.3
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 0,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    },
+    {
+      "grain": "vertical",
+      "closed": true,
+      "vertices": [
+        {
+          "x": 371.26640104756854,
+          "y": 2695.6108612432595,
+          "xCm": 9.82,
+          "yCm": 71.32
+        },
+        {
+          "x": 220.4698664731518,
+          "y": 2197.6425781505864,
+          "xCm": 5.83,
+          "yCm": 58.15
+        },
+        {
+          "x": 297.9501814337827,
+          "y": 1305.6740742135755,
+          "xCm": 7.88,
+          "yCm": 34.55
+        },
+        {
+          "x": 502.04466962275944,
+          "y": 1305.6740742135755,
+          "xCm": 13.28,
+          "yCm": 34.55
+        },
+        {
+          "x": 426.454118441657,
+          "y": 2110.7134442923157,
+          "xCm": 11.28,
+          "yCm": 55.85
+        },
+        {
+          "x": 562.5171105676413,
+          "y": 2609.6110820875924,
+          "xCm": 14.88,
+          "yCm": 69.05
+        }
+      ],
+      "edges": [
+        {
+          "start": 0,
+          "end": 1,
+          "curved": true,
+          "cubic": false,
+          "controlX": 222.82815740933665,
+          "controlY": 2584.7320815792687,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "curved": false,
+          "cubic": false,
+          "controlX": null,
+          "controlY": null,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "curved": true,
+          "cubic": false,
+          "controlX": 519.3235057233337,
+          "controlY": 1321.4542266904684,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 4,
+          "end": 5,
+          "curved": true,
+          "cubic": false,
+          "controlX": 433.85910869655834,
+          "controlY": 2405.3163382490106,
+          "control2X": null,
+          "control2Y": null
+        },
+        {
+          "start": 5,
+          "end": 0,
+          "curved": true,
+          "cubic": false,
+          "controlX": 453.3777501032786,
+          "controlY": 2639.9590856328673,
+          "control2X": null,
+          "control2Y": null
+        }
+      ]
+    }
+  ]
+}

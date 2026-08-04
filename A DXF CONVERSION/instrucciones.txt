@@ -20,6 +20,8 @@ Guarda este archivo como convertir.py en la misma carpeta:
 
 Abre la terminal en esa carpeta y corre:
 
+cd C:\patrones
+
 python convertir.py
 
 Sale output.dxf en la misma carpeta.
