@@ -22,6 +22,9 @@ Verifica: ffmpeg -version
 3. Node.js
 
 https://nodejs.org → Windows Installer LTS
+
+=> https://nodejs.org/dist/v24.19.0/node-v24.19.0-x64.msi
+
 Instala con opciones por defecto
 Verifica: node --version
 
