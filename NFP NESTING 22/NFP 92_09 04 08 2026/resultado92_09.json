@@ -1,0 +1,17 @@
+[
+  {"id":5,"tx":0,"ty":0,"rotada":false},
+  {"id":4,"tx":137.35,"ty":0,"rotada":false},
+  {"id":7,"tx":98.846,"ty":1.0597,"rotada":true},
+  {"id":10,"tx":21,"ty":0.296875,"rotada":false},
+  {"id":13,"tx":21.0919,"ty":16.5617,"rotada":false},
+  {"id":6,"tx":63.2266,"ty":5.82812,"rotada":true},
+  {"id":0,"tx":13.7388,"ty":34.5945,"rotada":true},
+  {"id":9,"tx":133.258,"ty":57.7969,"rotada":false},
+  {"id":11,"tx":110.278,"ty":58.0969,"rotada":false},
+  {"id":14,"tx":0.6472,"ty":50.9974,"rotada":false},
+  {"id":1,"tx":98.5469,"ty":52.7188,"rotada":false},
+  {"id":3,"tx":65.9688,"ty":54.6328,"rotada":true},
+  {"id":8,"tx":133.258,"ty":73.0938,"rotada":false},
+  {"id":2,"tx":81.6797,"ty":67.5625,"rotada":false},
+  {"id":12,"tx":109.658,"ty":74.3969,"rotada":false}
+]
