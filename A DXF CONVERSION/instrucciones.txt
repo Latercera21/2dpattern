@@ -1,0 +1,33 @@
+================
+
+1. Instalar ezdxf en cmd
+
+pip install ezdxf
+
+
+======
+
+2. Guardar el JSON
+Guarda tu JSON como input.json en una carpeta, por ejemplo C:\patrones\input.json
+
+
+3. Guardar el script
+Guarda este archivo como convertir.py en la misma carpeta:
+
+
+
+4. Ejecutar
+
+Abre la terminal en esa carpeta y corre:
+
+python convertir.py
+
+Sale output.dxf en la misma carpeta.
+
+
+===
+
+C:\patrones\
+    input.json
+    convertir.py
+    output.dxf  ← este lo crea el script
