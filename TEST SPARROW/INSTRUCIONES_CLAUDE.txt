@@ -1,7 +1,15 @@
 ..
 ..
 ..
-Con esta figura nueva (distinta a la anterior), Sparrow da 90.66cm 
+"""No, sparrow_geo.hpp solo es un archivo de funciones — no tiene un main(), no corre solo. 
+Necesitás un programa que lo llame. test_sparrow_vs_nfp.cpp es ese programa 
+(imprime el NFP de referencia y el resultado de Sparrow, pero podés ignorar la 
+parte del NFP y mirar solo la línea [Sparrow])."""
+
+
+
+
+""Con esta figura nueva (distinta a la anterior), Sparrow da 90.66cm 
 — mejor incluso que Audaces (91.39cm). 
 Corro 2 semillas más para confirmar que no es casualidad.
 
@@ -16,7 +24,7 @@ es la salida de tu main.cpp normal (motor NFP + genético).
 El guardarSVG solo lo llama main.cpp, sparrow_geo.hpp no genera SVG. O sea, 
 ese resultado feo es el de tu pipeline actual, 
 no el de lo que probé yo — y de hecho confirma el punto: Sparrow (90.6-92.3) 
-le gana claramente a tu pipeline actual (95.34) en esta misma figura.
+le gana claramente a tu pipeline actual (95.34) en esta misma figura.""
 """
 """"
 ejemplo de claude:
@@ -50,6 +58,7 @@ C:\nesting_sparrow_test\
     y con test_sparrow_vs_nfp.cpp + sparrow_geo.hpp agregados.
     Compilar (parado en esa carpeta):
     ..
+    cd C:\nesting
     ..
     g++ -std=c++17 -O2 -I. -c clipper_engine.cpp -o clipper_engine.o
     g++ -std=c++17 -O2 -I. -c clipper_offset.cpp -o clipper_offset.o
