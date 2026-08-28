@@ -1,0 +1,62 @@
+..
+..
+..
+Con esta figura nueva (distinta a la anterior), Sparrow da 90.66cm 
+— mejor incluso que Audaces (91.39cm). 
+Corro 2 semillas más para confirmar que no es casualidad.
+
+Ejecutó 2 comandos
+
+Confirmado con 3 semillas en una figura completamente distinta: 90.66, 92.34, 90.60 
+— dos de las tres corridas superan a Audaces (91.39), 
+la tercera queda a 1cm. Consistente con lo que vimos antes.
+
+Ahora, sobre tu SVG (95.34cm, "pésimo acomodo"): eso no es de Sparrow, 
+es la salida de tu main.cpp normal (motor NFP + genético). 
+El guardarSVG solo lo llama main.cpp, sparrow_geo.hpp no genera SVG. O sea, 
+ese resultado feo es el de tu pipeline actual, 
+no el de lo que probé yo — y de hecho confirma el punto: Sparrow (90.6-92.3) 
+le gana claramente a tu pipeline actual (95.34) en esta misma figura.
+"""
+""""
+ejemplo de claude:
+
+C:\nesting_sparrow_test\
+  test_sparrow_vs_nfp.cpp    (te lo di yo)
+  sparrow_geo.hpp             (te lo di yo)
+  figuras_dama.json           (tu JSON, renombrado)
+  nesting_core.hpp            (de tu proyecto, copiar)
+  curve_parser.hpp            (de tu proyecto, copiar)
+  json_io.hpp                 (de tu proyecto, copiar)
+  clipper_engine.cpp          (de tu proyecto, copiar)
+  clipper_offset.cpp          (de tu proyecto, copiar)
+  clipper_rectclip.cpp        (de tu proyecto, copiar)
+  clipper_triangulation.cpp   (de tu proyecto, copiar)
+  clipper2\
+    clipper.core.h
+    clipper.engine.h
+    clipper.export.h
+    clipper.h
+    clipper.minkowski.h
+    clipper.offset.h
+    clipper.rectclip.h
+    clipper.triangulation.h
+    clipper.version.h
+
+    ..
+    --
+    Es igual a tu carpeta de antes, solo que sin main.cpp, genetic.hpp, 
+    svg_export.hpp (no hacen falta para este test) 
+    y con test_sparrow_vs_nfp.cpp + sparrow_geo.hpp agregados.
+    Compilar (parado en esa carpeta):
+    ..
+    ..
+    g++ -std=c++17 -O2 -I. -c clipper_engine.cpp -o clipper_engine.o
+    g++ -std=c++17 -O2 -I. -c clipper_offset.cpp -o clipper_offset.o
+    g++ -std=c++17 -O2 -I. -c clipper_rectclip.cpp -o clipper_rectclip.o
+    g++ -std=c++17 -O2 -I. -c clipper_triangulation.cpp -o clipper_triangulation.o
+    g++ -std=c++17 -O2 -I. -c test_sparrow_vs_nfp.cpp -o test_sparrow_vs_nfp.o
+    g++ -std=c++17 -O2 -o test_sparrow_vs_nfp.exe test_sparrow_vs_nfp.o clipper_engine.o clipper_offset.o clipper_rectclip.o clipper_triangulation.o
+    ..
+    ..
+    test_sparrow_vs_nfp.exe 160 1 20 8
