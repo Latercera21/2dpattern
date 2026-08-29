@@ -69,8 +69,19 @@ C:\nesting_sparrow_test\
 ..
     test_sparrow_vs_nfp.exe 160 1 20 8
     ..
+    ----
     nuevo:
     sparrow solo:
+    ..
+    sparrow_geo.hpp          (te lo di, actualizado)
+    sparrow_solo.cpp         (te lo di, NUEVO — solo Sparrow, sin comparación)
+    figuras.json             (te lo di, es tu DAMA-TM-SIEMPRE-W-CIERRE.json renombrado)
+    nesting_core.hpp         (tuyo, copiar)
+    curve_parser.hpp         (tuyo, copiar)
+    json_io.hpp               (tuyo, copiar)
+    clipper_engine.cpp / clipper_offset.cpp / clipper_rectclip.cpp / clipper_triangulation.cpp  (tuyos)
+    clipper2\  (con todos los .h)
+    ..
     g++ -std=c++17 -O2 -I. -c clipper_engine.cpp -o clipper_engine.o
     g++ -std=c++17 -O2 -I. -c clipper_offset.cpp -o clipper_offset.o
     g++ -std=c++17 -O2 -I. -c clipper_rectclip.cpp -o clipper_rectclip.o
